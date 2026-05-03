@@ -274,3 +274,4 @@ Step 02 (Core Schema / Run Config / Debug Output Contract)에서 다룰 것:
 | 2026-05-03 | 작업 중 발견 이슈 반영. S01-D11 (`.claude/` ignore 처리) + S01-D5 보완 (환경 binary 절대경로). Plan §A.1, §4.4, §4.6 갱신. |
 | 2026-05-03 | Step 01 cleanup. **Appendix A 제거** (워크플로우 결정: 단발성 scaffolding). DoD-1~8 모두 통과. |
 | 2026-05-03 | commit 직전 발견 I-3 — `*.egg-info/`가 staged됨. S01-D12 추가. .gitignore 갱신. |
+| 2026-05-03 | Step 01 commit 후 워크플로우 결정 글로벌화 — D015 (branch+commit), D016 (Plan/Tracker structure), H010 추가 ([000_Architecture_Decisions.md](000_Architecture_Decisions.md)) |

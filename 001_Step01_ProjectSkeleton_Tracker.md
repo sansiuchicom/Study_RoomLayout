@@ -70,6 +70,8 @@ Plan §4의 항목과 **동일한 번호**를 유지한다.
 | 2026-05-03 | 워크플로우 결정 — Step 단위 branch + per-작업 commit + no-squash merge. Step 01은 예외(이미 main 작업). 메모리 `feedback_branch_commit_workflow` 저장 |
 | 2026-05-03 | Step 01 cleanup. Plan §A 제거. `000_Progress_Tracker.md` 갱신. DoD-1~8 모두 ✅ |
 | 2026-05-03 | commit 직전 발견 I-3 — `src/proto3.egg-info/`가 staged됨. `.gitignore`에 `*.egg-info/` 추가, S01-D12로 결정 기록, unstage |
+| 2026-05-03 | Step 01 commit (`6475f7c feat: step01 project skeleton`) |
+| 2026-05-03 | 워크플로우 결정 글로벌화 — D015/D016 + H010을 [000_Architecture_Decisions.md](000_Architecture_Decisions.md)에 추가. 별도 docs commit 예정 |
 
 ---
 

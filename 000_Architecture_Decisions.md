@@ -478,6 +478,75 @@ proto3 will generate many JSON/SVG debug artifacts. Keeping them tracked by defa
 
 ---
 
+## D015. Per-Step branch + per-work-item commit + no-squash merge
+
+Status: Accepted
+Type: Repo / VCS convention
+
+Decision:
+
+For Step-level (or larger Stage-level) work:
+
+- **Start**: checkout a new branch (e.g., `step02-core-schema`).
+- **During**: commit each completed work item separately. Plan §4 work-item granularity defines commit granularity by default. Design commit boundaries during Plan-time, not after.
+- **Judgment exception**: very simple/small work may stay on `main` directly.
+- **Finish**: merge with `git merge --no-ff` (no squash). Then delete the branch (`git branch -d <branch>`).
+- **Commit message**: prefix-style 1~2 lines, e.g. `git commit -m "feat: 제목, 간단한 내용"`. Common prefixes: `feat`, `fix`, `refactor`, `docs`, `chore`.
+
+Reason:
+
+- Squash discards per-commit history. Failure-to-pruning ([D010](000_Architecture_Decisions.md)) and provenance ([Pipeline Overview §12.1](000_Pipeline_Overview.md)) work better when each commit corresponds to a Plan §4 work item — diagnosing "when did this break" is easier with per-commit history aligned to plan items.
+- Per-Step branch makes work-in-progress visible without cluttering main, while merge --no-ff preserves the Step's commit cluster as a reviewable unit.
+- The Plan §4 ↔ commit mapping makes automated execution and code review easier.
+
+Step 01 was an exception: this convention was decided mid-Step-01, so Step 01 was bundled into a single `feat: step01 project skeleton` commit on `main` (see Step 01 Plan / Tracker for details). Step 02 onward applies D015 from the start.
+
+---
+
+## D016. Per-Step companion docs: Plan + Tracker
+
+Status: Accepted
+Type: Documentation / repo convention
+
+Decision:
+
+Each implementation Step has two companion documents at the repo root:
+
+- **`NNN_StepNN_<name>_Plan.md`** — living decision doc + work specification. Updated during discussion, frozen once decided. Detailed enough that an automated executor can run from it without consulting other files.
+- **`NNN_StepNN_<name>_Tracker.md`** — progress log + checklist. Updated continuously while working.
+
+Plan section structure (followed by Step 01):
+
+- §0 Purpose (with cross-references)
+- §1 Definition of Done (with verification commands)
+- §2 결정 기록 (decision table; per-Step decision IDs prefixed with the step, e.g. `S01-D1`)
+- §3 Directory structure (target state)
+- §4 Work items (each with command + verification)
+- §5 의도적으로 하지 않는 것 (explicit non-goals with "유예" reasoning)
+- §6 Risks
+- §7 Next-Step linkage
+- (optional) §A Appendix — inline file contents for automation. **Single-use scaffolding**: stripped during Step-close cleanup. The first Step (Step 01) keeps it heavy while workflow is being established; later Steps may skip it from the start.
+
+Tracker mirrors Plan §4 numbering 1:1 in its §1 checklist; automation depends on this.
+
+Step-close cleanup sequence:
+
+1. Verify all Plan §4 items checked.
+2. Verify all DoD items checked.
+3. `git status` clean.
+4. Update `000_Progress_Tracker.md` (current step status, active files, step status table).
+5. Strip Plan §A.
+6. Move both Step files to `legacy/stepNN/` ([Pipeline Overview §16](000_Pipeline_Overview.md)).
+7. git commit per [D015](000_Architecture_Decisions.md).
+
+Reason:
+
+- Separates *decisions* (Plan, slow-changing, frozen on completion) from *progress* (Tracker, fast-changing, archived on completion). Mixing them makes both worse.
+- Plan §4 ↔ Tracker §1 numbering preserves traceability and enables automated execution.
+- Single-use Appendix avoids the "huge inline scaffolding lives forever in the repo" failure mode.
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.
@@ -580,6 +649,15 @@ Candidate Search became Search Orchestrator, not Stage 14.
 ## H009. Split validation into pre-repair and post-repair
 
 Repair now consumes a defect report and is validated afterward.
+
+## H010. Codified Step-level documentation and VCS workflow during Step 01
+
+Step 01 set up the project skeleton. During execution, two workflow patterns emerged from collaboration and were promoted to accepted decisions:
+
+- D016 (Per-Step Plan + Tracker companion docs) — decision/progress separation, Plan §A as single-use scaffolding, Step-close cleanup sequence.
+- D015 (Per-Step branch + per-work-item commit + no-squash merge) — Step 01 itself was bundled into one `main` commit as an exception, since the convention was decided mid-Step-01.
+
+These patterns proved their value during Step 01 and would otherwise live only in session memory, invisible to anyone reading the global docs. Promoted to D015/D016 to make them auditable and durable.
 
 ---
 

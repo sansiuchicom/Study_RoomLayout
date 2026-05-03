@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+outputs/debug_runs/*
+!outputs/debug_runs/.gitkeep
+
+experiments/runs/*
+!experiments/runs/.gitkeep
+
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python build / packaging artifacts
+*.egg-info/
+
+# IDE / tool work dirs
+.claude/
+
+.DS_Store

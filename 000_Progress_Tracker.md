@@ -29,7 +29,7 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Pre-implementation planning complete enough to start Step 01.
+Step 01 complete. Ready for Step 02 kickoff.
 ```
 
 Current Step:
@@ -41,7 +41,7 @@ Step 01. Project Skeleton / Global Docs
 Current Step status:
 
 ```text
-Ready to begin.
+Completed, awaiting Step 02 kickoff.
 ```
 
 ---
@@ -60,14 +60,14 @@ Global docs:
 Active Step files:
 
 ```text
-None yet.
+001_Step01_ProjectSkeleton_Plan.md     (Completed; pending move to legacy/step01/ at Step 02 kickoff)
+001_Step01_ProjectSkeleton_Tracker.md  (Completed; pending move to legacy/step01/ at Step 02 kickoff)
 ```
 
 Next Step files to create:
 
 ```text
-001_Step01_ProjectSkeleton_Plan.md
-001_Step01_ProjectSkeleton_Tracker.md
+TBD at Step 02 kickoff (e.g., 002_Step02_CoreSchema_Plan.md, 002_Step02_CoreSchema_Tracker.md)
 ```
 
 ---
@@ -103,7 +103,11 @@ Completed:
 Immediate next action:
 
 ```text
-Create Step 01 plan/tracker and initialize repo skeleton.
+Step 02 kickoff: create 002_Step02_CoreSchema_Plan.md + Tracker.
+Apply new branch/commit workflow (see memory: feedback_branch_commit_workflow):
+  - checkout new branch (e.g., step02-core-schema)
+  - commit per Plan §4 work item
+  - merge --no-ff into main, then delete branch
 ```
 
 Step 01 should cover:
@@ -141,7 +145,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 
 | Step | Status | Notes |
 |---:|---|---|
-| 01 | Ready | Project Skeleton / Global Docs |
+| 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
 | 02 | Not started | Core Schema / Run Config / Debug Output Contract |
 | 03 | Not started | Visualization Renderer / Visual Vocabulary |
 | 04 | Not started | Apartment Fixtures / Target Adapter |

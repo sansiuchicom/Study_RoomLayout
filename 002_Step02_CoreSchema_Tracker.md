@@ -26,7 +26,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | # | 작업 | commit msg | 상태 | 완료일 |
 |---|---|---|:---:|---|
 | 4.1 | Step 01 docs archive + scaffold step02 modules + Plan/Tracker 추가 | `chore: archive step01 docs + scaffold step02 module structure` | [x] | 2026-05-04 |
-| 4.2 | 22개 schema dataclass 정의 (input/program/region-atom/candidate/growth/validation) | `feat: schema dataclasses (input/program/region-atom/candidate/growth/validation)` | [ ] | |
+| 4.2 | 22개 schema dataclass 정의 (input/program/region-atom/candidate/growth/validation) | `feat: schema dataclasses (input/program/region-atom/candidate/growth/validation)` | [x] | 2026-05-04 |
 | 4.3 | RunConfig + DebugArtifact + run folder contract | `feat: RunConfig + DebugArtifact + run folder contract` | [ ] | |
 | 4.4 | serialize.py + smoke tests + serialize round-trip 1개 | `feat: serialization helpers + smoke tests` | [ ] | |
 | 4.5 | step02 cleanup (Plan/Tracker 마무리, Progress Tracker 갱신) | `docs: step02 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
@@ -42,7 +42,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | # | 조건 | 결과 | 검증 시각 |
 |---|---|:---:|---|
 | DoD-1 | §3 모듈 트리 모두 존재 | [x] | 2026-05-04 (4.1 후 — 11 modules import OK) |
-| DoD-2 | 22개 schema dataclass 정의 (필드 + TBD 주석) | [ ] | |
+| DoD-2 | 22개 schema dataclass 정의 (필드 + TBD 주석) | [x] | 2026-05-04 (모두 default instantiation OK + cross-module compose OK) |
 | DoD-3 | `RunConfig` 정의 (S02-D4 6필드) | [ ] | |
 | DoD-4 | `DebugArtifact` + 17개 파일명 상수 + `run_folder()` 헬퍼 | [ ] | |
 | DoD-5 | `to_json` / `from_json` round-trip OK | [ ] | |
@@ -65,6 +65,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 2026-05-04 | Plan 작성 완료 ([002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)) |
 | 2026-05-04 | 이 Tracker 생성 |
 | 2026-05-04 | §4.1 완료 — Step 01 docs를 `legacy/step01/`로 git mv. `src/proto3/{config.py,debug.py}` + `src/proto3/schema/` (8 sub-modules) scaffold. 11개 모듈 모두 import OK |
+| 2026-05-04 | §4.2 완료 — 22개 schema dataclass 정의 (input 3 / program 4 / region_atom 5 / candidate 5 / growth 2 / validation 3). `from __future__ import annotations` + `dataclass` + `field`. Cross-module reference 동작 (growth → candidate, program). 22개 default instantiation 통과 |
 
 ---
 

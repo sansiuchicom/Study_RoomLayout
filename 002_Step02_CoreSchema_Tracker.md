@@ -27,7 +27,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 |---|---|---|:---:|---|
 | 4.1 | Step 01 docs archive + scaffold step02 modules + Plan/Tracker 추가 | `chore: archive step01 docs + scaffold step02 module structure` | [x] | 2026-05-04 |
 | 4.2 | 22개 schema dataclass 정의 (input/program/region-atom/candidate/growth/validation) | `feat: schema dataclasses (input/program/region-atom/candidate/growth/validation)` | [x] | 2026-05-04 |
-| 4.3 | RunConfig + DebugArtifact + run folder contract | `feat: RunConfig + DebugArtifact + run folder contract` | [ ] | |
+| 4.3 | RunConfig + DebugArtifact + run folder contract | `feat: RunConfig + DebugArtifact + run folder contract` | [x] | 2026-05-04 |
 | 4.4 | serialize.py + smoke tests + serialize round-trip 1개 | `feat: serialization helpers + smoke tests` | [ ] | |
 | 4.5 | step02 cleanup (Plan/Tracker 마무리, Progress Tracker 갱신) | `docs: step02 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
 
@@ -43,8 +43,8 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 |---|---|:---:|---|
 | DoD-1 | §3 모듈 트리 모두 존재 | [x] | 2026-05-04 (4.1 후 — 11 modules import OK) |
 | DoD-2 | 22개 schema dataclass 정의 (필드 + TBD 주석) | [x] | 2026-05-04 (모두 default instantiation OK + cross-module compose OK) |
-| DoD-3 | `RunConfig` 정의 (S02-D4 6필드) | [ ] | |
-| DoD-4 | `DebugArtifact` + 17개 파일명 상수 + `run_folder()` 헬퍼 | [ ] | |
+| DoD-3 | `RunConfig` 정의 (S02-D4 6필드) | [x] | 2026-05-04 (default + override + atom defaults 600/300/800 검증) |
+| DoD-4 | `DebugArtifact` + 17개 파일명 상수 + `run_folder()` 헬퍼 | [x] | 2026-05-04 (15 JSON distinct + SVG prefix/suffix + run_folder + stage_svg_filename) |
 | DoD-5 | `to_json` / `from_json` round-trip OK | [ ] | |
 | DoD-6 | `pytest -q` 모두 통과 | [ ] | |
 | DoD-7 | `pip install -e .` 회귀 없음 | [x] | 2026-05-04 (4.1 후 — 모든 새 모듈 import OK) |
@@ -66,6 +66,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 2026-05-04 | 이 Tracker 생성 |
 | 2026-05-04 | §4.1 완료 — Step 01 docs를 `legacy/step01/`로 git mv. `src/proto3/{config.py,debug.py}` + `src/proto3/schema/` (8 sub-modules) scaffold. 11개 모듈 모두 import OK |
 | 2026-05-04 | §4.2 완료 — 22개 schema dataclass 정의 (input 3 / program 4 / region_atom 5 / candidate 5 / growth 2 / validation 3). `from __future__ import annotations` + `dataclass` + `field`. Cross-module reference 동작 (growth → candidate, program). 22개 default instantiation 통과 |
+| 2026-05-04 | §4.3 완료 — `RunConfig` (6필드, default 모두 명시) + `DebugArtifact` + 15 JSON 파일명 상수 + `STAGE_SVG_PREFIX/SUFFIX` + `run_folder(run_id, base)` + `stage_svg_filename(stage_num, name)`. 모든 contract 검증 통과 |
 
 ---
 

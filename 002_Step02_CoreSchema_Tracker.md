@@ -28,7 +28,7 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 4.1 | Step 01 docs archive + scaffold step02 modules + Plan/Tracker 추가 | `chore: archive step01 docs + scaffold step02 module structure` | [x] | 2026-05-04 |
 | 4.2 | 22개 schema dataclass 정의 (input/program/region-atom/candidate/growth/validation) | `feat: schema dataclasses (input/program/region-atom/candidate/growth/validation)` | [x] | 2026-05-04 |
 | 4.3 | RunConfig + DebugArtifact + run folder contract | `feat: RunConfig + DebugArtifact + run folder contract` | [x] | 2026-05-04 |
-| 4.4 | serialize.py + smoke tests + serialize round-trip 1개 | `feat: serialization helpers + smoke tests` | [ ] | |
+| 4.4 | serialize.py + smoke tests + serialize round-trip 1개 | `feat: serialization helpers + smoke tests` | [x] | 2026-05-04 |
 | 4.5 | step02 cleanup (Plan/Tracker 마무리, Progress Tracker 갱신) | `docs: step02 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → (Step 종료) merge --no-ff to main.
@@ -45,8 +45,8 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | DoD-2 | 22개 schema dataclass 정의 (필드 + TBD 주석) | [x] | 2026-05-04 (모두 default instantiation OK + cross-module compose OK) |
 | DoD-3 | `RunConfig` 정의 (S02-D4 6필드) | [x] | 2026-05-04 (default + override + atom defaults 600/300/800 검증) |
 | DoD-4 | `DebugArtifact` + 17개 파일명 상수 + `run_folder()` 헬퍼 | [x] | 2026-05-04 (15 JSON distinct + SVG prefix/suffix + run_folder + stage_svg_filename) |
-| DoD-5 | `to_json` / `from_json` round-trip OK | [ ] | |
-| DoD-6 | `pytest -q` 모두 통과 | [ ] | |
+| DoD-5 | `to_json` / `from_json` round-trip OK | [x] | 2026-05-04 (BuildingInput full round-trip + RunConfig round-trip + missing-key default) |
+| DoD-6 | `pytest -q` 모두 통과 | [x] | 2026-05-04 (9 passed) |
 | DoD-7 | `pip install -e .` 회귀 없음 | [x] | 2026-05-04 (4.1 후 — 모든 새 모듈 import OK) |
 | DoD-8 | Step 01 docs `legacy/step01/`로 이동됨 | [x] | 2026-05-04 (`git mv` 사용 — history 보존) |
 | DoD-9 | `000_Progress_Tracker.md` Step 02 완료로 갱신 | [ ] | |
@@ -67,14 +67,23 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 2026-05-04 | §4.1 완료 — Step 01 docs를 `legacy/step01/`로 git mv. `src/proto3/{config.py,debug.py}` + `src/proto3/schema/` (8 sub-modules) scaffold. 11개 모듈 모두 import OK |
 | 2026-05-04 | §4.2 완료 — 22개 schema dataclass 정의 (input 3 / program 4 / region_atom 5 / candidate 5 / growth 2 / validation 3). `from __future__ import annotations` + `dataclass` + `field`. Cross-module reference 동작 (growth → candidate, program). 22개 default instantiation 통과 |
 | 2026-05-04 | §4.3 완료 — `RunConfig` (6필드, default 모두 명시) + `DebugArtifact` + 15 JSON 파일명 상수 + `STAGE_SVG_PREFIX/SUFFIX` + `run_folder(run_id, base)` + `stage_svg_filename(stage_num, name)`. 모든 contract 검증 통과 |
+| 2026-05-04 | §4.4 완료 — `serialize.py` (to_dict, from_dict, _reconstruct, to_json, from_json). I-S02-1 발견 + 즉시 해결 (nested generic 재귀). `tests/test_smoke.py` 확장 (6개 테스트), `tests/test_serialize.py` 신설 (3개). **9 passed in 0.02s** |
 
 ---
 
 ## 4. 발견 이슈 / Plan 변경
 
-작업 중 Plan 갱신을 유발한 사항을 기록한다. 없으면 비워둠.
+작업 중 Plan 갱신을 유발한 사항을 기록한다.
 
-(없음)
+### I-S02-1. `_reconstruct`가 `list[tuple[float, float]]`의 안쪽 tuple을 처리 못함 (2026-05-04) — **해결**
+
+§4.4 첫 pytest에서 `test_building_input_round_trip` fail. `FloorInput.footprint: list[tuple[float, float]]`가 round-trip 후 `list[list[float]]`로 됨.
+
+원인: `_reconstruct`의 list 처리가 inner type을 dataclass인 경우만 재귀했고, tuple 같은 nested generic은 그냥 `list(value)` 반환.
+
+**수정**: list 처리 시 항상 `_reconstruct(args[0], v)` 재귀. tuple도 동일하게 element 재귀. 한 번에 list[Dataclass], list[tuple], list[list[X]], tuple[Dataclass] 모두 동작.
+
+→ 9 passed.
 
 ---
 

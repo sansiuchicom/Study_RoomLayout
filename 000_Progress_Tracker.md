@@ -29,19 +29,19 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 01 complete. Ready for Step 02 kickoff.
+Step 02 complete. Ready for Step 03 kickoff.
 ```
 
 Current Step:
 
 ```text
-Step 01. Project Skeleton / Global Docs
+Step 02. Core Schema / Run Config / Debug Output Contract
 ```
 
 Current Step status:
 
 ```text
-Completed, awaiting Step 02 kickoff.
+Completed, awaiting Step 03 kickoff.
 ```
 
 ---
@@ -60,14 +60,16 @@ Global docs:
 Active Step files:
 
 ```text
-001_Step01_ProjectSkeleton_Plan.md     (Completed; pending move to legacy/step01/ at Step 02 kickoff)
-001_Step01_ProjectSkeleton_Tracker.md  (Completed; pending move to legacy/step01/ at Step 02 kickoff)
+002_Step02_CoreSchema_Plan.md     (Completed; pending move to legacy/step02/ at Step 03 kickoff)
+002_Step02_CoreSchema_Tracker.md  (Completed; pending move to legacy/step02/ at Step 03 kickoff)
 ```
+
+Step 01 docs archived to legacy/step01/ (during Step 02 P5 #1).
 
 Next Step files to create:
 
 ```text
-TBD at Step 02 kickoff (e.g., 002_Step02_CoreSchema_Plan.md, 002_Step02_CoreSchema_Tracker.md)
+TBD at Step 03 kickoff (e.g., 003_Step03_Visualization_Plan.md, 003_Step03_Visualization_Tracker.md)
 ```
 
 ---
@@ -103,11 +105,15 @@ Completed:
 Immediate next action:
 
 ```text
-Step 02 kickoff: create 002_Step02_CoreSchema_Plan.md + Tracker.
-Apply new branch/commit workflow (see memory: feedback_branch_commit_workflow):
-  - checkout new branch (e.g., step02-core-schema)
+Step 03 kickoff: create 003_Step03_Visualization_Plan.md + Tracker.
+Apply D015/D016 workflow (now codified globally; first applied in Step 02):
+  - checkout new branch (e.g., step03-visualization)
   - commit per Plan §4 work item
   - merge --no-ff into main, then delete branch
+
+Step 02 introduced 22 schema dataclasses, RunConfig, DebugArtifact +
+17 filename constants, and serialize.py round-trip. Step 03 will add
+the SVG-first visualization renderer (D013) and consume these schemas.
 ```
 
 Step 01 should cover:
@@ -146,7 +152,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | Step | Status | Notes |
 |---:|---|---|
 | 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
-| 02 | Not started | Core Schema / Run Config / Debug Output Contract |
+| 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Not started | Visualization Renderer / Visual Vocabulary |
 | 04 | Not started | Apartment Fixtures / Target Adapter |
 | 05 | Not started | Geometry Kernel / Atom Resolution Commitments |

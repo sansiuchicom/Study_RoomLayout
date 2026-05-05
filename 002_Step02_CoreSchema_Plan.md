@@ -470,3 +470,4 @@ push 시점은 사용자 확인 후.
 |---|---|
 | 2026-05-04 | 초기 작성. §0–§8. 결정 S02-D1~D12 합의. Plan §A 생략 (D016/S02-D7 첫 적용). |
 | 2026-05-04 | RunConfig 확장 우려 의논 — S02-D4에 확장 정책 단락 추가. §4.4 `from_dict` 코드를 missing-key default 처리로 보강 (backward-compat 보장). |
+| 2026-05-04 | Step 02 cleanup. DoD-1~11 모두 통과. P5 #1~#5 commit (5개) on `step02-core-schema`. branch는 main으로 `--no-ff` merge 후 삭제. |

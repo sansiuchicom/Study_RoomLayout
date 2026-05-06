@@ -85,3 +85,56 @@ def test_from_dict_strict_unknown_can_be_disabled() -> None:
         strict_unknown=False,
     )
     assert b.target_type == "apartment"
+
+
+def test_invalid_layout_candidate_round_trip() -> None:
+    """D018: a valid=False LayoutCandidate with failure_records round-trips.
+
+    Exercises the unified-output schema: failure_records (list of dataclass),
+    debug_artifact_refs (dict), validation_result (nested dataclass).
+    """
+    from proto3.schema import FailureRecord, LayoutCandidate, ValidationResult
+    from proto3.schema.serialize import from_json, to_json
+
+    lc1 = LayoutCandidate(
+        candidate_id="c-001",
+        valid=False,
+        validation_result=ValidationResult(
+            stage="post_repair",
+            valid=False,
+            hard_failures=["primary_door_boundary_missing"],
+        ),
+        failure_records=[
+            FailureRecord(
+                failure_type="primary_door_boundary_missing",
+                affected_space="bathroom_1",
+                detected_stage="stage_13",
+                evidence={"required_mm": 800, "actual_mm": 600},
+            ),
+        ],
+        debug_artifact_refs={"stage_13_svg": "outputs/debug_runs/r1/stage_13_final.svg"},
+    )
+    s = to_json(lc1)
+    lc2 = from_json(LayoutCandidate, s)
+    assert lc1 == lc2
+
+
+def test_from_dict_rejects_invalid_literal_value() -> None:
+    """D017: Literal-typed fields validate allowed values at deserialization.
+
+    Without this, `target_type: TargetType` (a Literal alias) would silently
+    accept "apartmnt" or any string — fixture typos would only surface much
+    later at Stage 00 gate.
+    """
+    with pytest.raises(ValueError) as exc:
+        from_dict(BuildingInput, {"target_type": "apartmnt", "floors": []})
+    assert "apartmnt" in str(exc.value)
+    assert "apartment" in str(exc.value)  # message lists allowed values
+
+    # Bypassing strict_unknown does NOT bypass Literal validation
+    with pytest.raises(ValueError):
+        from_dict(
+            BuildingInput,
+            {"target_type": "garage", "floors": []},
+            strict_unknown=False,
+        )

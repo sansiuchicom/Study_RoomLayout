@@ -529,21 +529,79 @@ Plan section structure (followed by Step 01):
 
 Tracker mirrors Plan §4 numbering 1:1 in its §1 checklist; automation depends on this.
 
-Step-close cleanup sequence:
+Step-close cleanup sequence (at the **closing** Step's final commit):
 
 1. Verify all Plan §4 items checked.
 2. Verify all DoD items checked.
 3. `git status` clean.
 4. Update `000_Progress_Tracker.md` (current step status, active files, step status table).
 5. Strip Plan §A.
-6. Move both Step files to `legacy/stepNN/` ([Pipeline Overview §16](000_Pipeline_Overview.md)).
-7. git commit per [D015](000_Architecture_Decisions.md).
+6. git commit per [D015](000_Architecture_Decisions.md), then `git merge --no-ff` to main and delete branch.
+
+Then at the **next** Step's kickoff §4.1 commit:
+
+7. `git mv` previous Step files to `legacy/stepNN/` ([Pipeline Overview §16](000_Pipeline_Overview.md)) together with the next Step's module scaffold.
 
 Reason:
 
 - Separates *decisions* (Plan, slow-changing, frozen on completion) from *progress* (Tracker, fast-changing, archived on completion). Mixing them makes both worse.
 - Plan §4 ↔ Tracker §1 numbering preserves traceability and enables automated execution.
 - Single-use Appendix avoids the "huge inline scaffolding lives forever in the repo" failure mode.
+- **Deferred archive (step 7)**: moving Plan/Tracker mid-cleanup creates a self-reference paradox — the cleanup checklist itself ends up under `legacy/`, and the closing Tracker would have to mark its own archival as "done" before the move. By archiving at the *next* Step's kickoff §4.1, the previous Step's docs stay accessible at repo root through the close, and the new Step's first commit naturally bundles "archive previous + scaffold current". Pattern validated across Step 01 → 02 → 03.
+
+---
+
+## D017. Strict Literal validation in schema deserialization
+
+Status: Accepted  
+Type: Replaceable implementation choice
+
+Decision:
+
+`from_dict` and `from_json` validate `Literal[...]`-typed fields against their allowed values at deserialization time. Out-of-range values raise `ValueError` immediately, not silently passing through to a later Stage gate.
+
+Reason:
+
+Python `typing.Literal` is a static-analysis hint with no runtime enforcement. `BuildingInput.target_type: TargetType = Literal["apartment", "house", "hotel", "warehouse", "office"]` was silently accepting `"apartmnt"` and any other string — a fixture typo would only surface much later at Stage 00. This violates the spirit of [S02-D13](legacy/step02/002_Step02_CoreSchema_Plan.md) ("strict input policy"). Validating Literal at deserialization fails fast, locally, with a clear error message.
+
+Scope:
+
+- Applies to all dataclass fields whose annotation is `Literal[...]` or `Literal[...] | None`.
+- Validation runs regardless of `strict_unknown`. The two policies are independent: `strict_unknown` controls *unknown keys*, D017 controls *invalid values* of known Literal-typed keys.
+- Does NOT introduce general schema runtime validation (no min/max, no regex, no required-field semantics beyond what S02-D13 already does). The framework remains schema-stub-first; Literal is the narrow case where the annotation already encodes the allowed set, so enforcing it costs nothing.
+
+Discovered: Step 03 review followups #5 (2026-05-06).
+
+---
+
+## D018. Stage 13 output assembly: unified LayoutCandidate (valid=True/False)
+
+Status: Accepted  
+Type: Architecture invariant
+
+Decision:
+
+Stage 13 emits a single dataclass — `LayoutCandidate` — for both valid and invalid candidates. The `valid: bool` field discriminates the two cases. There is no separate `InvalidCandidateReport` class.
+
+`LayoutCandidate` carries the union of fields needed by either case; failure-side fields default to empty/None and must be populated for `valid=False`:
+
+| Field | Type | Required when |
+|---|---|---|
+| `validation_result` | `ValidationResult \| None` | Post-repair Stage 13 result; populated whether valid or invalid |
+| `failure_records` | `list[FailureRecord]` | **Must be non-empty when `valid=False`** ([Pipeline Overview §9](000_Pipeline_Overview.md)) |
+| `debug_artifact_refs` | `dict[str, str]` | `{kind: path}` for debug SVG/JSON references |
+| `provenance` | `dict` | Search-path information (TBD typed) |
+| `output_artifacts` | `dict` | Final JSON/SVG output paths (TBD typed) |
+
+Reason:
+
+- The schema already encoded the unified-model intent: `LayoutCandidate.valid: bool = False` had been on the dataclass since Step 02. A separate `InvalidCandidateReport` would have made that field meaningless.
+- Consistency with [D009](000_Architecture_Decisions.md). Pre/post validation is unified in `ValidationResult.stage`. Splitting only the Stage 13 output across two classes would break the pattern.
+- The Search Orchestrator pseudo-flow ([Pipeline Overview §10](000_Pipeline_Overview.md)) reads `result.valid` and `result.failure_records` directly. Unified model means no isinstance / discriminated-union dispatch.
+- Valid candidates may legitimately carry partial failure information (e.g., resolved soft violations). Empty default `failure_records=[]` accommodates this without forcing the caller through Optional handling.
+- Pipeline Overview §9 Stage 13 narrative ("LayoutCandidate if valid, InvalidCandidateReport if invalid") was a *narrative* split, not a *data model* split. Narrative is updated to reflect the unified data model.
+
+Discovered: Step 03 review followups #6 (2026-05-06). The reviewer noted Pipeline §9 listed `InvalidCandidateReport` while the schema lacked any such class. Investigation showed the schema's `valid: bool` already implied unification; this decision codifies that alignment.
 
 ---
 
@@ -658,6 +716,12 @@ Step 01 set up the project skeleton. During execution, two workflow patterns eme
 - D015 (Per-Step branch + per-work-item commit + no-squash merge) — Step 01 itself was bundled into one `main` commit as an exception, since the convention was decided mid-Step-01.
 
 These patterns proved their value during Step 01 and would otherwise live only in session memory, invisible to anyone reading the global docs. Promoted to D015/D016 to make them auditable and durable.
+
+## H011. Deferred Plan/Tracker archive to next-Step kickoff (D016 amendment)
+
+Original D016 step 6 said "Move both Step files to `legacy/stepNN/`" as part of Step-close cleanup. In practice, doing the `git mv` mid-cleanup creates a self-reference paradox: the cleanup checklist itself ends up under `legacy/`, and the closing Tracker would have to mark its own archival before the move. Across Step 01, 02, 03 the actual practice was to defer the move to the next Step's §4.1 kickoff commit, where it bundles cleanly with "scaffold next-Step modules". The user codified this deferral on 2026-05-03.
+
+D016 wording was amended on 2026-05-06 (Step 03 review followups #4) to reflect the actual practice: cleanup steps 1–6 happen at Step-close; archive (step 7) happens at the *next* Step's kickoff §4.1. Documented after a reviewer flagged the inconsistency between D016 text and Progress Tracker statements.
 
 ---
 

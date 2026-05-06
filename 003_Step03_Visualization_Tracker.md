@@ -3,7 +3,7 @@
 Status: Completed
 Started: 2026-05-06
 Completed: 2026-05-06
-Branch: `step03-visualization` (pending merge to main)
+Branch: `step03-visualization` (merged into main via `--no-ff` at 22737ad, deleted)
 Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan.md)
 
 ---
@@ -54,7 +54,7 @@ Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan
 | DoD-9 | Step 02 docs moved to `legacy/step02/` via `git mv` | [x] | 2026-05-06 (§4.1) |
 | DoD-10 | `000_Progress_Tracker.md` updated (Step 03 → Done) | [x] | 2026-05-06 (§4.7) |
 | DoD-11 | All §4 commits land on `step03-visualization` branch | [x] | 2026-05-06 (7 commits 4.1~4.7) |
-| DoD-12 | `git merge --no-ff` to main, branch deleted | [ ] | — (pending — last step after this commit) |
+| DoD-12 | `git merge --no-ff` to main, branch deleted | [x] | 2026-05-06 (merge commit 22737ad; branch `step03-visualization` deleted; pushed to origin) |
 | DoD-13 | Notebook executes top-to-bottom + writes `outputs/notebooks/step03_viz_demo/<run_id>/minimal.svg` | [x] | 2026-05-06 (사용자 VSCode 실행 후 SVG 생성 확인 — `outputs/notebooks/step03_viz_demo/20260506T125041/minimal.svg`) |
 | DoD-14 | `.gitattributes` + `pyproject.toml [project.optional-dependencies] dev` set up | [x] | 2026-05-06 (§4.6) |
 
@@ -100,6 +100,14 @@ S03-D13 Plan에서 "outputs/는 이미 gitignored"라고 단정했으나, 실제
 8000×6000mm를 100mm 단위로 자르면 80×60 격자. 800px display에서 격자가 px 한두 개 간격이라 회색 단색처럼 보임. Footprint outline (stroke=40mm)도 grid line과 좌표 정렬되어 이중선처럼 보이는 효과 발생.
 
 **판단**: fine styling 영역. Plan §5 Def-5에 "fine styling refinements"로 이미 deferred 처리되어 있음. Step 03 시점에는 기능적 정확성 (12 layer, polygon, grid 모두 그려짐)으로 OK 판단. major/minor grid (1000mm 진하게 + 100mm 옅게) 등은 추후 visual polish 후속.
+
+### I-S03-4. 노트북 cell outputs가 stripped 안 된 채 §4.6 commit에 들어감 (2026-05-06, 사후 리뷰 #1) — **해결**
+
+§4.6 commit `f321d5d`의 `notebooks/step03_viz_demo.ipynb`에 cell 1~4의 `execution_count` (1~4) + `outputs` (각각 1개씩, base64-inlined SVG 등 포함)가 그대로 들어감. S03-D14는 strip on commit 정책인데 활성화 안 됨.
+
+**원인**: `.gitattributes`에 `*.ipynb filter=nbstripout`은 등록했지만, `nbstripout --install`은 사용자가 실행 안 함. 이 명령은 `.git/config`에 filter 정의를 등록하는 단계로, `.gitattributes`만으로는 git이 filter를 호출하지 못함. Plan §4.6 prereq 1줄에만 적혀 있었고 강조가 약했음.
+
+**해결** (review followups #3): `nbstripout` 명령으로 cell outputs strip한 버전 commit. Plan §4.6에 **CRITICAL** 경고 추가 — "각 contributor는 clone마다 한 번 `nbstripout --install` 실행 필수". 이전 commit의 cell outputs는 git history에 남아있음 (force-push 안 함; 차후 필요 시 git-filter-repo로 정리 가능).
 
 ---
 

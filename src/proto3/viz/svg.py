@@ -7,6 +7,7 @@ Coordinates: mm in, mm in viewBox; Y axis flipped (math-y up → SVG-y down).
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from proto3.schema.input import BuildingInput
 from proto3.viz.palette import (
@@ -129,5 +130,6 @@ def render(
          slots, seeds, grown, doors, failure)
 
     ET.indent(svg, space="  ")
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     ET.ElementTree(svg).write(out_path, encoding="utf-8", xml_declaration=True)
     return out_path

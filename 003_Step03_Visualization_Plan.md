@@ -173,6 +173,7 @@ Each item = 1 commit. Plan §4 numbering ↔ Tracker §1 numbering 1:1 ↔ §8 c
 
 - Add `pyproject.toml` `[project.optional-dependencies] dev = ["jupyter", "nbstripout"]` (S03-D15).
 - Add `.gitattributes` at repo root with single line: `*.ipynb filter=nbstripout` (S03-D14).
+- **CRITICAL**: each contributor must run `nbstripout --install` **once per local clone**. The `.gitattributes` filter is a no-op until `nbstripout` is registered in `.git/config` via that command. Without it, cell outputs (including base64-inlined SVGs) WILL be committed. This was missed during Step 03 §4.6 itself (see Tracker I-S03-4) and fixed in review followups #3.
 - Write `notebooks/step03_viz_demo.ipynb` (S03-D12) cells:
   1. **Markdown**: title `# Step 03 Viz Demo`, purpose, prerequisites (`pip install -e ".[dev]"` + `nbstripout --install` once + run from repo root).
   2. **Code (root resolver)**: defines `_find_repo_root(start)` that walks up from `start.resolve()` until a directory containing `pyproject.toml` is found; binds `ROOT = _find_repo_root(Path.cwd())`. Robust to VSCode Jupyter (cwd = notebook dir) and CLI launch from repo root alike.

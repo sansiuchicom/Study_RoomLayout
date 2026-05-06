@@ -551,6 +551,29 @@ Reason:
 
 ---
 
+## D017. Strict Literal validation in schema deserialization
+
+Status: Accepted  
+Type: Replaceable implementation choice
+
+Decision:
+
+`from_dict` and `from_json` validate `Literal[...]`-typed fields against their allowed values at deserialization time. Out-of-range values raise `ValueError` immediately, not silently passing through to a later Stage gate.
+
+Reason:
+
+Python `typing.Literal` is a static-analysis hint with no runtime enforcement. `BuildingInput.target_type: TargetType = Literal["apartment", "house", "hotel", "warehouse", "office"]` was silently accepting `"apartmnt"` and any other string — a fixture typo would only surface much later at Stage 00. This violates the spirit of [S02-D13](legacy/step02/002_Step02_CoreSchema_Plan.md) ("strict input policy"). Validating Literal at deserialization fails fast, locally, with a clear error message.
+
+Scope:
+
+- Applies to all dataclass fields whose annotation is `Literal[...]` or `Literal[...] | None`.
+- Validation runs regardless of `strict_unknown`. The two policies are independent: `strict_unknown` controls *unknown keys*, D017 controls *invalid values* of known Literal-typed keys.
+- Does NOT introduce general schema runtime validation (no min/max, no regex, no required-field semantics beyond what S02-D13 already does). The framework remains schema-stub-first; Literal is the narrow case where the annotation already encodes the allowed set, so enforcing it costs nothing.
+
+Discovered: Step 03 review followups #5 (2026-05-06).
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.

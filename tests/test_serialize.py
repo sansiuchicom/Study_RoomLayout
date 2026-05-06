@@ -85,3 +85,24 @@ def test_from_dict_strict_unknown_can_be_disabled() -> None:
         strict_unknown=False,
     )
     assert b.target_type == "apartment"
+
+
+def test_from_dict_rejects_invalid_literal_value() -> None:
+    """D017: Literal-typed fields validate allowed values at deserialization.
+
+    Without this, `target_type: TargetType` (a Literal alias) would silently
+    accept "apartmnt" or any string — fixture typos would only surface much
+    later at Stage 00 gate.
+    """
+    with pytest.raises(ValueError) as exc:
+        from_dict(BuildingInput, {"target_type": "apartmnt", "floors": []})
+    assert "apartmnt" in str(exc.value)
+    assert "apartment" in str(exc.value)  # message lists allowed values
+
+    # Bypassing strict_unknown does NOT bypass Literal validation
+    with pytest.raises(ValueError):
+        from_dict(
+            BuildingInput,
+            {"target_type": "garage", "floors": []},
+            strict_unknown=False,
+        )

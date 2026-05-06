@@ -16,7 +16,7 @@ import json
 import types
 from dataclasses import fields, is_dataclass
 from pathlib import Path
-from typing import Any, get_args, get_origin, get_type_hints
+from typing import Any, Literal, get_args, get_origin, get_type_hints
 
 
 def to_dict(obj: Any) -> Any:
@@ -94,7 +94,14 @@ def _reconstruct(type_hint: Any, value: Any, *, strict_unknown: bool = True) -> 
             if arg is type(None):
                 continue
             return _reconstruct(arg, value, strict_unknown=strict_unknown)
-    # primitive / dict / str / int / Literal / unknown
+    # Literal[...] — strict allowed-values check (D017)
+    if origin is Literal:
+        if value not in args:
+            raise ValueError(
+                f"value {value!r} not in allowed Literal values {list(args)!r}"
+            )
+        return value
+    # primitive / dict / str / int / unknown
     return value
 
 

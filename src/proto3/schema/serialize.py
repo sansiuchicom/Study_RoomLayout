@@ -4,8 +4,11 @@ Free functions, not methods (SRP — dataclass = data, helper = policy).
 Single place that handles custom types as they are introduced in later
 Steps (Polygon/Enum/datetime/numpy etc.).
 
-Backward-compat: from_dict treats missing keys as dataclass default
-(S02-D4 RunConfig extension policy applies to all schemas).
+from_dict input policy (S02-D13):
+  - non-dict `data` for a dataclass `cls` -> TypeError
+  - unknown keys in `data` -> ValueError (set strict_unknown=False to allow)
+  - missing keys (cls field absent in data) -> dataclass default kicks in
+    (S02-D4 backward-compat path; the only silent-fallback case)
 """
 from __future__ import annotations
 
@@ -31,14 +34,27 @@ def to_dict(obj: Any) -> Any:
     return obj
 
 
-def from_dict(cls: type, data: Any) -> Any:
-    """Reverse of to_dict using type hints.
+def from_dict(cls: type, data: Any, *, strict_unknown: bool = True) -> Any:
+    """Reverse of to_dict using type hints. See module docstring for input policy.
 
-    Missing keys fall back to the dataclass default (S02-D4 extension policy)
-    so older serialized files remain readable after schema additions.
+    strict_unknown=False is the escape hatch for the rare case where a field
+    was *removed* from the schema and old serialized files must still load.
+    Backward-compat for *added* fields needs no opt-out — that is the
+    missing-key default path.
     """
     if not is_dataclass(cls):
         return data
+    if not isinstance(data, dict):
+        raise TypeError(
+            f"{cls.__name__} expects dict for from_dict, got {type(data).__name__}"
+        )
+    known = {f.name for f in fields(cls)}
+    if strict_unknown:
+        unknown = set(data) - known
+        if unknown:
+            raise ValueError(
+                f"unknown keys for {cls.__name__}: {sorted(unknown)}"
+            )
     try:
         hints = get_type_hints(cls)
     except Exception:
@@ -46,37 +62,39 @@ def from_dict(cls: type, data: Any) -> Any:
     kwargs: dict[str, Any] = {}
     for f in fields(cls):
         if f.name in data:
-            kwargs[f.name] = _reconstruct(hints.get(f.name, f.type), data[f.name])
+            kwargs[f.name] = _reconstruct(
+                hints.get(f.name, f.type), data[f.name], strict_unknown=strict_unknown
+            )
         # else: dataclass default kicks in — backward-compat for new fields
     return cls(**kwargs)
 
 
-def _reconstruct(type_hint: Any, value: Any) -> Any:
+def _reconstruct(type_hint: Any, value: Any, *, strict_unknown: bool = True) -> Any:
     """Reconstruct one value given its type hint."""
     if value is None:
         return None
     # nested dataclass
     if isinstance(type_hint, type) and is_dataclass(type_hint):
-        return from_dict(type_hint, value)
+        return from_dict(type_hint, value, strict_unknown=strict_unknown)
     origin = get_origin(type_hint)
     args = get_args(type_hint)
     # list[T] — recurse into element type so list[tuple[...]] / list[Dataclass] both work
     if origin is list and isinstance(value, list):
         if args:
-            return [_reconstruct(args[0], v) for v in value]
+            return [_reconstruct(args[0], v, strict_unknown=strict_unknown) for v in value]
         return list(value)
     # tuple[T, ...] — JSON has no tuple; list incoming, recurse on element type
     if origin is tuple and isinstance(value, list):
         if args:
-            return tuple(_reconstruct(args[0], v) for v in value)
+            return tuple(_reconstruct(args[0], v, strict_unknown=strict_unknown) for v in value)
         return tuple(value)
     # X | None / X | Y  (PEP 604 union)
     if origin is types.UnionType:
         for arg in args:
             if arg is type(None):
                 continue
-            return _reconstruct(arg, value)
-    # primitive / dict / str / int / unknown
+            return _reconstruct(arg, value, strict_unknown=strict_unknown)
+    # primitive / dict / str / int / Literal / unknown
     return value
 
 
@@ -89,10 +107,10 @@ def to_json(obj: Any, path: Path | None = None, *, indent: int = 2) -> str:
     return s
 
 
-def from_json(cls: type, source: str | Path) -> Any:
+def from_json(cls: type, source: str | Path, *, strict_unknown: bool = True) -> Any:
     """Deserialize from JSON string or file Path.
 
     Pass a Path to read from disk; pass a str for an in-memory JSON document.
     """
     text = source.read_text(encoding="utf-8") if isinstance(source, Path) else source
-    return from_dict(cls, json.loads(text))
+    return from_dict(cls, json.loads(text), strict_unknown=strict_unknown)

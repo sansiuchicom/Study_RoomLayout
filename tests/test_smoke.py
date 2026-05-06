@@ -104,3 +104,27 @@ def test_run_folder_and_stage_svg_filename() -> None:
     assert run_folder("r42", base=Path("/tmp/dbg")) == Path("/tmp/dbg/r42")
     assert stage_svg_filename(8, "spine") == "stage_08_spine.svg"
     assert stage_svg_filename(13, "final") == "stage_13_final.svg"
+
+
+def test_assert_target_consistent_passes_when_equal() -> None:
+    """S02-D14: matching RunConfig and BuildingInput target_type is the happy path."""
+    from proto3.config import RunConfig, assert_target_consistent
+    from proto3.schema import BuildingInput
+
+    rc = RunConfig(target_type="apartment")
+    bi = BuildingInput(target_type="apartment")
+    assert_target_consistent(rc, bi)  # no raise
+
+
+def test_assert_target_consistent_raises_on_mismatch() -> None:
+    """S02-D14: mismatch must raise — silent fallthrough is the bug being fixed."""
+    import pytest
+
+    from proto3.config import RunConfig, assert_target_consistent
+    from proto3.schema import BuildingInput
+
+    rc = RunConfig(target_type="apartment")
+    bi = BuildingInput(target_type="hotel")
+    with pytest.raises(ValueError) as exc:
+        assert_target_consistent(rc, bi)
+    assert "apartment" in str(exc.value) and "hotel" in str(exc.value)

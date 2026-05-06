@@ -6,6 +6,12 @@ compatible (D003, S02-D10): BuildingInput.floors is always a list.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
+
+# S02-D14: canonical target type alias. Both BuildingInput.target_type (data
+# identity) and RunConfig.target_type (run-time intent) use this; Stage 00
+# enforces equality via proto3.config.assert_target_consistent.
+TargetType = Literal["apartment", "house", "hotel", "warehouse", "office"]
 
 
 @dataclass
@@ -30,7 +36,7 @@ class FloorInput:
 @dataclass
 class BuildingInput:
     """Multi-floor container. Apartment uses len(floors) == 1 (D003, S02-D10)."""
-    target_type: str = "apartment"  # apartment | house | hotel | warehouse | office
+    target_type: TargetType = "apartment"  # canonical alias above (S02-D14)
     floors: list[FloorInput] = field(default_factory=list)
     program_request: dict = field(default_factory=dict)  # raw — typed in Step 06
     persistent_anchors: list[PersistentAnchor] = field(default_factory=list)

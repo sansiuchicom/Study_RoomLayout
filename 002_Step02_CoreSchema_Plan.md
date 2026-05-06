@@ -61,6 +61,8 @@ Cross-reference:
 | S02-D10 | apartment-first 호환 | `BuildingInput`은 `floors: list[FloorInput]` 형태로 multi-floor 호환. apartment용은 `len(floors) == 1` 케이스 ([D003](000_Architecture_Decisions.md)) | "core schema must support BuildingInput, FloorInput from beginning" 원칙 충족 |
 | S02-D11 | type forward reference | 필요 시 `from __future__ import annotations` 사용 (string-based type hint) | 같은 모듈 내 / 순환 참조 회피 |
 | S02-D12 | Step 01 docs 이동 시점 | Step 02의 첫 commit에 포함 (P5 #1) | Step 01 cleanup 절차 ([D016](000_Architecture_Decisions.md))의 마지막 단계. 같은 branch에서 처리하는 게 자연스러움 |
+| S02-D13 | `from_dict` 입력 검증 정책 | (a) `data`가 dict 아닌 경우 `TypeError`. (b) 알려지지 않은 key는 기본값 `strict_unknown=True`로 `ValueError`. (c) cls에 있고 data에 없는 missing key는 그대로 dataclass default fallback (S02-D4 backward-compat 유지). `strict_unknown=False`는 *필드 제거* 시점의 escape hatch | (a)/(b)는 backward-compat과 무관 — 정책을 한 if문에 묶어두면 typo·잘못된 호출이 silent하게 빈 객체를 만든다. (c)만 backward-compat 경로 |
+| S02-D14 | `target_type` canonical source | `Literal["apartment","house","hotel","warehouse","office"]` 별칭 `TargetType`을 [`schema/input.py`](src/proto3/schema/input.py)에 정의. `BuildingInput.target_type` (데이터 정체성)과 `RunConfig.target_type` (런타임 의도) 둘 다 `TargetType`. 일치 강제는 [`proto3.config.assert_target_consistent`](src/proto3/config.py)가 Stage 00에서 수행 | 둘은 의미가 달라 한쪽만 두면 fixture 로드 *전*에 target을 알 수 없거나, 데이터가 자기 정체성을 못 가짐. 둘 다 두되 typed Literal로 typo 차단 + Stage 00 invariant로 silent mismatch 차단 |
 
 ### S02-D4 — RunConfig 필드 (확정)
 
@@ -472,3 +474,4 @@ push 시점은 사용자 확인 후.
 | 2026-05-04 | RunConfig 확장 우려 의논 — S02-D4에 확장 정책 단락 추가. §4.4 `from_dict` 코드를 missing-key default 처리로 보강 (backward-compat 보장). |
 | 2026-05-04 | Step 02 cleanup. DoD-1~11 모두 통과. P5 #1~#5 commit (5개) on `step02-core-schema`. branch는 main으로 `--no-ff` merge 후 삭제. |
 | 2026-05-06 | 사후 리뷰 후속 #1 (docs only). `Status: Active → Completed`. DoD-2 표기를 "22 schema + RunConfig/DebugArtifact는 DoD-3/4"로 정리(§0/§1 일관). `__init__.py` future export 주석에서 `RunConfig`/`DebugArtifact` 위치를 `.config`/`.debug`로 정정. |
+| 2026-05-06 | 사후 리뷰 후속 #2 (코드 + §2 결정). S02-D13 추가 — `from_dict`에 입력 타입/unknown key strict 검증 (missing key는 기존 default fallback 유지). S02-D14 추가 — `TargetType` Literal 별칭, `BuildingInput.target_type`/`RunConfig.target_type` 둘 다 `TargetType`, `assert_target_consistent()` 헬퍼로 Stage 00 invariant 명시. 테스트 5개 추가, 14 passed. |

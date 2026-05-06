@@ -110,4 +110,5 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 날짜 | 변경 |
 |---|---|
 | 2026-05-04 | 초기 생성. Plan §4 P5 5개 작업 + DoD 11개 + cleanup 8단계. |
-| 2026-05-06 | 사후 리뷰 후속. `Status: In progress → Completed`. Plan/Tracker stale status 정정 + Plan §0/§1 22 vs 24 표기 정리. (코드 변경 — S02-D13/D14 — 은 별도 commit/Plan §변경이력 entry 참조) |
+| 2026-05-06 | 사후 리뷰 후속 #1. `Status: In progress → Completed`. Plan/Tracker stale status 정정 + Plan §0/§1 22 vs 24 표기 정리. |
+| 2026-05-06 | 사후 리뷰 후속 #2. S02-D13/D14 코드/테스트 반영 — `from_dict` strict 정책, `TargetType` Literal, `assert_target_consistent()`. 14 passed. 자세한 결정은 [Plan §2](002_Step02_CoreSchema_Plan.md) 참조. |

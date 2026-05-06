@@ -1,4 +1,4 @@
-"""RunConfig — runtime configuration (S02-D4).
+"""RunConfig — runtime configuration (S02-D4) + Stage 00 consistency check (S02-D14).
 
 Minimal start (6 fields). Extension policy: new fields require defaults
 (backward-compat) and Plan §2 decision-ID record. See
@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .schema.input import BuildingInput, TargetType
+
 
 @dataclass
 class RunConfig:
@@ -17,9 +19,22 @@ class RunConfig:
     All new fields MUST have defaults (S02-D4 extension policy) so that
     existing call sites and saved run_config.json files remain valid.
     """
-    target_type: str = "apartment"        # apartment | house | hotel | warehouse | office (D003)
+    target_type: TargetType = "apartment"  # run-time intent; must match BuildingInput.target_type at Stage 00 (S02-D14)
     atom_size_mm: int = 600                # default layout atom side (D006, Pipeline §8)
     min_atom_side_mm: int = 300            # below this is sliver (D006, Pipeline §8)
     door_min_boundary_mm: int = 800        # door-capable shared boundary minimum (D006, Pipeline §8)
     random_seed: int | None = None         # reproducibility; None = nondeterministic
     debug_run_id: str | None = None        # outputs/debug_runs/<this>/; None = auto-generate
+
+
+def assert_target_consistent(run_config: RunConfig, building: BuildingInput) -> None:
+    """Enforce RunConfig.target_type == BuildingInput.target_type at Stage 00 (S02-D14).
+
+    The two carry the same value but distinct meanings (run intent vs data
+    identity), so a mismatch is a real error — not a silent default.
+    """
+    if run_config.target_type != building.target_type:
+        raise ValueError(
+            f"target_type mismatch: RunConfig={run_config.target_type!r}, "
+            f"BuildingInput={building.target_type!r}"
+        )

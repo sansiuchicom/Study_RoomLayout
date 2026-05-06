@@ -1,4 +1,6 @@
-"""Serialization round-trip + backward-compat tests (S02-D3, S02-D6)."""
+"""Serialization round-trip + backward-compat tests (S02-D3, S02-D6, S02-D13)."""
+import pytest
+
 from proto3.schema import BuildingInput, FloorInput, PersistentAnchor
 from proto3.schema.serialize import from_dict, from_json, to_json
 
@@ -46,3 +48,40 @@ def test_runconfig_round_trip_and_defaults() -> None:
     c3 = from_dict(RunConfig, {"target_type": "warehouse"})
     assert c3.target_type == "warehouse"
     assert c3.atom_size_mm == 600  # default kept
+
+
+def test_from_dict_rejects_non_dict() -> None:
+    """S02-D13: non-dict data for a dataclass cls must raise TypeError.
+
+    Previously `from_dict(BuildingInput, [])` returned an empty BuildingInput
+    silently because `'name' in []` is always False — every field fell back
+    to default. That is a typo/contract bug, not backward-compat.
+    """
+    with pytest.raises(TypeError):
+        from_dict(BuildingInput, [])
+    with pytest.raises(TypeError):
+        from_dict(BuildingInput, "apartment")
+    with pytest.raises(TypeError):
+        from_dict(BuildingInput, 42)
+
+
+def test_from_dict_rejects_unknown_keys_by_default() -> None:
+    """S02-D13: unknown keys raise ValueError so typos are caught early."""
+    with pytest.raises(ValueError) as exc:
+        from_dict(BuildingInput, {"target_typo": "apartment"})
+    assert "target_typo" in str(exc.value)
+
+
+def test_from_dict_strict_unknown_can_be_disabled() -> None:
+    """S02-D13: strict_unknown=False is the escape hatch for removed fields.
+
+    Use only when an old serialized file has a field that the schema no
+    longer defines. Added fields (the common backward-compat case) need no
+    opt-out — that is the missing-key default path.
+    """
+    b = from_dict(
+        BuildingInput,
+        {"target_type": "apartment", "removed_field": 99},
+        strict_unknown=False,
+    )
+    assert b.target_type == "apartment"

@@ -26,7 +26,7 @@ Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan
 |---|---|---|:---:|---|
 | 4.1 | Step 02 docs archive + scaffold viz module + Plan/Tracker 추가 | `chore: archive step02 docs + scaffold step03 module structure` | [x] | 2026-05-06 |
 | 4.2 | Visual vocabulary palette + role_to_palette_key + corridor=grey | `feat: visual vocabulary v1 (12-layer order + palette + role mapping)` | [x] | 2026-05-06 |
-| 4.3 | Minimal apartment fixture (`fixtures/apartment_minimal.json`, program_request dict 형식) | `feat: minimal apartment fixture (S03-D10)` | [ ] | — |
+| 4.3 | Minimal apartment fixture (`fixtures/apartment_minimal.json`, program_request dict 형식) | `feat: minimal apartment fixture (S03-D10)` | [x] | 2026-05-06 |
 | 4.4 | SVG renderer core (12 layers, footprint + grid, Y-flip) | `feat: SVG renderer core (12-layer stable order, footprint+grid)` | [ ] | — |
 | 4.5 | Smoke test (4 assertions covering DoD-4/6) | `feat: viz smoke test (12-layer stable order verified)` | [ ] | — |
 | 4.6 | Notebook + .gitattributes + dev deps (nbstripout 정책 포함) | `feat: step03 viz demo notebook + nbstripout policy + dev deps` | [ ] | — |

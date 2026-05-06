@@ -12,6 +12,7 @@ from proto3.viz.palette import (
     LAYER_ORDER,
     role_to_palette_key,
 )
+from proto3.viz.svg import render
 
 __all__ = [
     "GRID_SPACING_MM",
@@ -19,5 +20,6 @@ __all__ = [
     "LABEL_FONT_SIZE_RATIO",
     "LAYER_COLORS",
     "LAYER_ORDER",
+    "render",
     "role_to_palette_key",
 ]

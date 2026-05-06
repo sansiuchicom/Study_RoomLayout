@@ -29,19 +29,19 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 02 complete. Ready for Step 03 kickoff.
+Step 03 complete. Ready for Step 04 kickoff.
 ```
 
 Current Step:
 
 ```text
-Step 02. Core Schema / Run Config / Debug Output Contract
+Step 03. Visualization Renderer / Visual Vocabulary
 ```
 
 Current Step status:
 
 ```text
-Completed, awaiting Step 03 kickoff.
+Completed, awaiting Step 04 kickoff.
 ```
 
 ---
@@ -60,16 +60,17 @@ Global docs:
 Active Step files:
 
 ```text
-002_Step02_CoreSchema_Plan.md     (Completed; pending move to legacy/step02/ at Step 03 kickoff)
-002_Step02_CoreSchema_Tracker.md  (Completed; pending move to legacy/step02/ at Step 03 kickoff)
+003_Step03_Visualization_Plan.md     (Completed; pending move to legacy/step03/ at Step 04 kickoff)
+003_Step03_Visualization_Tracker.md  (Completed; pending move to legacy/step03/ at Step 04 kickoff)
 ```
 
-Step 01 docs archived to legacy/step01/ (during Step 02 P5 #1).
+Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
+Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
 
 Next Step files to create:
 
 ```text
-TBD at Step 03 kickoff (e.g., 003_Step03_Visualization_Plan.md, 003_Step03_Visualization_Tracker.md)
+TBD at Step 04 kickoff (e.g., 004_Step04_ApartmentFixtures_Plan.md, 004_Step04_ApartmentFixtures_Tracker.md)
 ```
 
 ---
@@ -105,15 +106,18 @@ Completed:
 Immediate next action:
 
 ```text
-Step 03 kickoff: create 003_Step03_Visualization_Plan.md + Tracker.
-Apply D015/D016 workflow (now codified globally; first applied in Step 02):
-  - checkout new branch (e.g., step03-visualization)
+Step 04 kickoff: create 004_Step04_ApartmentFixtures_Plan.md + Tracker.
+Apply D015/D016 workflow:
+  - checkout new branch (e.g., step04-apartment-fixtures)
   - commit per Plan §4 work item
   - merge --no-ff into main, then delete branch
 
-Step 02 introduced 22 schema dataclasses, RunConfig, DebugArtifact +
-17 filename constants, and serialize.py round-trip. Step 03 will add
-the SVG-first visualization renderer (D013) and consume these schemas.
+Step 03 introduced src/proto3/viz/ (palette + svg renderer with 12-layer
+stable order per D013), fixtures/apartment_minimal.json, the notebook
+convention (notebooks/, outputs/notebooks/<stem>/<run_id>/, nbstripout
+filter via .gitattributes, dev extras in pyproject.toml), and a viz
+smoke test. Step 04 will expand fixtures into real apartment inputs
+and define the Target adapter contract.
 ```
 
 Step 01 should cover:
@@ -153,7 +157,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 |---:|---|---|
 | 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
-| 03 | Not started | Visualization Renderer / Visual Vocabulary |
+| 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Not started | Apartment Fixtures / Target Adapter |
 | 05 | Not started | Geometry Kernel / Atom Resolution Commitments |
 | 06 | Not started | Program & Domain Constraint Engine |

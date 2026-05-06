@@ -8,6 +8,9 @@ version = "0.0.0"
 description = "Spine-first floor layout generation framework (proto3)"
 requires-python = ">=3.11"
 
+[project.optional-dependencies]
+dev = ["jupyter", "nbstripout"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

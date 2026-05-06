@@ -264,3 +264,5 @@ Step 05 (Geometry Kernel) will:
 |---|---|
 | 2026-05-06 | Initial draft. §0–§8. 11 decisions (S03-D1 ~ S03-D11). 6 work items. |
 | 2026-05-06 | Pre-implementation revision. Schema check revealed `BuildingInput.program_request: dict` (not ProgramInstance) → S03-D10 fixture format updated. `SpaceUnitSpec.role` enum (public/private/service/wet/hub/corridor) ≠ §12.3 grouping → S03-D4 boosted with `role_to_palette_key()` mapping function + corridor=grey stub. Notebook convention added (S03-D12 location, S03-D13 output dir, S03-D14 nbstripout, S03-D15 dev deps). Work items 6 → 7 (4.6 notebook inserted, cleanup → 4.7). DoD-13 + DoD-14 added. R-S03-5/6, Def-9/10 added. |
+| 2026-05-06 | Mid-implementation refinement (§4.6). S03-D12 walk-up resolver wording (VSCode Jupyter cwd issue I-S03-2). S03-D13 wording corrected re: `.gitignore` extension done in §4.6 (I-S03-1: `outputs/notebooks/*` was not previously ignored). |
+| 2026-05-06 | Step 03 closed. 7 commits on `step03-visualization`; merge --no-ff into main next. |

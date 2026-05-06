@@ -29,7 +29,7 @@ Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan
 | 4.3 | Minimal apartment fixture (`fixtures/apartment_minimal.json`, program_request dict 형식) | `feat: minimal apartment fixture (S03-D10)` | [x] | 2026-05-06 |
 | 4.4 | SVG renderer core (12 layers, footprint + grid, Y-flip) | `feat: SVG renderer core (12-layer stable order, footprint+grid)` | [x] | 2026-05-06 |
 | 4.5 | Smoke test (4 assertions covering DoD-4/6) | `feat: viz smoke test (12-layer stable order verified)` | [x] | 2026-05-06 |
-| 4.6 | Notebook + .gitattributes + dev deps (nbstripout 정책 포함) | `feat: step03 viz demo notebook + nbstripout policy + dev deps` | [ ] | — |
+| 4.6 | Notebook + .gitattributes + dev deps (nbstripout 정책 포함) | `feat: step03 viz demo notebook + nbstripout policy + dev deps` | [x] | 2026-05-06 |
 | 4.7 | Step 03 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step03 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | — |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → (Step 종료) merge --no-ff to main.

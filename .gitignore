@@ -6,6 +6,9 @@ __pycache__/
 outputs/debug_runs/*
 !outputs/debug_runs/.gitkeep
 
+outputs/notebooks/*
+!outputs/notebooks/.gitkeep
+
 experiments/runs/*
 !experiments/runs/.gitkeep
 

@@ -529,21 +529,25 @@ Plan section structure (followed by Step 01):
 
 Tracker mirrors Plan §4 numbering 1:1 in its §1 checklist; automation depends on this.
 
-Step-close cleanup sequence:
+Step-close cleanup sequence (at the **closing** Step's final commit):
 
 1. Verify all Plan §4 items checked.
 2. Verify all DoD items checked.
 3. `git status` clean.
 4. Update `000_Progress_Tracker.md` (current step status, active files, step status table).
 5. Strip Plan §A.
-6. Move both Step files to `legacy/stepNN/` ([Pipeline Overview §16](000_Pipeline_Overview.md)).
-7. git commit per [D015](000_Architecture_Decisions.md).
+6. git commit per [D015](000_Architecture_Decisions.md), then `git merge --no-ff` to main and delete branch.
+
+Then at the **next** Step's kickoff §4.1 commit:
+
+7. `git mv` previous Step files to `legacy/stepNN/` ([Pipeline Overview §16](000_Pipeline_Overview.md)) together with the next Step's module scaffold.
 
 Reason:
 
 - Separates *decisions* (Plan, slow-changing, frozen on completion) from *progress* (Tracker, fast-changing, archived on completion). Mixing them makes both worse.
 - Plan §4 ↔ Tracker §1 numbering preserves traceability and enables automated execution.
 - Single-use Appendix avoids the "huge inline scaffolding lives forever in the repo" failure mode.
+- **Deferred archive (step 7)**: moving Plan/Tracker mid-cleanup creates a self-reference paradox — the cleanup checklist itself ends up under `legacy/`, and the closing Tracker would have to mark its own archival as "done" before the move. By archiving at the *next* Step's kickoff §4.1, the previous Step's docs stay accessible at repo root through the close, and the new Step's first commit naturally bundles "archive previous + scaffold current". Pattern validated across Step 01 → 02 → 03.
 
 ---
 
@@ -658,6 +662,12 @@ Step 01 set up the project skeleton. During execution, two workflow patterns eme
 - D015 (Per-Step branch + per-work-item commit + no-squash merge) — Step 01 itself was bundled into one `main` commit as an exception, since the convention was decided mid-Step-01.
 
 These patterns proved their value during Step 01 and would otherwise live only in session memory, invisible to anyone reading the global docs. Promoted to D015/D016 to make them auditable and durable.
+
+## H011. Deferred Plan/Tracker archive to next-Step kickoff (D016 amendment)
+
+Original D016 step 6 said "Move both Step files to `legacy/stepNN/`" as part of Step-close cleanup. In practice, doing the `git mv` mid-cleanup creates a self-reference paradox: the cleanup checklist itself ends up under `legacy/`, and the closing Tracker would have to mark its own archival before the move. Across Step 01, 02, 03 the actual practice was to defer the move to the next Step's §4.1 kickoff commit, where it bundles cleanly with "scaffold next-Step modules". The user codified this deferral on 2026-05-03.
+
+D016 wording was amended on 2026-05-06 (Step 03 review followups #4) to reflect the actual practice: cleanup steps 1–6 happen at Step-close; archive (step 7) happens at the *next* Step's kickoff §4.1. Documented after a reviewer flagged the inconsistency between D016 text and Progress Tracker statements.
 
 ---
 

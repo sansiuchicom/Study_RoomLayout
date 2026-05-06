@@ -280,6 +280,8 @@ These values are first-pass defaults. They are not universal architectural laws,
 
 Step 05 Geometry Kernel must confirm or revise these values before region/atom decomposition becomes serious.
 
+**Open issue — door capability granularity (TBD).** The 800mm threshold above applies to a *contact segment*, not to individual cell-cell adjacencies. With atom_size = 600mm, a single cell-cell boundary is 600mm and would falsely reject doors that are physically installable across two or more contiguous cells along the same wall. Provisional operative definition: for each region pair, group their cell-cell adjacencies into maximal contiguous runs along a single axis-aligned wall; door-capable iff any such run has length ≥ door_min_boundary_mm. Disjoint segments between the same region pair (e.g., U-shaped wraparound) are *not* summed — the threshold applies per segment. Step 05/08 must confirm this definition once the first fixture is decomposed and inspected.
+
 ---
 
 # 9. Canonical runtime pipeline Stages
@@ -519,6 +521,8 @@ Rules:
 - Primary spaces need access-adjacent or access-host boundary potential.
 - Dependent spaces need parent-boundary potential.
 - Seed candidates must preserve provenance: terminal, branch, slot, parent region, and initial boundary evidence.
+
+**Open issue — seed clustering (TBD).** proto1/2 layouts showed seeds visually clustered, producing unrealistic-looking starts. Two likely causes: score-based top-K selection has no diversity term, and multi-source growth all initiates near the spine head. Provisional first-pass mitigation when this Stage is implemented: Poisson-disk-style rejection sampling over candidate seeds with a min-distance parameter (initial guess 4–5 × atom_size). Topology-aware quotas (one seed per spine branch) are deferred — they assume sufficiently branched spines and are a separate decision. Role-aware constraints (e.g., bedroom not adjacent to entry) belong to Stage 02 / Step 06 program/domain constraints, not the seed-spread mechanism.
 
 ---
 

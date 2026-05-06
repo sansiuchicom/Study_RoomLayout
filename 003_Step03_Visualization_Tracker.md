@@ -3,7 +3,7 @@
 Status: Completed
 Started: 2026-05-06
 Completed: 2026-05-06
-Branch: `step03-visualization` (pending merge to main)
+Branch: `step03-visualization` (merged into main via `--no-ff` at 22737ad, deleted)
 Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan.md)
 
 ---
@@ -54,7 +54,7 @@ Companion plan: [003_Step03_Visualization_Plan.md](003_Step03_Visualization_Plan
 | DoD-9 | Step 02 docs moved to `legacy/step02/` via `git mv` | [x] | 2026-05-06 (§4.1) |
 | DoD-10 | `000_Progress_Tracker.md` updated (Step 03 → Done) | [x] | 2026-05-06 (§4.7) |
 | DoD-11 | All §4 commits land on `step03-visualization` branch | [x] | 2026-05-06 (7 commits 4.1~4.7) |
-| DoD-12 | `git merge --no-ff` to main, branch deleted | [ ] | — (pending — last step after this commit) |
+| DoD-12 | `git merge --no-ff` to main, branch deleted | [x] | 2026-05-06 (merge commit 22737ad; branch `step03-visualization` deleted; pushed to origin) |
 | DoD-13 | Notebook executes top-to-bottom + writes `outputs/notebooks/step03_viz_demo/<run_id>/minimal.svg` | [x] | 2026-05-06 (사용자 VSCode 실행 후 SVG 생성 확인 — `outputs/notebooks/step03_viz_demo/20260506T125041/minimal.svg`) |
 | DoD-14 | `.gitattributes` + `pyproject.toml [project.optional-dependencies] dev` set up | [x] | 2026-05-06 (§4.6) |
 

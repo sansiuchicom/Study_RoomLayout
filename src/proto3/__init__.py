@@ -8,8 +8,9 @@ Canonical references (repo root):
 Future top-level exports (placeholder; populated as Steps land):
 
     # Step 02 — Core Schema
-    # from .schema import BuildingInput, FloorInput, RunConfig
-    # from .schema import PersistentAnchor
+    # from .config import RunConfig
+    # from .debug import DebugArtifact
+    # from .schema import BuildingInput, FloorInput, PersistentAnchor
     # from .schema import ProgramInstance, SpaceUnitSpec, ClusterSpec
     # from .schema import AccessPolicy
     # from .schema import Region, RegionSet, Atom, AtomSet
@@ -18,7 +19,6 @@ Future top-level exports (placeholder; populated as Steps land):
     # from .schema import SpineCandidate, SlotCandidate, SeedCandidate
     # from .schema import GrowthResult, LayoutCandidate
     # from .schema import ValidationResult, FailureRecord, NoGoodRecord
-    # from .schema import DebugArtifact
 
 This package currently exposes nothing. Importing it should succeed
 (used by tests/test_smoke.py to verify packaging).

@@ -1,8 +1,8 @@
 # 002 Step 02 — Core Schema / Run Config / Debug Output Contract Plan
 
-Status: Active
-Scope: 24개 dataclass stub + RunConfig + DebugArtifact (+ 폴더 contract) + serialization helpers + smoke tests. D015/D016 첫 적용 Step.
-Last updated: 2026-05-04
+Status: Completed
+Scope: 22개 schema dataclass stub + RunConfig + DebugArtifact (+ 폴더 contract) + serialization helpers + smoke tests. D015/D016 첫 적용 Step. (총 24 dataclass = 22 schema + RunConfig + DebugArtifact)
+Last updated: 2026-05-06
 
 ---
 
@@ -32,7 +32,7 @@ Cross-reference:
 | # | 조건 | 검증 방법 |
 |---|---|---|
 | DoD-1 | §3 모듈 트리 모두 존재 | `ls src/proto3/schema/` → 8개 .py + `ls src/proto3/{config,debug}.py` |
-| DoD-2 | 24개 dataclass 모두 정의 (Pipeline Overview에서 추론 가능한 필드 + TBD 주석) | `from proto3.schema import *` 후 각 클래스 `@dataclass` 확인 |
+| DoD-2 | 22개 schema dataclass 모두 정의 (Pipeline Overview에서 추론 가능한 필드 + TBD 주석). RunConfig/DebugArtifact는 DoD-3/DoD-4가 담당 | `from proto3.schema import *` 후 각 클래스 `@dataclass` 확인 |
 | DoD-3 | `RunConfig` 정의 (필드 §2/S02-D4 표) | `RunConfig()` instantiation OK |
 | DoD-4 | `DebugArtifact` + 17개 파일명 상수 + `run_folder()` 헬퍼 정의 | `from proto3.debug import INPUT_FILENAME, ...` |
 | DoD-5 | `to_json` / `from_json` round-trip OK (`BuildingInput` 빈 인스턴스 1개) | round-trip pytest 1개 통과 |
@@ -471,3 +471,4 @@ push 시점은 사용자 확인 후.
 | 2026-05-04 | 초기 작성. §0–§8. 결정 S02-D1~D12 합의. Plan §A 생략 (D016/S02-D7 첫 적용). |
 | 2026-05-04 | RunConfig 확장 우려 의논 — S02-D4에 확장 정책 단락 추가. §4.4 `from_dict` 코드를 missing-key default 처리로 보강 (backward-compat 보장). |
 | 2026-05-04 | Step 02 cleanup. DoD-1~11 모두 통과. P5 #1~#5 commit (5개) on `step02-core-schema`. branch는 main으로 `--no-ff` merge 후 삭제. |
+| 2026-05-06 | 사후 리뷰 후속 #1 (docs only). `Status: Active → Completed`. DoD-2 표기를 "22 schema + RunConfig/DebugArtifact는 DoD-3/4"로 정리(§0/§1 일관). `__init__.py` future export 주석에서 `RunConfig`/`DebugArtifact` 위치를 `.config`/`.debug`로 정정. |

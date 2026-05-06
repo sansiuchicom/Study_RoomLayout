@@ -1,9 +1,10 @@
 # 002 Step 02 — Core Schema / Run Config / Debug Output Contract Tracker
 
-Status: In progress
+Status: Completed
 Started: 2026-05-04
-Last updated: 2026-05-04
-Branch: `step02-core-schema`
+Completed: 2026-05-04
+Last updated: 2026-05-06
+Branch: `step02-core-schema` (merged into main, deleted)
 Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 
 ---
@@ -109,3 +110,4 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 | 날짜 | 변경 |
 |---|---|
 | 2026-05-04 | 초기 생성. Plan §4 P5 5개 작업 + DoD 11개 + cleanup 8단계. |
+| 2026-05-06 | 사후 리뷰 후속. `Status: In progress → Completed`. Plan/Tracker stale status 정정 + Plan §0/§1 22 vs 24 표기 정리. (코드 변경 — S02-D13/D14 — 은 별도 commit/Plan §변경이력 entry 참조) |

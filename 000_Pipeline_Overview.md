@@ -617,16 +617,17 @@ Purpose: Validate the repaired candidate, diagnose failures, and assemble final 
 
 Outputs:
 
-- `LayoutCandidate` if valid,
-- `InvalidCandidateReport` if invalid,
-- `PostRepairValidationResult`,
-- `FailureRecord[]`,
-- final debug artifacts,
-- output JSON/SVG references.
+- `LayoutCandidate` (single dataclass for both valid and invalid; `valid: bool` discriminates per [D018](000_Architecture_Decisions.md)),
+- inside that `LayoutCandidate`:
+  - `validation_result` — post-repair `ValidationResult` (stage="post_repair", per [D009](000_Architecture_Decisions.md)),
+  - `failure_records: list[FailureRecord]` — must be non-empty when `valid=False`,
+  - `debug_artifact_refs: dict[str, str]` — final debug artifact paths,
+  - `output_artifacts: dict` — final JSON/SVG output references,
+  - `provenance: dict` — search-path information.
 
 Required behavior:
 
-> Stage 13 assembles both successful LayoutCandidate outputs and invalid candidate reports. Invalid outputs must still include FailureRecords, provenance, and debug artifacts.
+> Stage 13 assembles a single unified `LayoutCandidate` per candidate. Invalid candidates (`valid=False`) must still populate `failure_records`, `provenance`, and `debug_artifact_refs`. Valid candidates may carry empty defaults on the failure-side fields.
 
 Failure diagnosis should distinguish:
 

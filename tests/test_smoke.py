@@ -128,3 +128,21 @@ def test_assert_target_consistent_raises_on_mismatch() -> None:
     with pytest.raises(ValueError) as exc:
         assert_target_consistent(rc, bi)
     assert "apartment" in str(exc.value) and "hotel" in str(exc.value)
+
+
+def test_layout_candidate_unified_output_fields_defaults() -> None:
+    """D018: LayoutCandidate carries unified fields with empty/None defaults.
+
+    `valid=False` candidates need failure_records / debug_artifact_refs;
+    `valid=True` may legitimately leave them empty. Defaults must accommodate
+    both without forcing Optional handling.
+    """
+    from proto3.schema import LayoutCandidate
+
+    lc = LayoutCandidate()
+    assert lc.valid is False
+    assert lc.validation_result is None
+    assert lc.failure_records == []
+    assert lc.debug_artifact_refs == {}
+    assert lc.provenance == {}
+    assert lc.output_artifacts == {}

@@ -574,6 +574,37 @@ Discovered: Step 03 review followups #5 (2026-05-06).
 
 ---
 
+## D018. Stage 13 output assembly: unified LayoutCandidate (valid=True/False)
+
+Status: Accepted  
+Type: Architecture invariant
+
+Decision:
+
+Stage 13 emits a single dataclass — `LayoutCandidate` — for both valid and invalid candidates. The `valid: bool` field discriminates the two cases. There is no separate `InvalidCandidateReport` class.
+
+`LayoutCandidate` carries the union of fields needed by either case; failure-side fields default to empty/None and must be populated for `valid=False`:
+
+| Field | Type | Required when |
+|---|---|---|
+| `validation_result` | `ValidationResult \| None` | Post-repair Stage 13 result; populated whether valid or invalid |
+| `failure_records` | `list[FailureRecord]` | **Must be non-empty when `valid=False`** ([Pipeline Overview §9](000_Pipeline_Overview.md)) |
+| `debug_artifact_refs` | `dict[str, str]` | `{kind: path}` for debug SVG/JSON references |
+| `provenance` | `dict` | Search-path information (TBD typed) |
+| `output_artifacts` | `dict` | Final JSON/SVG output paths (TBD typed) |
+
+Reason:
+
+- The schema already encoded the unified-model intent: `LayoutCandidate.valid: bool = False` had been on the dataclass since Step 02. A separate `InvalidCandidateReport` would have made that field meaningless.
+- Consistency with [D009](000_Architecture_Decisions.md). Pre/post validation is unified in `ValidationResult.stage`. Splitting only the Stage 13 output across two classes would break the pattern.
+- The Search Orchestrator pseudo-flow ([Pipeline Overview §10](000_Pipeline_Overview.md)) reads `result.valid` and `result.failure_records` directly. Unified model means no isinstance / discriminated-union dispatch.
+- Valid candidates may legitimately carry partial failure information (e.g., resolved soft violations). Empty default `failure_records=[]` accommodates this without forcing the caller through Optional handling.
+- Pipeline Overview §9 Stage 13 narrative ("LayoutCandidate if valid, InvalidCandidateReport if invalid") was a *narrative* split, not a *data model* split. Narrative is updated to reflect the unified data model.
+
+Discovered: Step 03 review followups #6 (2026-05-06). The reviewer noted Pipeline §9 listed `InvalidCandidateReport` while the schema lacked any such class. Investigation showed the schema's `valid: bool` already implied unification; this decision codifies that alignment.
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.

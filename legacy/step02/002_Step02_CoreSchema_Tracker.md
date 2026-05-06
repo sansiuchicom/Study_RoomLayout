@@ -1,6 +1,6 @@
 # 002 Step 02 — Core Schema / Run Config / Debug Output Contract Tracker
 
-Status: Completed
+Status: Completed / Archived
 Started: 2026-05-04
 Completed: 2026-05-04
 Last updated: 2026-05-06
@@ -91,17 +91,17 @@ Companion plan: [002_Step02_CoreSchema_Plan.md](002_Step02_CoreSchema_Plan.md)
 
 ## 5. Step 종료 시 cleanup 체크리스트
 
-[D016 cleanup 절차](000_Architecture_Decisions.md) 7단계 적용 (Plan §A 단계는 이번 Step에서 §A 미생성으로 skip).
+[D016 cleanup 절차](../../000_Architecture_Decisions.md) 7단계 적용 (Plan §A 단계는 이번 Step에서 §A 미생성으로 skip).
 
 - [x] §1의 모든 작업이 [x] (4.1~4.5)
 - [x] §2의 모든 DoD가 [x] (DoD-1~11)
 - [x] `git status`로 의도하지 않은 untracked/dirty 없음 확인 (각 commit 직전)
-- [x] [`000_Progress_Tracker.md`](000_Progress_Tracker.md) 갱신 (Plan §4.5)
+- [x] [`000_Progress_Tracker.md`](../../000_Progress_Tracker.md) 갱신 (Plan §4.5)
 - [x] **Plan §A 제거** — *N/A* (S02-D7로 §A 미생성. D016 권장 첫 적용)
 - [x] Step 01 docs를 [`legacy/step01/`](legacy/) 로 이동 (Plan §4.1) — P5 #1에서 처리됨
 - [ ] **Step 02 docs 이동은 Step 03 kickoff 시점으로 이연** — Step 01 cleanup 패턴 일관 (사용자 결정 2026-05-03)
-- [x] **branch 종료**: main에 `git merge --no-ff step02-core-schema` → `git branch -d step02-core-schema` → `git push origin main` ([D015](000_Architecture_Decisions.md))
-- [x] git commit 메시지 컨벤션 ([D015](000_Architecture_Decisions.md)): prefix-style 1~2줄 — 5개 commit 모두 적용
+- [x] **branch 종료**: main에 `git merge --no-ff step02-core-schema` → `git branch -d step02-core-schema` → `git push origin main` ([D015](../../000_Architecture_Decisions.md))
+- [x] git commit 메시지 컨벤션 ([D015](../../000_Architecture_Decisions.md)): prefix-style 1~2줄 — 5개 commit 모두 적용
 
 ---
 

@@ -1,6 +1,6 @@
 # 001 Step 01 — Project Skeleton / Global Docs Tracker
 
-Status: In progress
+Status: Completed / Archived
 Started: 2026-05-03
 Last updated: 2026-05-03
 Companion plan: [001_Step01_ProjectSkeleton_Plan.md](001_Step01_ProjectSkeleton_Plan.md)
@@ -71,7 +71,7 @@ Plan §4의 항목과 **동일한 번호**를 유지한다.
 | 2026-05-03 | Step 01 cleanup. Plan §A 제거. `000_Progress_Tracker.md` 갱신. DoD-1~8 모두 ✅ |
 | 2026-05-03 | commit 직전 발견 I-3 — `src/proto3.egg-info/`가 staged됨. `.gitignore`에 `*.egg-info/` 추가, S01-D12로 결정 기록, unstage |
 | 2026-05-03 | Step 01 commit (`6475f7c feat: step01 project skeleton`) |
-| 2026-05-03 | 워크플로우 결정 글로벌화 — D015/D016 + H010을 [000_Architecture_Decisions.md](000_Architecture_Decisions.md)에 추가. 별도 docs commit 예정 |
+| 2026-05-03 | 워크플로우 결정 글로벌화 — D015/D016 + H010을 [000_Architecture_Decisions.md](../../000_Architecture_Decisions.md)에 추가. 별도 docs commit 예정 |
 
 ---
 
@@ -137,7 +137,7 @@ Step 01 종료 직전에 순서대로 확인.
 - [x] §1의 모든 작업이 [x] (4.1–4.8)
 - [x] §2의 모든 DoD가 [x] (DoD-1–8)
 - [x] `git status`로 의도하지 않은 untracked/dirty 없음 확인 (commit 직전 검증)
-- [x] [`000_Progress_Tracker.md`](000_Progress_Tracker.md) 갱신 (Plan §4.8 절차)
+- [x] [`000_Progress_Tracker.md`](../../000_Progress_Tracker.md) 갱신 (Plan §4.8 절차)
 - [x] **Plan §A (Appendix 인라인 자료) 제거** — 첫 Step에서만 필요. 사용자 결정(2026-05-03)
 - [ ] 이 두 파일(`001_Step01_ProjectSkeleton_Plan.md`, `001_Step01_ProjectSkeleton_Tracker.md`)을 [`legacy/step01/`](legacy/) 로 이동 — **Step 02 kickoff 시점**으로 이연 (사용자 결정 2026-05-03)
 - [x] git commit — 옵션 X (한 번에). 컨벤션 합의: `git commit -m "feat: 제목, 간단한 내용"` 1~2줄 (메모리 `feedback_branch_commit_workflow` 참조)

@@ -29,7 +29,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 4.3 | Stage 00 input load + normalization | `feat: stage 00 input load + normalization (S04-D4, D13)` | [x] | 2026-05-07 |
 | 4.4 | Stage 01 program resolution frame + cardinality gate + ProgramInstantiationFailure | `feat: stage 01 program resolution frame + cardinality gate (S04-D4, D11, D12)` | [x] | 2026-05-07 |
 | 4.5 | 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse) + fixture_matrix.py | `feat: 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse, S04-D1)` | [x] | 2026-05-07 |
-| 4.6 | Tests: target adapter / stage00 / stage01 (R1 fail) / roundtrip | `feat: step04 tests (target adapter + stage 00/01 + R1 regression)` | [ ] | |
+| 4.6 | Tests: target adapter / stage00 / stage01 (R1 fail) / roundtrip | `feat: step04 tests (target adapter + stage 00/01 + R1 regression)` | [x] | 2026-05-07 |
 | 4.7 | step04_fixture_overview notebook | `feat: step04 fixture overview notebook (5-fixture compare, S04-D9)` | [ ] | |
 | 4.8 | Step 04 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step04 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
 
@@ -45,13 +45,13 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 |---|---|:---:|---|
 | DoD-1 | `src/proto3/target/` 모듈 트리 존재 + import OK | [x] | 2026-05-07 (§4.1 후 22 passed; §4.2에서 Protocol + ApartmentAdapter 구현) |
 | DoD-2 | `src/proto3/stages/` 모듈 트리 존재 + import OK | [x] | 2026-05-07 (§4.1 후 22 passed) |
-| DoD-3 | `ApartmentAdapter.load_fixture(path)` returns valid BuildingInput | [ ] | |
-| DoD-4 | Stage 00: fixture path → BuildingInput + target consistency check | [ ] | |
+| DoD-3 | `ApartmentAdapter.load_fixture(path)` returns valid BuildingInput | [x] | 2026-05-07 (§4.6 test_target_adapter) |
+| DoD-4 | Stage 00: fixture path → BuildingInput + target consistency check | [x] | 2026-05-07 (§4.6 test_stage00_load 5개) |
 | DoD-5 | Stage 01: program_request → ProgramInstance + cardinality fail (D004) | [x] | 2026-05-07 (§4.4) |
 | DoD-6 | 5 fixture 파일 존재 + 각 round-trip OK | [x] | 2026-05-07 (§4.5 sanity check 5/5 round-trip OK) |
 | DoD-7 | `tests/fixture_matrix.py` 매핑 + metadata | [x] | 2026-05-07 (§4.5: A1~R2 5개 ID + expected_failure) |
-| DoD-8 | R1 fixture가 Stage 01에서 ProgramInstantiationFailure 발생 | [ ] | |
-| DoD-9 | `pytest -q` 통과 (≥ 19 + 신규) | [ ] | |
+| DoD-8 | R1 fixture가 Stage 01에서 ProgramInstantiationFailure 발생 | [x] | 2026-05-07 (§4.6 test_stage01_program::test_stage01_r1_raises) |
+| DoD-9 | `pytest -q` 통과 (≥ 19 + 신규) | [x] | 2026-05-07 (39 passed: 22 기존 + 17 신규) |
 | DoD-10 | `pip install -e .` 회귀 없음 | [ ] | |
 | DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [x] | 2026-05-07 (§4.1) |
 | DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [ ] | |
@@ -74,7 +74,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 2026-05-07 | §4.2 완료 — TargetAdapter Protocol (`target/base.py`) + ApartmentAdapter (`target/apartment.py`) 구현. `load_fixture` (from_json wrapper) + `target_rules` (apartment min_cardinality dict). commit `1e02b87` |
 | 2026-05-07 | §4.3 완료 — `stages/stage00_load.run(path, *, run_config, adapter)` 구현. adapter resolution: explicit > run_config.target_type > apartment default. run_config 있으면 assert_target_consistent 호출. commit `2b03703` |
 | 2026-05-07 | §4.4 완료 — `ProgramInstantiationFailure(Exception)` 추가 (`schema/validation.py`). `stages/stage01_program.run(building, *, adapter)` 구현: program_request → ProgramInstance + adapter.target_rules min_cardinality 비교, 미충족 시 raise (FailureRecord 보관). commit `acd62e7` |
-| 2026-05-07 | §4.5 완료 — fixture 4개 신규 작성 (apartment_4bed_2bath, _l_shape, _no_bath, _too_small) + `tests/fixture_matrix.py` (5 matrix ID + expected_failure metadata). 5/5 round-trip OK |
+| 2026-05-07 | §4.5 완료 — fixture 4개 신규 작성 (apartment_4bed_2bath, _l_shape, _no_bath, _too_small) + `tests/fixture_matrix.py` (5 matrix ID + expected_failure metadata). 5/5 round-trip OK. commit `1e165d3` |
+| 2026-05-07 | §4.6 완료 — 4 test 파일 신규 (target_adapter, stage00_load, stage01_program, fixtures_roundtrip). 17 신규 테스트, 총 39 passed. 상대 import (`from .fixture_matrix`) 패턴 채택 |
 
 ---
 

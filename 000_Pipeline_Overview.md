@@ -1007,6 +1007,8 @@ When a Step is completed, its Step-specific files may move to:
 legacy/step01/
 ```
 
+Legacy policy (H012, 2026-05-07): `legacy/stepNN/*.md` is treated as a frozen historical record. Relative links inside legacy docs are **not maintained** after archive — they may be broken (e.g., `000_Architecture_Decisions.md` would need `../../` prefix from `legacy/stepNN/`). This is intentional; legacy is for history, not live navigation.
+
 Numbering rules:
 
 - `000_*` = global docs,

@@ -723,6 +723,18 @@ Original D016 step 6 said "Move both Step files to `legacy/stepNN/`" as part of 
 
 D016 wording was amended on 2026-05-06 (Step 03 review followups #4) to reflect the actual practice: cleanup steps 1–6 happen at Step-close; archive (step 7) happens at the *next* Step's kickoff §4.1. Documented after a reviewer flagged the inconsistency between D016 text and Progress Tracker statements.
 
+## H012. Legacy doc relative links not maintained after archive (D016 amendment)
+
+When Step docs are archived to `legacy/stepNN/` per D016 step 7, their relative links to root files (e.g., `[000_Architecture_Decisions.md](000_Architecture_Decisions.md)`) become broken because the relative path now requires `../../` prefix. Step 02 and Step 03 archived docs were both found to have this drift.
+
+Policy: **`legacy/stepNN/*.md` is treated as a frozen historical record; relative links are not maintained after archive.** Rationale:
+
+- legacy docs are append-only history; updating them post-move would imply they remain "live" docs.
+- audit and traceability remain intact through the file content itself; the broken links are minor friction, not correctness loss.
+- mechanical fix on archive is possible but adds churn for low value (legacy reference frequency is near zero in practice).
+
+Codified on 2026-05-07 (Step 04 kickoff, review followup #8). Pipeline Overview §16 mirrors this policy.
+
 ---
 
 # 6. Summary

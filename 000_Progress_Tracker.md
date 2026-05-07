@@ -2,7 +2,7 @@
 
 Status: Current working status only  
 Scope: active Step, active files, completed work, next actions, blockers  
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ---
 
@@ -29,19 +29,20 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 03 complete. Ready for Step 04 kickoff.
+Step 04 in progress.
 ```
 
 Current Step:
 
 ```text
-Step 03. Visualization Renderer / Visual Vocabulary
+Step 04. Apartment Fixtures / Target Adapter
 ```
 
 Current Step status:
 
 ```text
-Completed, awaiting Step 04 kickoff.
+In progress; §4.1 (archive Step 03 docs + scaffold step04 modules + Plan/Tracker
++ drift fix + Progress Tracker kickoff update + D016 amendment) landing.
 ```
 
 ---
@@ -60,17 +61,18 @@ Global docs:
 Active Step files:
 
 ```text
-003_Step03_Visualization_Plan.md     (Completed; pending move to legacy/step03/ at Step 04 kickoff)
-003_Step03_Visualization_Tracker.md  (Completed; pending move to legacy/step03/ at Step 04 kickoff)
+004_Step04_ApartmentFixtures_Plan.md     (In progress)
+004_Step04_ApartmentFixtures_Tracker.md  (In progress)
 ```
 
 Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
 Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
+Step 03 docs archived to `legacy/step03/` (during Step 04 §4.1, 2026-05-07).
 
 Next Step files to create:
 
 ```text
-TBD at Step 04 kickoff (e.g., 004_Step04_ApartmentFixtures_Plan.md, 004_Step04_ApartmentFixtures_Tracker.md)
+TBD at Step 05 kickoff (e.g., 005_Step05_GeometryKernel_Plan.md, 005_Step05_GeometryKernel_Tracker.md)
 ```
 
 ---
@@ -97,6 +99,7 @@ Completed:
 - SVG-first visualization accepted.
 - Empty anchor fields required early, even before multi-floor implementation.
 - Debug output should be ignored by default.
+- Legacy doc relative links are not maintained post-archive (H012, Step 04 §4.1).
 ```
 
 ---
@@ -106,46 +109,35 @@ Completed:
 Immediate next action:
 
 ```text
-Step 04 kickoff: create 004_Step04_ApartmentFixtures_Plan.md + Tracker.
-Apply D015/D016 workflow:
-  - checkout new branch (e.g., step04-apartment-fixtures)
-  - commit per Plan §4 work item
-  - merge --no-ff into main, then delete branch
-
-Step 03 introduced src/proto3/viz/ (palette + svg renderer with 12-layer
-stable order per D013), fixtures/apartment_minimal.json, the notebook
-convention (notebooks/, outputs/notebooks/<stem>/<run_id>/, nbstripout
-filter via .gitattributes, dev extras in pyproject.toml), and a viz
-smoke test. Step 04 will expand fixtures into real apartment inputs
-and define the Target adapter contract.
+Step 04 §4.2 — Target adapter Protocol + ApartmentAdapter (target_rules with
+min_cardinality dict per S04-D12). Then §4.3 Stage 00, §4.4 Stage 01 with
+ProgramInstantiationFailure (per S04-D11/D13).
 ```
 
-Step 01 should cover:
+Step 04 produces:
 
 ```text
-- create base repo folders,
-- create initial .gitignore,
-- place the 000 global docs,
-- create placeholder src/ package structure,
-- create fixtures/, outputs/, experiments/, tests/, legacy/ folders,
-- add .gitkeep files where needed,
-- define minimal project run/test expectation.
+- proto3.target.{TargetAdapter, ApartmentAdapter}
+- proto3.stages.{stage00_load, stage01_program} (와꾸; Step 06 replaces/extends)
+- proto3.schema.validation.ProgramInstantiationFailure
+- 5 fixtures (apartment_minimal, _4bed_2bath, _l_shape, _no_bath, _too_small)
+- tests/fixture_matrix.py (MATRIX dict + expected_failure metadata)
+- notebooks/step04_fixture_overview.ipynb
 ```
 
 ---
 
 # 5. Known open issues
 
-These are not blockers for Step 01.
+These are not blockers for Step 04.
 
 ```text
-- Exact geometry library choice is not yet fixed.
-- Exact decomposition algorithm is not yet fixed.
-- Exact growth scoring formula is not yet fixed.
+- Exact geometry library choice is not yet fixed (Step 05).
+- Exact decomposition algorithm is not yet fixed (Step 07).
+- Exact growth scoring formula is not yet fixed (Step 11).
 - Exact multi-floor anchor behavior is deferred to Step 14.
+- Curved / non-Manhattan footprint normalization strategy is jointly deferred to Step 05.
 ```
-
-These should not block project skeleton setup.
 
 ---
 
@@ -158,7 +150,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
-| 04 | Not started | Apartment Fixtures / Target Adapter |
+| 04 | In progress | Apartment Fixtures / Target Adapter (kickoff 2026-05-07) |
 | 05 | Not started | Geometry Kernel / Atom Resolution Commitments |
 | 06 | Not started | Program & Domain Constraint Engine |
 | 07 | Not started | Region / Atom Decomposition |
@@ -195,5 +187,5 @@ Before starting a new Step:
 2. Check the canonical framework in 000_Pipeline_Overview.md.
 3. Check relevant decisions in 000_Architecture_Decisions.md.
 4. Create the active Step plan/tracker.
-5. Update this file when the Step starts, pauses, or finishes.
+5. Update this file when the Step starts (kickoff §4.1), pauses, or finishes (close §4.8).
 ```

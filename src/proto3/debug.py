@@ -2,7 +2,9 @@
 
 Defines the canonical filename constants for outputs/debug_runs/<run_id>/
 (Pipeline Overview §12.2) plus run_folder() and stage_svg_filename() helpers.
-Actual write functions are deferred to Step 03 (visualization).
+Stage-by-stage write functions (per-stage debug emission via DebugArtifact)
+land alongside their producing Stages — Stage 00–01 in Step 04, Stage 02+
+in subsequent Steps.
 """
 from __future__ import annotations
 

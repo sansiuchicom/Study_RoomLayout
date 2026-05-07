@@ -22,7 +22,23 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
     (D004 / DH-004 regression).
     """
     spaces = building.program_request.get("spaces", [])
-    space_units = [SpaceUnitSpec(name=s["name"], role=s["role"]) for s in spaces]
+    if not isinstance(spaces, list):
+        raise ProgramInstantiationFailure(FailureRecord(
+            failure_type="program_request_schema_invalid",
+            detected_stage="01",
+            evidence={"reason": "'spaces' is not a list", "got": type(spaces).__name__},
+            diagnosis={"likely_layer": "program_request"},
+        ))
+    space_units = []
+    for i, s in enumerate(spaces):
+        if not (isinstance(s, dict) and "name" in s and "role" in s):
+            raise ProgramInstantiationFailure(FailureRecord(
+                failure_type="program_request_schema_invalid",
+                detected_stage="01",
+                evidence={"index": i, "item": s, "expected": "dict with name+role"},
+                diagnosis={"likely_layer": "program_request"},
+            ))
+        space_units.append(SpaceUnitSpec(name=s["name"], role=s["role"]))
     instance = ProgramInstance(space_units=space_units)
 
     min_card: dict = adapter.target_rules().get("min_cardinality", {})

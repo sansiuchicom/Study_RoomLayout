@@ -111,3 +111,4 @@ Step 종료 시 순서대로:
 | 2026-05-07 | 리뷰 반영 #1. DoD-15/16 추가. |
 | 2026-05-07 | §4.8 close. 8 commits on `step04-apartment-fixtures` (7ce53f4 → cleanup). 39 passed. 14/16 DoD [x], DoD-14 [~] (merge 사용자 확인 대기). |
 | 2026-05-07 | 리뷰 반영 #1 — Status 정정, cleanup checklist 마킹, DoD-10 명령 `python -m pip` + 검증 [x] (#1, #2). |
+| 2026-05-07 | 리뷰 반영 #2 — Stage 01 program_request schema validation 추가 (#3). 3 tests 추가, total 42 passed. |

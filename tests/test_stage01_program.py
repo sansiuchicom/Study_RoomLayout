@@ -34,3 +34,24 @@ def test_stage01_r1_raises_program_instantiation_failure():
     assert failure.affected_space == "wet"
     assert failure.evidence == {"role": "wet", "required": 1, "actual": 0}
     assert failure.detected_stage == "01"
+
+
+def test_stage01_raises_when_spaces_not_list():
+    b = BuildingInput(program_request={"spaces": "not_a_list"})
+    with pytest.raises(ProgramInstantiationFailure) as exc_info:
+        stage01_program.run(b, adapter=ApartmentAdapter())
+    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"
+
+
+def test_stage01_raises_when_space_missing_role():
+    b = BuildingInput(program_request={"spaces": [{"name": "living"}]})
+    with pytest.raises(ProgramInstantiationFailure) as exc_info:
+        stage01_program.run(b, adapter=ApartmentAdapter())
+    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"
+
+
+def test_stage01_raises_when_space_item_not_dict():
+    b = BuildingInput(program_request={"spaces": ["just_a_string"]})
+    with pytest.raises(ProgramInstantiationFailure) as exc_info:
+        stage01_program.run(b, adapter=ApartmentAdapter())
+    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"

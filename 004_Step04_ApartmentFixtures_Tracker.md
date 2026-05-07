@@ -27,7 +27,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 4.1 | Step 03 docs archive + scaffold target/stages modules + Plan/Tracker 추가 | `chore: archive step03 docs + scaffold step04 module structure` | [x] | 2026-05-07 |
 | 4.2 | TargetAdapter Protocol + ApartmentAdapter | `feat: target adapter protocol + apartment adapter (S04-D3, D12)` | [x] | 2026-05-07 |
 | 4.3 | Stage 00 input load + normalization | `feat: stage 00 input load + normalization (S04-D4, D13)` | [x] | 2026-05-07 |
-| 4.4 | Stage 01 program resolution frame + cardinality gate | `feat: stage 01 program resolution frame + cardinality gate (S04-D4, D004)` | [ ] | |
+| 4.4 | Stage 01 program resolution frame + cardinality gate + ProgramInstantiationFailure | `feat: stage 01 program resolution frame + cardinality gate (S04-D4, D11, D12)` | [x] | 2026-05-07 |
 | 4.5 | 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse) + fixture_matrix.py | `feat: 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse, S04-D1)` | [ ] | |
 | 4.6 | Tests: target adapter / stage00 / stage01 (R1 fail) / roundtrip | `feat: step04 tests (target adapter + stage 00/01 + R1 regression)` | [ ] | |
 | 4.7 | step04_fixture_overview notebook | `feat: step04 fixture overview notebook (5-fixture compare, S04-D9)` | [ ] | |
@@ -47,7 +47,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-2 | `src/proto3/stages/` 모듈 트리 존재 + import OK | [x] | 2026-05-07 (§4.1 후 22 passed) |
 | DoD-3 | `ApartmentAdapter.load_fixture(path)` returns valid BuildingInput | [ ] | |
 | DoD-4 | Stage 00: fixture path → BuildingInput + target consistency check | [ ] | |
-| DoD-5 | Stage 01: program_request → ProgramInstance + cardinality fail (D004) | [ ] | |
+| DoD-5 | Stage 01: program_request → ProgramInstance + cardinality fail (D004) | [x] | 2026-05-07 (§4.4) |
 | DoD-6 | 5 fixture 파일 존재 + 각 round-trip OK | [ ] | |
 | DoD-7 | `tests/fixture_matrix.py` 매핑 + metadata | [ ] | |
 | DoD-8 | R1 fixture가 Stage 01에서 ProgramInstantiationFailure 발생 | [ ] | |
@@ -58,7 +58,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [ ] | |
 | DoD-14 | §4 commits all on `step04-apartment-fixtures` + merge --no-ff + branch 삭제 | [ ] | |
 | DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [~] | 2026-05-07 §4.1 In progress 갱신 완료; close 시점 갱신 대기 |
-| DoD-16 | `proto3.schema.validation.ProgramInstantiationFailure` exception 정의 + import OK | [ ] | |
+| DoD-16 | `proto3.schema.validation.ProgramInstantiationFailure` exception 정의 + import OK | [x] | 2026-05-07 (§4.4) |
 
 ---
 
@@ -72,7 +72,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 2026-05-07 | 리뷰 반영 #1. S04-D11~D14 추가 (ProgramInstantiationFailure exception, R1 표현 방식, Stage 00 signature, legacy link 정책). DoD-15/16 추가. Plan §3.1 fixture 명세 표 신설 |
 | 2026-05-07 | §4.1 완료 — Step 03 docs `legacy/step03/` 이동, target/stages 모듈 scaffold, drift fix (palette.py / debug.py), D016 amendment (H012), Pipeline §16 mirror, Progress Tracker kickoff update. commit `7ce53f4`. 22 passed |
 | 2026-05-07 | §4.2 완료 — TargetAdapter Protocol (`target/base.py`) + ApartmentAdapter (`target/apartment.py`) 구현. `load_fixture` (from_json wrapper) + `target_rules` (apartment min_cardinality dict). commit `1e02b87` |
-| 2026-05-07 | §4.3 완료 — `stages/stage00_load.run(path, *, run_config, adapter)` 구현. adapter resolution: explicit > run_config.target_type > apartment default. run_config 있으면 assert_target_consistent 호출 |
+| 2026-05-07 | §4.3 완료 — `stages/stage00_load.run(path, *, run_config, adapter)` 구현. adapter resolution: explicit > run_config.target_type > apartment default. run_config 있으면 assert_target_consistent 호출. commit `2b03703` |
+| 2026-05-07 | §4.4 완료 — `ProgramInstantiationFailure(Exception)` 추가 (`schema/validation.py`). `stages/stage01_program.run(building, *, adapter)` 구현: program_request → ProgramInstance + adapter.target_rules min_cardinality 비교, 미충족 시 raise (FailureRecord 보관) |
 
 ---
 

@@ -46,3 +46,16 @@ class NoGoodRecord:
     pattern: dict = field(default_factory=dict)
     action: dict = field(default_factory=dict)  # reject_*, penalize_*, ...
     # TBD: confidence, expiry, scope (per-run vs persistent)
+
+
+class ProgramInstantiationFailure(Exception):
+    """Stage 01 cardinality gate failure (D004 / DH-004 regression, S04-D11).
+
+    Raised when a role required by `TargetAdapter.target_rules()['min_cardinality']`
+    is under-supplied by `BuildingInput.program_request`. Step 06 (Program
+    Engine) may catch this and convert it into a ValidationResult.
+    """
+
+    def __init__(self, failure: FailureRecord, message: str | None = None) -> None:
+        self.failure = failure
+        super().__init__(message or failure.failure_type or "program instantiation failed")

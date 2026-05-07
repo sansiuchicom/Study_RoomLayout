@@ -48,8 +48,9 @@ _ROLE_TO_PALETTE_KEY: dict[str, str] = {
 def role_to_palette_key(role: str) -> str:
     """Map SpaceUnitSpec.role enum to LAYER_COLORS key.
 
-    Unknown roles fall back to "private" — Step 04 will refine when program
-    category strings stabilize (R-S03-2).
+    Unknown roles fall back to "private". Formal mapping from
+    ProgramInstance.category to palette key is yielded to Step 06
+    (Program & Domain Constraint Engine) per S04-D7 (R-S03-2).
     """
     return _ROLE_TO_PALETTE_KEY.get(role, "private")
 

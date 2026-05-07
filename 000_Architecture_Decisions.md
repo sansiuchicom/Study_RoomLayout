@@ -2,7 +2,7 @@
 
 Status: Canonical decision record  
 Scope: accepted proto3 architecture decisions, invariant vs replaceable choices, and decision history appendix  
-Last updated: 2026-05-02
+Last updated: 2026-05-07
 
 ---
 
@@ -461,6 +461,9 @@ __pycache__/
 outputs/debug_runs/*
 !outputs/debug_runs/.gitkeep
 
+outputs/notebooks/*
+!outputs/notebooks/.gitkeep
+
 experiments/runs/*
 !experiments/runs/.gitkeep
 
@@ -722,6 +725,18 @@ These patterns proved their value during Step 01 and would otherwise live only i
 Original D016 step 6 said "Move both Step files to `legacy/stepNN/`" as part of Step-close cleanup. In practice, doing the `git mv` mid-cleanup creates a self-reference paradox: the cleanup checklist itself ends up under `legacy/`, and the closing Tracker would have to mark its own archival before the move. Across Step 01, 02, 03 the actual practice was to defer the move to the next Step's §4.1 kickoff commit, where it bundles cleanly with "scaffold next-Step modules". The user codified this deferral on 2026-05-03.
 
 D016 wording was amended on 2026-05-06 (Step 03 review followups #4) to reflect the actual practice: cleanup steps 1–6 happen at Step-close; archive (step 7) happens at the *next* Step's kickoff §4.1. Documented after a reviewer flagged the inconsistency between D016 text and Progress Tracker statements.
+
+## H012. Legacy doc relative links not maintained after archive (D016 amendment)
+
+When Step docs are archived to `legacy/stepNN/` per D016 step 7, their relative links to root files (e.g., `[000_Architecture_Decisions.md](000_Architecture_Decisions.md)`) become broken because the relative path now requires `../../` prefix. Step 02 and Step 03 archived docs were both found to have this drift.
+
+Policy: **`legacy/stepNN/*.md` is treated as a frozen historical record; relative links are not maintained after archive.** Rationale:
+
+- legacy docs are append-only history; updating them post-move would imply they remain "live" docs.
+- audit and traceability remain intact through the file content itself; the broken links are minor friction, not correctness loss.
+- mechanical fix on archive is possible but adds churn for low value (legacy reference frequency is near zero in practice).
+
+Codified on 2026-05-07 (Step 04 kickoff, review followup #8). Pipeline Overview §16 mirrors this policy.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Status: Canonical global reference  
 Scope: proto3 framework, terminology, runtime pipeline, search orchestration, target model, and implementation Step map  
-Last updated: 2026-05-02
+Last updated: 2026-05-07
 
 ---
 
@@ -1007,6 +1007,8 @@ When a Step is completed, its Step-specific files may move to:
 legacy/step01/
 ```
 
+Legacy policy (H012, 2026-05-07): `legacy/stepNN/*.md` is treated as a frozen historical record. Relative links inside legacy docs are **not maintained** after archive — they may be broken (e.g., `000_Architecture_Decisions.md` would need `../../` prefix from `legacy/stepNN/`). This is intentional; legacy is for history, not live navigation.
+
 Numbering rules:
 
 - `000_*` = global docs,
@@ -1032,6 +1034,9 @@ __pycache__/
 
 outputs/debug_runs/*
 !outputs/debug_runs/.gitkeep
+
+outputs/notebooks/*
+!outputs/notebooks/.gitkeep
 
 experiments/runs/*
 !experiments/runs/.gitkeep

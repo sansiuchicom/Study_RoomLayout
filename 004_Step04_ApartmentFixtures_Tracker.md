@@ -30,7 +30,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 4.4 | Stage 01 program resolution frame + cardinality gate + ProgramInstantiationFailure | `feat: stage 01 program resolution frame + cardinality gate (S04-D4, D11, D12)` | [x] | 2026-05-07 |
 | 4.5 | 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse) + fixture_matrix.py | `feat: 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse, S04-D1)` | [x] | 2026-05-07 |
 | 4.6 | Tests: target adapter / stage00 / stage01 (R1 fail) / roundtrip | `feat: step04 tests (target adapter + stage 00/01 + R1 regression)` | [x] | 2026-05-07 |
-| 4.7 | step04_fixture_overview notebook | `feat: step04 fixture overview notebook (5-fixture compare, S04-D9)` | [ ] | |
+| 4.7 | step04_fixture_overview notebook | `feat: step04 fixture overview notebook (5-fixture compare, S04-D9)` | [x] | 2026-05-07 |
 | 4.8 | Step 04 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step04 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → (Step 종료) merge --no-ff to main.
@@ -55,7 +55,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-10 | `pip install -e .` 회귀 없음 | [ ] | |
 | DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [x] | 2026-05-07 (§4.1) |
 | DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [ ] | |
-| DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [ ] | |
+| DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [~] | 2026-05-07 코드 검증 OK (5 SVG `outputs/notebooks/step04_fixture_overview/<run_id>/`에 생성). notebook execute는 사용자 VSCode에서 verify 대기 |
 | DoD-14 | §4 commits all on `step04-apartment-fixtures` + merge --no-ff + branch 삭제 | [ ] | |
 | DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [~] | 2026-05-07 §4.1 In progress 갱신 완료; close 시점 갱신 대기 |
 | DoD-16 | `proto3.schema.validation.ProgramInstantiationFailure` exception 정의 + import OK | [x] | 2026-05-07 (§4.4) |
@@ -75,7 +75,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 2026-05-07 | §4.3 완료 — `stages/stage00_load.run(path, *, run_config, adapter)` 구현. adapter resolution: explicit > run_config.target_type > apartment default. run_config 있으면 assert_target_consistent 호출. commit `2b03703` |
 | 2026-05-07 | §4.4 완료 — `ProgramInstantiationFailure(Exception)` 추가 (`schema/validation.py`). `stages/stage01_program.run(building, *, adapter)` 구현: program_request → ProgramInstance + adapter.target_rules min_cardinality 비교, 미충족 시 raise (FailureRecord 보관). commit `acd62e7` |
 | 2026-05-07 | §4.5 완료 — fixture 4개 신규 작성 (apartment_4bed_2bath, _l_shape, _no_bath, _too_small) + `tests/fixture_matrix.py` (5 matrix ID + expected_failure metadata). 5/5 round-trip OK. commit `1e165d3` |
-| 2026-05-07 | §4.6 완료 — 4 test 파일 신규 (target_adapter, stage00_load, stage01_program, fixtures_roundtrip). 17 신규 테스트, 총 39 passed. 상대 import (`from .fixture_matrix`) 패턴 채택 |
+| 2026-05-07 | §4.6 완료 — 4 test 파일 신규 (target_adapter, stage00_load, stage01_program, fixtures_roundtrip). 17 신규 테스트, 총 39 passed. 상대 import (`from .fixture_matrix`) 패턴 채택. commit `df58530` |
+| 2026-05-07 | §4.7 완료 — `notebooks/step04_fixture_overview.ipynb` 작성 (6 cells: walk-up resolver, fixture_matrix import, 5-fixture render loop, inline SVG display, notes). 코드 검증 OK (5 SVG 생성 inline simulation). notebook execute는 사용자가 VSCode에서 verify |
 
 ---
 

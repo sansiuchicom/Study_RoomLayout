@@ -1,0 +1,21 @@
+{
+  "target_type": "apartment",
+  "floors": [
+    {
+      "footprint": [[0, 0], [4000, 0], [4000, 4000], [0, 4000]],
+      "floor_root": [2000, 0],
+      "floor_program": null,
+      "anchor_projections": []
+    }
+  ],
+  "program_request": {
+    "spaces": [
+      {"name": "living",     "role": "public"},
+      {"name": "kitchen",    "role": "service"},
+      {"name": "bedroom_1",  "role": "private"},
+      {"name": "bedroom_2",  "role": "private"},
+      {"name": "bathroom_1", "role": "wet"}
+    ]
+  },
+  "persistent_anchors": []
+}

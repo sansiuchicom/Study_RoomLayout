@@ -2,7 +2,7 @@
 
 Status: Canonical global reference  
 Scope: proto3 framework, terminology, runtime pipeline, search orchestration, target model, and implementation Step map  
-Last updated: 2026-05-02
+Last updated: 2026-05-07
 
 ---
 
@@ -1034,6 +1034,9 @@ __pycache__/
 
 outputs/debug_runs/*
 !outputs/debug_runs/.gitkeep
+
+outputs/notebooks/*
+!outputs/notebooks/.gitkeep
 
 experiments/runs/*
 !experiments/runs/.gitkeep

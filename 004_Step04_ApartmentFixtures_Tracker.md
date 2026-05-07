@@ -1,7 +1,8 @@
 # 004 Step 04 — Apartment Fixtures / Target Adapter Tracker
 
-Status: In progress
+Status: Completed (pending merge)
 Started: 2026-05-07
+Completed: 2026-05-07
 Branch: `step04-apartment-fixtures`
 Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtures_Plan.md)
 
@@ -52,7 +53,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-7 | `tests/fixture_matrix.py` 매핑 + metadata | [x] | 2026-05-07 (§4.5: A1~R2 5개 ID + expected_failure) |
 | DoD-8 | R1 fixture가 Stage 01에서 ProgramInstantiationFailure 발생 | [x] | 2026-05-07 (§4.6 test_stage01_program::test_stage01_r1_raises) |
 | DoD-9 | `pytest -q` 통과 (≥ 19 + 신규) | [x] | 2026-05-07 (39 passed: 22 기존 + 17 신규) |
-| DoD-10 | `pip install -e .` 회귀 없음 | [ ] | |
+| DoD-10 | `python -m pip install -e .` 회귀 없음 | [x] | 2026-05-07 (system `pip` alias targets py3.10 → fails on requires-python>=3.11; verified with `python -m pip install -e .` OK) |
 | DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [x] | 2026-05-07 (§4.1) |
 | DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [x] | 2026-05-07 (§4.8) |
 | DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [x] | 2026-05-07 사용자 VSCode 실행 후 5 SVG inline 표시 확인 (B1 외곽 L자 + 100mm grid 검증). 점선 모양은 stroke + grid 시각 겹침 (R-S03-3 styling 이슈, Step 05+) |
@@ -92,13 +93,13 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 
 Step 종료 시 순서대로:
 
-- [ ] Plan §4 모든 항목 [x] 확인
-- [ ] DoD §2 모든 항목 [x] 확인
-- [ ] `git status` clean 확인
-- [ ] `000_Progress_Tracker.md` 갱신: Current step → "Step 04 done; ready for Step 05 kickoff", Active files → Step 04 docs as "Completed; pending move to legacy/step04/ at Step 05 kickoff", Step status table → Step 04 Done
-- [ ] (D016 amendment) Step 04 docs는 **Step 05 kickoff 시** `legacy/step04/`로 이동 — 이 Step에서는 옮기지 않음
-- [ ] git commit (4.8)
-- [ ] `git checkout main && git merge --no-ff step04-apartment-fixtures && git branch -d step04-apartment-fixtures && git push origin main`
+- [x] Plan §4 모든 항목 [x] 확인
+- [x] DoD §2 모든 항목 [x] 확인 (DoD-14 [~] merge 대기)
+- [x] `git status` clean 확인
+- [x] `000_Progress_Tracker.md` 갱신: Current step → "Step 04 complete (pending merge)", Active files → Step 04 docs as "Completed; pending move to legacy/step04/ at Step 05 kickoff", Step status table → Step 04 Done
+- [-] (D016 amendment) Step 04 docs는 **Step 05 kickoff 시** `legacy/step04/`로 이동 — 이 Step에서는 옮기지 않음 (의도된 미수행)
+- [x] git commit (4.8 = ce77b4d)
+- [ ] `git checkout main && git merge --no-ff step04-apartment-fixtures && git branch -d step04-apartment-fixtures && git push origin main` (merge 사용자 확인 대기)
 
 ---
 
@@ -109,3 +110,4 @@ Step 종료 시 순서대로:
 | 2026-05-07 | Initial. 8 work items, 14 DoD. |
 | 2026-05-07 | 리뷰 반영 #1. DoD-15/16 추가. |
 | 2026-05-07 | §4.8 close. 8 commits on `step04-apartment-fixtures` (7ce53f4 → cleanup). 39 passed. 14/16 DoD [x], DoD-14 [~] (merge 사용자 확인 대기). |
+| 2026-05-07 | 리뷰 반영 #1 — Status 정정, cleanup checklist 마킹, DoD-10 명령 `python -m pip` + 검증 [x] (#1, #2). |

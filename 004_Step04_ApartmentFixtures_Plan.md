@@ -33,7 +33,7 @@ DH-004 (bathroom-0 regression) 회귀 검증 회로는 Step 04 시점에 **R1 fi
 | DoD-7 | `tests/fixture_matrix.py` (또는 동등물)에 5 fixture ID → 파일 매핑 + matrix metadata + R1/R2 expected_failure 정보 | import test |
 | DoD-8 | R1 fixture가 Stage 01에서 `ProgramInstantiationFailure` 발생 — Step 04에서 검증 회로 작동 | regression test |
 | DoD-9 | `pytest -q` 통과 (Step 03의 19 + Step 04 신규 테스트 합산) | pytest |
-| DoD-10 | `pip install -e .` 회귀 없음 — 신규 runtime deps 0개 | install check |
+| DoD-10 | `python -m pip install -e .` 회귀 없음 — 신규 runtime deps 0개 (system `pip` alias may target wrong Python; use `python -m pip`) | install check |
 | DoD-11 | Step 03 docs (`003_Step03_*.md`) → `legacy/step03/` via `git mv` | git ls-files |
 | DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Step 04 → Done" 갱신 (Active files, Step status table 포함) | manual |
 | DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 `outputs/notebooks/step04_fixture_overview/<run_id>/`에 5개 SVG 생성 | notebook 실행 |
@@ -169,6 +169,7 @@ MATRIX = {
 | Def-8 | Target B/C/D/E adapter 구현 / placeholder class | premature (S04-D3) | 각 Target 본격 진입 시 |
 | Def-9 | `fixtures/apartment/` 하위 디렉토리 분리 | 5개에 over-engineering (S04-D10) | Target B 진입 시 |
 | Def-10 | `proto3.schema.serialize.from_dict()` multi-arm Union 명시적 raise | 현재 schema에선 trigger 케이스 없음. 미래 schema 진화 시 안전화 | Step 05+ |
+| Def-11 | `TargetRules` dataclass/TypedDict 정형화 (현재 `target_rules() -> dict`는 loose) | Step 06에서 ProgramRequest dataclass와 함께 정형화하면 자연스러움. 지금은 Stage 01이 `min_cardinality` shape를 그대로 신뢰 | Step 06 |
 
 ---
 
@@ -224,3 +225,4 @@ Step 04 산출물:
 | 2026-05-07 | Initial draft. §0~§8. 10 decisions (S04-D1 ~ S04-D10). 8 work items. 14 DoD. Fixture matrix 5개 (다른 세션 합의 8→5 축소). |
 | 2026-05-07 | 리뷰 반영 #1. S04-D11 (ProgramInstantiationFailure exception), D12 (R1 표현 + target_rules min_cardinality), D13 (Stage 00 run signature), D14 (legacy link 정책). DoD-15/16 추가. §3.1 fixture 명세 표 신설. §4.1에 drift fix + Progress Tracker kickoff 갱신 + D016 amendment + Pipeline §16 mirror 추가. §5 Def-10 추가. §6 R-S04-2 텍스트 fix (fixture JSON metadata 금지 명시), R-S04-6 신설. |
 | 2026-05-07 | Step 04 close. 8 commits on `step04-apartment-fixtures` (7ce53f4 archive+scaffold → d92edb5 notebook → cleanup). 39 passed. 14/16 DoD [x], DoD-14 [~] (merge --no-ff + branch 삭제 사용자 확인 대기). |
+| 2026-05-07 | 리뷰 반영 #1 — DoD-10 명령 `python -m pip install -e .`로 변경 (#1). Def-11 추가 (TargetRules TypedDict, #5). |

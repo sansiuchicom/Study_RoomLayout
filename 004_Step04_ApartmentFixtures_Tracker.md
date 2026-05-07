@@ -24,8 +24,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 
 | # | 작업 | commit msg | 상태 | 완료일 |
 |---|---|---|:---:|---|
-| 4.1 | Step 03 docs archive + scaffold target/stages modules + Plan/Tracker 추가 | `chore: archive step03 docs + scaffold step04 module structure` | [ ] | |
-| 4.2 | TargetAdapter Protocol + ApartmentAdapter | `feat: target adapter protocol + apartment adapter (S04-D3)` | [ ] | |
+| 4.1 | Step 03 docs archive + scaffold target/stages modules + Plan/Tracker 추가 | `chore: archive step03 docs + scaffold step04 module structure` | [x] | 2026-05-07 |
+| 4.2 | TargetAdapter Protocol + ApartmentAdapter | `feat: target adapter protocol + apartment adapter (S04-D3, D12)` | [x] | 2026-05-07 |
 | 4.3 | Stage 00 input load + normalization | `feat: stage 00 input load + normalization (S04-D4)` | [ ] | |
 | 4.4 | Stage 01 program resolution frame + cardinality gate | `feat: stage 01 program resolution frame + cardinality gate (S04-D4, D004)` | [ ] | |
 | 4.5 | 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse) + fixture_matrix.py | `feat: 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse, S04-D1)` | [ ] | |
@@ -43,8 +43,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 
 | # | 조건 | 결과 | 검증 시각 |
 |---|---|:---:|---|
-| DoD-1 | `src/proto3/target/` 모듈 트리 존재 + import OK | [ ] | |
-| DoD-2 | `src/proto3/stages/` 모듈 트리 존재 + import OK | [ ] | |
+| DoD-1 | `src/proto3/target/` 모듈 트리 존재 + import OK | [x] | 2026-05-07 (§4.1 후 22 passed; §4.2에서 Protocol + ApartmentAdapter 구현) |
+| DoD-2 | `src/proto3/stages/` 모듈 트리 존재 + import OK | [x] | 2026-05-07 (§4.1 후 22 passed) |
 | DoD-3 | `ApartmentAdapter.load_fixture(path)` returns valid BuildingInput | [ ] | |
 | DoD-4 | Stage 00: fixture path → BuildingInput + target consistency check | [ ] | |
 | DoD-5 | Stage 01: program_request → ProgramInstance + cardinality fail (D004) | [ ] | |
@@ -53,11 +53,11 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-8 | R1 fixture가 Stage 01에서 ProgramInstantiationFailure 발생 | [ ] | |
 | DoD-9 | `pytest -q` 통과 (≥ 19 + 신규) | [ ] | |
 | DoD-10 | `pip install -e .` 회귀 없음 | [ ] | |
-| DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [ ] | |
+| DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [x] | 2026-05-07 (§4.1) |
 | DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [ ] | |
 | DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [ ] | |
 | DoD-14 | §4 commits all on `step04-apartment-fixtures` + merge --no-ff + branch 삭제 | [ ] | |
-| DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [ ] | |
+| DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [~] | 2026-05-07 §4.1 In progress 갱신 완료; close 시점 갱신 대기 |
 | DoD-16 | `proto3.schema.validation.ProgramInstantiationFailure` exception 정의 + import OK | [ ] | |
 
 ---
@@ -70,6 +70,8 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 2026-05-07 | 다른 세션 + 현 세션 합쳐 fixture matrix 8 → 5 축소 합의 (A1, A2, B1, R1, R2). 사선/곡선 deferred. R1만 Step 04 회로, R2는 Step 06 대기 |
 | 2026-05-07 | 결정사항 S04-D1~D10 확정. Plan/Tracker 작성 |
 | 2026-05-07 | 리뷰 반영 #1. S04-D11~D14 추가 (ProgramInstantiationFailure exception, R1 표현 방식, Stage 00 signature, legacy link 정책). DoD-15/16 추가. Plan §3.1 fixture 명세 표 신설 |
+| 2026-05-07 | §4.1 완료 — Step 03 docs `legacy/step03/` 이동, target/stages 모듈 scaffold, drift fix (palette.py / debug.py), D016 amendment (H012), Pipeline §16 mirror, Progress Tracker kickoff update. commit `7ce53f4`. 22 passed |
+| 2026-05-07 | §4.2 완료 — TargetAdapter Protocol (`target/base.py`) + ApartmentAdapter (`target/apartment.py`) 구현. `load_fixture` (from_json wrapper) + `target_rules` (apartment min_cardinality dict) |
 
 ---
 

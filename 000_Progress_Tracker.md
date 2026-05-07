@@ -29,7 +29,7 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 04 in progress.
+Step 04 complete (pending merge to main). Ready for Step 05 kickoff.
 ```
 
 Current Step:
@@ -41,8 +41,8 @@ Step 04. Apartment Fixtures / Target Adapter
 Current Step status:
 
 ```text
-In progress; §4.1 (archive Step 03 docs + scaffold step04 modules + Plan/Tracker
-+ drift fix + Progress Tracker kickoff update + D016 amendment) landing.
+Completed 2026-05-07; 8 commits on `step04-apartment-fixtures`; awaiting
+`git merge --no-ff` to main + branch deletion (user-confirmed step).
 ```
 
 ---
@@ -61,8 +61,8 @@ Global docs:
 Active Step files:
 
 ```text
-004_Step04_ApartmentFixtures_Plan.md     (In progress)
-004_Step04_ApartmentFixtures_Tracker.md  (In progress)
+004_Step04_ApartmentFixtures_Plan.md     (Completed; pending move to legacy/step04/ at Step 05 kickoff)
+004_Step04_ApartmentFixtures_Tracker.md  (Completed; pending move to legacy/step04/ at Step 05 kickoff)
 ```
 
 Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
@@ -109,20 +109,22 @@ Completed:
 Immediate next action:
 
 ```text
-Step 04 §4.2 — Target adapter Protocol + ApartmentAdapter (target_rules with
-min_cardinality dict per S04-D12). Then §4.3 Stage 00, §4.4 Stage 01 with
-ProgramInstantiationFailure (per S04-D11/D13).
+Confirm Step 04 close: git merge --no-ff step04-apartment-fixtures into main,
+delete branch, push to origin. Then Step 05 kickoff (Geometry Kernel /
+Atom Resolution Commitments) per Pipeline §15.
 ```
 
-Step 04 produces:
+Step 04 delivered:
 
 ```text
 - proto3.target.{TargetAdapter, ApartmentAdapter}
-- proto3.stages.{stage00_load, stage01_program} (와꾸; Step 06 replaces/extends)
+- proto3.stages.{stage00_load, stage01_program} (frame; Step 06 replaces/extends)
 - proto3.schema.validation.ProgramInstantiationFailure
 - 5 fixtures (apartment_minimal, _4bed_2bath, _l_shape, _no_bath, _too_small)
 - tests/fixture_matrix.py (MATRIX dict + expected_failure metadata)
+- tests/test_target_adapter.py + test_stage00_load.py + test_stage01_program.py + test_fixtures_roundtrip.py (17 신규 tests; total 39 passed)
 - notebooks/step04_fixture_overview.ipynb
+- D-decisions: D016 amendment H012 (legacy link policy)
 ```
 
 ---
@@ -150,7 +152,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
-| 04 | In progress | Apartment Fixtures / Target Adapter (kickoff 2026-05-07) |
+| 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; pending merge) |
 | 05 | Not started | Geometry Kernel / Atom Resolution Commitments |
 | 06 | Not started | Program & Domain Constraint Engine |
 | 07 | Not started | Region / Atom Decomposition |

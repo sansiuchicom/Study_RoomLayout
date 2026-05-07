@@ -1,7 +1,8 @@
 # 004 Step 04 — Apartment Fixtures / Target Adapter Plan
 
-Status: In progress
+Status: Completed (pending merge)
 Started: 2026-05-07
+Completed: 2026-05-07
 Branch: `step04-apartment-fixtures`
 Companion tracker: [004_Step04_ApartmentFixtures_Tracker.md](004_Step04_ApartmentFixtures_Tracker.md)
 
@@ -222,3 +223,4 @@ Step 04 산출물:
 |---|---|
 | 2026-05-07 | Initial draft. §0~§8. 10 decisions (S04-D1 ~ S04-D10). 8 work items. 14 DoD. Fixture matrix 5개 (다른 세션 합의 8→5 축소). |
 | 2026-05-07 | 리뷰 반영 #1. S04-D11 (ProgramInstantiationFailure exception), D12 (R1 표현 + target_rules min_cardinality), D13 (Stage 00 run signature), D14 (legacy link 정책). DoD-15/16 추가. §3.1 fixture 명세 표 신설. §4.1에 drift fix + Progress Tracker kickoff 갱신 + D016 amendment + Pipeline §16 mirror 추가. §5 Def-10 추가. §6 R-S04-2 텍스트 fix (fixture JSON metadata 금지 명시), R-S04-6 신설. |
+| 2026-05-07 | Step 04 close. 8 commits on `step04-apartment-fixtures` (7ce53f4 archive+scaffold → d92edb5 notebook → cleanup). 39 passed. 14/16 DoD [x], DoD-14 [~] (merge --no-ff + branch 삭제 사용자 확인 대기). |

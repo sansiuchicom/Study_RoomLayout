@@ -31,7 +31,7 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 4.5 | 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse) + fixture_matrix.py | `feat: 5-fixture matrix (A2/B1/R1/R2 new + A1 reuse, S04-D1)` | [x] | 2026-05-07 |
 | 4.6 | Tests: target adapter / stage00 / stage01 (R1 fail) / roundtrip | `feat: step04 tests (target adapter + stage 00/01 + R1 regression)` | [x] | 2026-05-07 |
 | 4.7 | step04_fixture_overview notebook | `feat: step04 fixture overview notebook (5-fixture compare, S04-D9)` | [x] | 2026-05-07 |
-| 4.8 | Step 04 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step04 cleanup (Plan/Tracker, Progress Tracker)` | [ ] | |
+| 4.8 | Step 04 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step04 cleanup (Plan/Tracker, Progress Tracker)` | [x] | 2026-05-07 |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → (Step 종료) merge --no-ff to main.
 
@@ -54,10 +54,10 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | DoD-9 | `pytest -q` 통과 (≥ 19 + 신규) | [x] | 2026-05-07 (39 passed: 22 기존 + 17 신규) |
 | DoD-10 | `pip install -e .` 회귀 없음 | [ ] | |
 | DoD-11 | Step 03 docs → `legacy/step03/` via git mv | [x] | 2026-05-07 (§4.1) |
-| DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [ ] | |
-| DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [~] | 2026-05-07 코드 검증 OK (5 SVG `outputs/notebooks/step04_fixture_overview/<run_id>/`에 생성). notebook execute는 사용자 VSCode에서 verify 대기 |
-| DoD-14 | §4 commits all on `step04-apartment-fixtures` + merge --no-ff + branch 삭제 | [ ] | |
-| DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [~] | 2026-05-07 §4.1 In progress 갱신 완료; close 시점 갱신 대기 |
+| DoD-12 | `000_Progress_Tracker.md`가 Step 04 close 시점에 "Done" 갱신 | [x] | 2026-05-07 (§4.8) |
+| DoD-13 | `notebooks/step04_fixture_overview.ipynb` 실행 시 5 SVG 생성 | [x] | 2026-05-07 사용자 VSCode 실행 후 5 SVG inline 표시 확인 (B1 외곽 L자 + 100mm grid 검증). 점선 모양은 stroke + grid 시각 겹침 (R-S03-3 styling 이슈, Step 05+) |
+| DoD-14 | §4 commits all on `step04-apartment-fixtures` + merge --no-ff + branch 삭제 | [~] | 2026-05-07 (§4.8) Plan/Tracker/Progress Tracker 갱신 commit까지; merge --no-ff + branch 삭제는 사용자 확인 후 |
+| DoD-15 | Progress Tracker가 4.1에서 "In progress", 4.8에서 "Done"으로 두 번 갱신 | [x] | 2026-05-07 (§4.1 In progress + §4.8 Done) |
 | DoD-16 | `proto3.schema.validation.ProgramInstantiationFailure` exception 정의 + import OK | [x] | 2026-05-07 (§4.4) |
 
 ---
@@ -76,7 +76,9 @@ Companion plan: [004_Step04_ApartmentFixtures_Plan.md](004_Step04_ApartmentFixtu
 | 2026-05-07 | §4.4 완료 — `ProgramInstantiationFailure(Exception)` 추가 (`schema/validation.py`). `stages/stage01_program.run(building, *, adapter)` 구현: program_request → ProgramInstance + adapter.target_rules min_cardinality 비교, 미충족 시 raise (FailureRecord 보관). commit `acd62e7` |
 | 2026-05-07 | §4.5 완료 — fixture 4개 신규 작성 (apartment_4bed_2bath, _l_shape, _no_bath, _too_small) + `tests/fixture_matrix.py` (5 matrix ID + expected_failure metadata). 5/5 round-trip OK. commit `1e165d3` |
 | 2026-05-07 | §4.6 완료 — 4 test 파일 신규 (target_adapter, stage00_load, stage01_program, fixtures_roundtrip). 17 신규 테스트, 총 39 passed. 상대 import (`from .fixture_matrix`) 패턴 채택. commit `df58530` |
-| 2026-05-07 | §4.7 완료 — `notebooks/step04_fixture_overview.ipynb` 작성 (6 cells: walk-up resolver, fixture_matrix import, 5-fixture render loop, inline SVG display, notes). 코드 검증 OK (5 SVG 생성 inline simulation). notebook execute는 사용자가 VSCode에서 verify |
+| 2026-05-07 | §4.7 완료 — `notebooks/step04_fixture_overview.ipynb` 작성 (6 cells: walk-up resolver, fixture_matrix import, 5-fixture render loop, inline SVG display, notes). 코드 검증 OK (5 SVG 생성 inline simulation). notebook execute는 사용자가 VSCode에서 verify. commit `d92edb5` |
+| 2026-05-07 | 사용자 VSCode 실행 검증 — 5 SVG inline 표시 확인 (B1 L자 footprint 정확). DoD-13 [x] |
+| 2026-05-07 | §4.8 cleanup 진행 — Plan/Tracker mark complete, Progress Tracker "Step 04 → Done" 갱신, 변경이력 업데이트 |
 
 ---
 
@@ -106,3 +108,4 @@ Step 종료 시 순서대로:
 |---|---|
 | 2026-05-07 | Initial. 8 work items, 14 DoD. |
 | 2026-05-07 | 리뷰 반영 #1. DoD-15/16 추가. |
+| 2026-05-07 | §4.8 close. 8 commits on `step04-apartment-fixtures` (7ce53f4 → cleanup). 39 passed. 14/16 DoD [x], DoD-14 [~] (merge 사용자 확인 대기). |

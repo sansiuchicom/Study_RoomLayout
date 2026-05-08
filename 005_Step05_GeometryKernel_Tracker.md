@@ -24,8 +24,8 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 
 | # | 작업 | commit msg | 상태 | 완료일 |
 |---|---|---|:---:|---|
-| 4.1 | Step 04 archive + geometry scaffold + references 정리 + pyproject deps + RunConfig atom_size 600→300 + atom_inclusion_threshold 신설 + tests 갱신 + Plan/Tracker + Progress Tracker kickoff | `chore: archive step04 docs + scaffold step05 geometry module + references + atom default 300mm` | [ ] | |
-| 4.2 | `proto3/geometry/lir.py` 통합 (rasterize + max_rect + LIR search) | `feat: geometry lir module — LIR search + max_rect (S05-D1)` | [ ] | |
+| 4.1 | Step 04 archive + geometry scaffold + references 정리 + pyproject deps + RunConfig atom_size 600→300 + atom_inclusion_threshold 신설 + tests 갱신 + Plan/Tracker + Progress Tracker kickoff | `chore: archive step04 docs + scaffold step05 geometry module + references + atom default 300mm` | [x] | 2026-05-08 (`7201781`) |
+| 4.2 | `proto3/geometry/lir.py` 통합 (rasterize + max_rect + LIR search) | `feat: geometry lir module — LIR search + max_rect (S05-D1)` | [x] | 2026-05-08 |
 | 4.3 | `proto3/geometry/grid.py` 통합 (anisotropic grid + 50% merge) | `feat: geometry grid module — anisotropic grid + 50% merge (S05-D1, D4)` | [ ] | |
 | 4.4 | `proto3/geometry/recursive.py` + `decompose.py` 통합 | `feat: geometry recursive + decompose wrapper (S05-D1, D4)` | [ ] | |
 | 4.5 | `proto3/schema/geometry.py` — GeometricPiece + Decomposition dataclass | `feat: GeometricPiece + Decomposition schema (S05-D5)` | [ ] | |
@@ -70,6 +70,8 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | Step 04 완료 후 main 동기화 (`822786a`). atom shape/size design fundamentals 의논 시작 — 사용자 외부 연구 후 v3.2 algorithm 가져옴 (per-family recursive progressive fill). 30 stress test 검증 (29/30 100%). |
 | 2026-05-08 | 결정 정리: Integration=A (그대로), target=0.3m, shapely 정식 deps, X2 scope split (Step 05 algorithm only / Step 07 schema integration), M2 (Region ↔ GeometricPiece 분리). |
 | 2026-05-08 | `step05-geometry-kernel` 브랜치 checkout. references/ 4 파일 rename + README 신설. Step 04 docs `legacy/step04/`로 git mv staged. `src/proto3/geometry/` 5 scaffold + `src/proto3/schema/geometry.py` 1 scaffold. pyproject shapely + numpy 추가. Plan/Tracker 작성. |
+| 2026-05-08 | §4.1 완료 — RunConfig atom_size 600→300, atom_inclusion_threshold=0.5 신설, test_smoke + test_serialize 갱신. 16 files added/created, 4 modified, 2 renamed. 52 passed. Progress Tracker kickoff. commit `7201781` |
+| 2026-05-08 | §4.2 완료 — `proto3/geometry/lir.py` 통합 (rasterize_polygon, max_rect_in_histogram, max_rect_in_mask, lir_at_angle, candidate_angles_from_boundary, find_main_rect_refined). v3.2의 `matplotlib.Path.contains_points` → `shapely.contains_xy`로 minor refactor (matplotlib runtime dep 회피, S05-D2 정합). 6 inline smoke 통과 (rect LIR 48㎡, L-shape LIR 48㎡ 정확). 52 passed. |
 
 ---
 

@@ -27,7 +27,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 4.1 | Step 04 archive + geometry scaffold + references 정리 + pyproject deps + RunConfig atom_size 600→300 + atom_inclusion_threshold 신설 + tests 갱신 + Plan/Tracker + Progress Tracker kickoff | `chore: archive step04 docs + scaffold step05 geometry module + references + atom default 300mm` | [x] | 2026-05-08 (`7201781`) |
 | 4.2 | `proto3/geometry/lir.py` 통합 (rasterize + max_rect + LIR search) | `feat: geometry lir module — LIR search + max_rect (S05-D1)` | [x] | 2026-05-08 |
 | 4.3 | `proto3/geometry/grid.py` 통합 (anisotropic grid + 50% merge) | `feat: geometry grid module — anisotropic grid + 50% merge (S05-D1, D4)` | [x] | 2026-05-08 |
-| 4.4 | `proto3/geometry/recursive.py` + `decompose.py` 통합 | `feat: geometry recursive + decompose wrapper (S05-D1, D4)` | [ ] | |
+| 4.4 | `proto3/geometry/recursive.py` + `decompose.py` 통합 | `feat: geometry recursive + decompose wrapper (S05-D1, D4)` | [x] | 2026-05-08 |
 | 4.5 | `proto3/schema/geometry.py` — GeometricPiece + Decomposition dataclass | `feat: GeometricPiece + Decomposition schema (S05-D5)` | [ ] | |
 | 4.6 | Algorithm tests (LIR + grid + recursive + 6-fixture integration) | `feat: geometry tests (lir + grid + recursive + 6-fixture integration)` | [ ] | |
 | 4.7 | 사선 fixture (D1, apartment_diagonal.json) + matrix 갱신 + render smoke 6 fixture 확장 | `feat: diagonal fixture (D1, S04 Def-1 resolved, S05-D7)` | [ ] | |
@@ -74,6 +74,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | §4.2 완료 — `proto3/geometry/lir.py` 통합 (rasterize_polygon, max_rect_in_histogram, max_rect_in_mask, lir_at_angle, candidate_angles_from_boundary, find_main_rect_refined). v3.2의 `matplotlib.Path.contains_points` → `shapely.contains_xy`로 minor refactor (matplotlib runtime dep 회피, S05-D2 정합). 6 inline smoke 통과 (rect LIR 48㎡, L-shape LIR 48㎡ 정확). 52 passed. |
 | 2026-05-08 | references 정리 (별도 chore commit, §4.2와 §4.3 사이) — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 11 files (4 cell + 7 zone + README). proto3 코드 docstring + Plan §3/§5/§6 + memory `project_proto3.md` 인용 모두 갱신. Plan §5 Def-13 신설 (v12 → Step 07 land 예정). 52 passed. commit `a7d6084` |
 | 2026-05-08 | §4.3 완료 — `proto3/geometry/grid.py` 통합 (compute_proportional_cell_size, grid_no_skip_aniso, merge_below_50_aniso, piece_direct_theta, angle_diff). v3.2 critical fixes 그대로 보존 (MultiPolygon all-parts, buffer-free neighbor, orphan preservation). 6 inline smoke 통과 (rect 8×6 → 540 cells perfect fit, L-shape 749 → 722 cells after merge, rotated rect theta 30° 정확). 52 passed. |
+| 2026-05-08 | §4.4 완료 — `proto3/geometry/recursive.py` (recursive_progressive_per_family) + `decompose.py` (auto_partition wrapper). v3.2 메인 알고리즘 통합. 4 fixture smoke: rect 8×6 (1 fam/540 cells), L-shape (1 fam/722 cells/0% gap), rotated 30° (theta 30° 정확 감지, 660 cells/0% gap), mirror wings multi-axis (**4 families 자동 분리**, 1399 cells/0% gap). v3.2 핵심 가치 모두 검증 (LIR 자동 회전 감지 + family-aware + per-family proportional). 52 passed. |
 
 ---
 

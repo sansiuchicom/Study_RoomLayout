@@ -2,5 +2,5 @@
 
 Will host: compute_proportional_cell_size, grid_no_skip_aniso,
 merge_below_50_aniso, piece_direct_theta, angle_diff.
-Ported from references/lir_recursive_per_family_v3_2.py.
+Ported from references/cell_v3_2.{py,md}.
 """

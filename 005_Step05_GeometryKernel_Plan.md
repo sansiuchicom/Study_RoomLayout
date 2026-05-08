@@ -11,7 +11,7 @@ Companion tracker: [005_Step05_GeometryKernel_Tracker.md](005_Step05_GeometryKer
 
 Step 05 = "Geometry Kernel / Atom Resolution Commitments" per [Pipeline §15](000_Pipeline_Overview.md#L963). 산출물 4가지:
 
-1. **`proto3.geometry` 패키지** — LIR (Largest Inscribed Rectangle) + per-family recursive decomposition + anisotropic grid + 50% merge rule. 외부 사용자 작업 ([references/lir_recursive_per_family_v3_2.py](references/lir_recursive_per_family_v3_2.py))를 Option A (그대로 + minor wrapper)로 import.
+1. **`proto3.geometry` 패키지** — LIR (Largest Inscribed Rectangle) + per-family recursive decomposition + anisotropic grid + 50% merge rule. 외부 사용자 작업 ([references/cell_v3_2.py](references/cell_v3_2.py))를 Option A (그대로 + minor wrapper)로 import.
 2. **`GeometricPiece` + `Decomposition` schema 신설** — v3.2 algorithm output을 받는 proto3 schema. D006 `Region/RegionSet` (architectural territory)과는 **별도 layer** (M2 결정). Region 매핑은 Step 07로 yield.
 3. **D006 amendment (D019 정식 등록)** — atom = "fixed 600mm cube" → "target 근처에서 family별 proportional"로 의미 정제. target_cell_size = 0.3m.
 4. **사선 fixture 추가** — 회전된 apartment 1개 (D1). v3.2 algorithm이 사선 boundary 처리하는지 fixture로 검증.
@@ -38,7 +38,7 @@ Step 05 = "Geometry Kernel / Atom Resolution Commitments" per [Pipeline §15](00
 | DoD-10 | `000_Progress_Tracker.md` 갱신: Step 05 → Done (close 시) + In progress (kickoff §4.1) | manual |
 | DoD-11 | `notebooks/step05_decomposition.ipynb` 실행 시 `outputs/notebooks/step05_decomposition/<run_id>/`에 6 SVG 생성 (5 기존 + 1 사선) — decomposition 시각화 (cell coloring by family_id) | notebook 실행 |
 | DoD-12 | `D019` (D006 amendment — per-family proportional atom sizing) 정식 등록 in `000_Architecture_Decisions.md` | grep |
-| DoD-13 | references/ 디렉토리 origin 보존 — `lir_recursive_per_family_v3_2.{py,md}` + 2 stress test PNG + `README.md` | git ls-files |
+| DoD-13 | references/ 디렉토리 origin 보존 — `cell_v3_2.{py,md}` + 2 cell stress PNG + `zone_v12.{py,md}` + 4 zone PNG + `README.md` (총 11 files) | git ls-files |
 | DoD-14 | §4 commits 모두 `step05-geometry-kernel` branch + `git merge --no-ff` to main + branch 삭제 | git log |
 | DoD-15 | 4.1 commit에 Progress Tracker §1/§6 "In progress" 갱신 포함 | git diff |
 | DoD-16 | RunConfig.atom_size_mm = 300 + atom_inclusion_threshold = 0.5 + min_atom_side_mm/tiny_atom_area deprecation 마커 (4.1에서 코드 + 4.9에서 D006/Pipeline §8 텍스트) | grep + test_smoke |
@@ -49,7 +49,7 @@ Step 05 = "Geometry Kernel / Atom Resolution Commitments" per [Pipeline §15](00
 
 | ID | 결정 | 근거 |
 |---|---|---|
-| **S05-D1** | v3.2 algorithm을 **Option A (그대로 + minor wrapper)**로 import. `references/lir_recursive_per_family_v3_2.py`의 함수들을 `src/proto3/geometry/{lir,grid,recursive,decompose}.py`로 분할. proto3 컨벤션 맞춰 minor refactor (한국어 주석은 영어로, import path 정리). | 검증된 30 stress test 재현 (29/30 100% coverage). 재작성 churn 회피. |
+| **S05-D1** | v3.2 algorithm을 **Option A (그대로 + minor wrapper)**로 import. `references/cell_v3_2.py`의 함수들을 `src/proto3/geometry/{lir,grid,recursive,decompose}.py`로 분할. proto3 컨벤션 맞춰 minor refactor (한국어 주석은 영어로, import path 정리). | 검증된 30 stress test 재현 (29/30 100% coverage). 재작성 churn 회피. |
 | **S05-D2** | **shapely>=2.0 + numpy>=1.24 정식 runtime 의존성** (`[project] dependencies`). Step 05 초기 Q1 (pure stdlib) 결정 뒤집음. | scan-to-BIM mission (사선/곡선 footprint robust 처리) 정당화 + v3.2 algorithm 의존성. shapely는 polygon ops, numpy는 rasterize. |
 | **S05-D3** | **atom_size_mm = 300mm로 통일** (was 600mm; D006 amendment via D019). v3.2 algorithm default와 일치. RunConfig.atom_size_mm 600→300 + `atom_inclusion_threshold = 0.5` 신설 (v3.2 50% rule). `min_atom_side_mm`, `tiny_atom_area_m2`은 **deprecated 명시** — v3.2가 area-fraction threshold로 대체. door defaults는 그대로 (도메인 가정). 4.1에서 RunConfig + tests 코드 변경, 4.9에서 D006/Pipeline §8 텍스트 amendment + D019 정식 등록. | v3.2 algorithm 기준 일관성. mission resolution (욕실 1.5×2m → 5×7 atoms) 충분. min_atom_side / tiny_area는 v3.2가 안 쓰는 개념이라 deprecate가 정직. |
 | **S05-D4** | **D006 amendment (D019 정식 등록)** — atom = "고정 600mm cube" → "target 근처 family별 proportional fit". Same-theta family = same cell size + phase chain (seamless), different-theta family = self-computed cell size. Boundary cells = polygon clipped by region edge (50% merge rule). | mission (사선 보존) + 알고리즘 단순성 (interior grid) 둘 다 만족. v3.2 검증으로 정합성 입증. |
@@ -78,10 +78,16 @@ src/proto3/
 
 references/                         # 신설 (외부 작업물 origin 보존)
 ├── README.md
-├── lir_recursive_per_family_v3_2.py
-├── lir_recursive_per_family_v3_2.md
-├── stress_test_15_shapes.png
-└── stress_test_15_edge_cases.png
+├── cell_v3_2.py                    # v3.2 cell partition algorithm
+├── cell_v3_2.md
+├── cell_v3_2_stress.png            # v3.2 stress test 일반 15
+├── cell_v3_2_edges.png             # v3.2 edge case 15
+├── zone_v12.py                     # v12 zoning algorithm (Step 07 land 예정)
+├── zone_v12.md
+├── zone_v12_evolution_g1.png       # v11 → v12 evolution 시각 1
+├── zone_v12_evolution_g2.png
+├── zone_v12_evolution_g3.png
+└── zone_v12_showcase.png           # v12 33 cases showcase
 
 fixtures/
 ├── apartment_minimal.json          # A1 (Step 03)
@@ -147,6 +153,7 @@ legacy/step04/                      # 신설 (archive)
 | Def-10 | `from_dict()` multi-arm Union 명시적 raise | Step 04 §5 Def-10 그대로 | Step 05+ minor |
 | Def-11 | Variable atom_size per region (F4 reconsider) | per-family proportional이 충분; 추가 variable size는 graph 복잡도만 늘림 | Step 07+ if fixtures show insufficient resolution |
 | Def-12 | Stage 03 anchor projection 본격 구현 | apartment-only는 no-op. multi-floor (Target B+) 진입 시 | Step 14 |
+| Def-13 | v12 zoning algorithm (`references/zone_v12.{py,md}`) 통합 — `proto3.zoning.*` 또는 `proto3.stages.stage04_decompose`에 land. v12 zone polygon → proto3 `Region` candidate 매핑. label assign은 Step 09 spine candidate에서. | Step 07 (Region/Atom Decomposition 본격) 책임. v12 + v3.2가 짝 맞아 Stage 04 통합이 plug-and-play 수준. | Step 07 |
 
 ---
 
@@ -159,7 +166,7 @@ legacy/step04/                      # 신설 (archive)
 | R-S05-3 | atom_size 600→300 amendment 시 backward-compat: 기존 fixture (Step 04) 좌표가 600mm 배수인지 확인 — 300mm 배수가 안 되면 boundary cell 더 많이 발생. | Step 04 fixture는 1000mm 단위라 300mm 배수 아니지만 v3.2 area-fraction (50% rule)이 boundary 흡수. Smoke test (DoD-4)로 6 fixture 검증. |
 | R-S05-4 | 사선 fixture가 v3.2 algorithm으로 잘 작동 안 할 수도 — vertex 좌표가 mm 단위 정수면 OK | DoD-5에서 round-trip + decompose 검증 |
 | R-S05-5 | numpy/shapely 새 deps로 dev install 회귀 — 기존 사용자 환경 영향 | DoD-7 (`python -m pip install -e .` 회귀 없음). shapely 2.0+ 은 stable. README/CHANGELOG 갱신은 Step 06+ |
-| R-S05-6 | v3.2 한국어 식별자/주석을 영어로 옮길 때 의미 drift | 4.2~4.4 작업 시 references/lir_recursive_per_family_v3_2.md 영문 docstring로 직접 매핑 |
+| R-S05-6 | v3.2 한국어 식별자/주석을 영어로 옮길 때 의미 drift | 4.2~4.4 작업 시 `references/cell_v3_2.md` 영문 docstring로 직접 매핑 |
 
 ---
 
@@ -194,3 +201,4 @@ Step 05 산출물:
 |---|---|
 | 2026-05-08 | Initial draft. §0~§8. 10 decisions (S05-D1 ~ S05-D10). 9 work items. 15 DoD. v3.2 algorithm 외부 도입 (refs origin: 사용자 외부 작업, 2026-05-08). X2 scope split (Step 05 algorithm only, Step 07 schema integration). M2 (Region/GeometricPiece 분리). |
 | 2026-05-08 | S05-D3 명확화 — atom_size 600→300mm + atom_inclusion_threshold 0.5 신설 + min_atom_side/tiny_atom_area deprecation. R-S05-3 의미 변경 (위험이 아니라 backward-compat 검증). DoD-16 추가. 4.1에 RunConfig 코드 변경, 4.9에 D006/Pipeline §8 텍스트 amendment 분리. |
+| 2026-05-08 | references 정리 — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 4 cell + 7 zone = 11 files. Def-13 신설 (v12 → Step 07). DoD-13 갱신 (cell + zone 다 origin 보존). |

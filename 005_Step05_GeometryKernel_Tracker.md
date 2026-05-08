@@ -72,6 +72,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | `step05-geometry-kernel` 브랜치 checkout. references/ 4 파일 rename + README 신설. Step 04 docs `legacy/step04/`로 git mv staged. `src/proto3/geometry/` 5 scaffold + `src/proto3/schema/geometry.py` 1 scaffold. pyproject shapely + numpy 추가. Plan/Tracker 작성. |
 | 2026-05-08 | §4.1 완료 — RunConfig atom_size 600→300, atom_inclusion_threshold=0.5 신설, test_smoke + test_serialize 갱신. 16 files added/created, 4 modified, 2 renamed. 52 passed. Progress Tracker kickoff. commit `7201781` |
 | 2026-05-08 | §4.2 완료 — `proto3/geometry/lir.py` 통합 (rasterize_polygon, max_rect_in_histogram, max_rect_in_mask, lir_at_angle, candidate_angles_from_boundary, find_main_rect_refined). v3.2의 `matplotlib.Path.contains_points` → `shapely.contains_xy`로 minor refactor (matplotlib runtime dep 회피, S05-D2 정합). 6 inline smoke 통과 (rect LIR 48㎡, L-shape LIR 48㎡ 정확). 52 passed. |
+| 2026-05-08 | references 정리 (별도 chore commit, §4.2와 §4.3 사이) — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 11 files (4 cell + 7 zone + README). proto3 코드 docstring + Plan §3/§5/§6 + memory `project_proto3.md` 인용 모두 갱신. Plan §5 Def-13 신설 (v12 → Step 07 land 예정). 52 passed. |
 
 ---
 

@@ -7,5 +7,5 @@ adapter mapping algorithm output → GeometricPiece + Atom.
 
 def auto_partition(*args, **kwargs):
     raise NotImplementedError(
-        "auto_partition() — Step 05 §4.x; see references/lir_recursive_per_family_v3_2.py"
+        "auto_partition() — Step 05 §4.x; see references/cell_v3_2.{py,md}"
     )

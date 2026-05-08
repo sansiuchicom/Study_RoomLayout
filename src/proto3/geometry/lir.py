@@ -1,6 +1,6 @@
 """LIR (Largest Inscribed Rectangle) search.
 
-Ported from references/lir_recursive_per_family_v3_2.md §4.
+Ported from references/cell_v3_2.md §4.
 
 Pipeline:
     rasterize_polygon       — polygon → binary mask (matplotlib.Path-based, vectorized)

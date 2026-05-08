@@ -28,7 +28,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 4.2 | `proto3/geometry/lir.py` 통합 (rasterize + max_rect + LIR search) | `feat: geometry lir module — LIR search + max_rect (S05-D1)` | [x] | 2026-05-08 |
 | 4.3 | `proto3/geometry/grid.py` 통합 (anisotropic grid + 50% merge) | `feat: geometry grid module — anisotropic grid + 50% merge (S05-D1, D4)` | [x] | 2026-05-08 |
 | 4.4 | `proto3/geometry/recursive.py` + `decompose.py` 통합 | `feat: geometry recursive + decompose wrapper (S05-D1, D4)` | [x] | 2026-05-08 |
-| 4.5 | `proto3/schema/geometry.py` — GeometricPiece + Decomposition dataclass | `feat: GeometricPiece + Decomposition schema (S05-D5)` | [ ] | |
+| 4.5 | `proto3/schema/geometry.py` — GeometricPiece + Decomposition dataclass | `feat: GeometricPiece + Decomposition schema (S05-D5)` | [x] | 2026-05-08 |
 | 4.6 | Algorithm tests (LIR + grid + recursive + 6-fixture integration) | `feat: geometry tests (lir + grid + recursive + 6-fixture integration)` | [ ] | |
 | 4.7 | 사선 fixture (D1, apartment_diagonal.json) + matrix 갱신 + render smoke 6 fixture 확장 | `feat: diagonal fixture (D1, S04 Def-1 resolved, S05-D7)` | [ ] | |
 | 4.8 | `notebooks/step05_decomposition.ipynb` (6 fixture × decomposition 시각화) | `feat: step05 decomposition notebook (S05-D9)` | [ ] | |
@@ -45,7 +45,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | # | 조건 | 결과 | 검증 시각 |
 |---|---|:---:|---|
 | DoD-1 | `src/proto3/geometry/` 모듈 (lir/grid/recursive/decompose) import OK | [ ] | |
-| DoD-2 | `proto3/schema/geometry.py` GeometricPiece + Decomposition import OK | [ ] | |
+| DoD-2 | `proto3/schema/geometry.py` GeometricPiece + Decomposition import OK | [x] | 2026-05-08 (§4.5: round-trip OK, JSON 188.6 KB on L-shape) |
 | DoD-3 | `shapely>=2.0 + numpy>=1.24` 정식 deps in pyproject | [ ] | |
 | DoD-4 | `auto_partition()` 6 fixture 모두 작동 (gap < 1%) | [ ] | |
 | DoD-5 | 사선 fixture (D1) round-trip + decompose 100% coverage | [ ] | |
@@ -75,6 +75,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | references 정리 (별도 chore commit, §4.2와 §4.3 사이) — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 11 files (4 cell + 7 zone + README). proto3 코드 docstring + Plan §3/§5/§6 + memory `project_proto3.md` 인용 모두 갱신. Plan §5 Def-13 신설 (v12 → Step 07 land 예정). 52 passed. commit `a7d6084` |
 | 2026-05-08 | §4.3 완료 — `proto3/geometry/grid.py` 통합 (compute_proportional_cell_size, grid_no_skip_aniso, merge_below_50_aniso, piece_direct_theta, angle_diff). v3.2 critical fixes 그대로 보존 (MultiPolygon all-parts, buffer-free neighbor, orphan preservation). 6 inline smoke 통과 (rect 8×6 → 540 cells perfect fit, L-shape 749 → 722 cells after merge, rotated rect theta 30° 정확). 52 passed. |
 | 2026-05-08 | §4.4 완료 — `proto3/geometry/recursive.py` (recursive_progressive_per_family) + `decompose.py` (auto_partition wrapper). v3.2 메인 알고리즘 통합. 4 fixture smoke: rect 8×6 (1 fam/540 cells), L-shape (1 fam/722 cells/0% gap), rotated 30° (theta 30° 정확 감지, 660 cells/0% gap), mirror wings multi-axis (**4 families 자동 분리**, 1399 cells/0% gap). v3.2 핵심 가치 모두 검증 (LIR 자동 회전 감지 + family-aware + per-family proportional). 52 passed. |
+| 2026-05-08 | §4.5 완료 — `proto3/schema/geometry.py` (GeometricPiece + Decomposition) + `region_atom.Atom` 확장 (parent_piece_id, family_id 추가) + `decompose.to_schema()` converter. **옵션 b + X (vertex list + 기존 Atom 확장)** 채택. L-shape sanity: 2 pieces, 722 atoms, parent_piece_id 매핑 정확, round-trip 보존 (pieces/atoms/theta/vertices/parent_piece_id/root_main_rect), JSON 188.6 KB. 52 passed. |
 
 ---
 

@@ -28,12 +28,20 @@ class RegionSet:
 
 @dataclass
 class Atom:
-    """Fine growth unit (§6.3)."""
+    """Fine growth unit (§6.3, D006).
+
+    Layered field population across Steps:
+      - Step 05: parent_piece_id (geometric subdivision ref) + family_id (same-theta group).
+      - Step 07: parent_region_id (architectural label) when Region candidates are mapped.
+      - Step 08: graph fields (exterior_contact, neighbor_atom_ids, role scores).
+    """
     atom_id: str = ""
-    parent_region_id: str | None = None
+    parent_piece_id: int | None = None        # Step 05 — index into Decomposition.pieces
+    parent_region_id: str | None = None       # Step 07 — architectural region label
+    family_id: int = 0                         # Step 05 — same theta + phase chain group
     center: tuple[float, float] | None = None
     vertices: list[tuple[float, float]] = field(default_factory=list)
-    # TBD: area, exterior_contact flag, role scores
+    # TBD (Step 08): exterior_contact flag, neighbor_atom_ids, role scores
 
 
 @dataclass

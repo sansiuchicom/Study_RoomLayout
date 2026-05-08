@@ -47,7 +47,7 @@ def test_runconfig_round_trip_and_defaults() -> None:
     # Missing-key compat
     c3 = from_dict(RunConfig, {"target_type": "warehouse"})
     assert c3.target_type == "warehouse"
-    assert c3.atom_size_mm == 600  # default kept
+    assert c3.atom_size_mm == 300  # default kept (D019 amended from 600 → 300)
 
 
 def test_from_dict_rejects_non_dict() -> None:

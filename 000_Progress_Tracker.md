@@ -29,20 +29,22 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 04 complete (pending merge to main). Ready for Step 05 kickoff.
+Step 05 in progress.
 ```
 
 Current Step:
 
 ```text
-Step 04. Apartment Fixtures / Target Adapter
+Step 05. Geometry Kernel / Atom Resolution Commitments
 ```
 
 Current Step status:
 
 ```text
-Completed 2026-05-07; 8 commits on `step04-apartment-fixtures`; awaiting
-`git merge --no-ff` to main + branch deletion (user-confirmed step).
+In progress 2026-05-08; §4.1 scaffold landing on `step05-geometry-kernel` branch.
+v3.2 algorithm imported from external user research (per-family recursive progressive
+fill; references/ origin preserved). D006 amendment (D019) per-family proportional
+atom sizing. X2 scope split (Step 05 algorithm only / Step 07 schema integration).
 ```
 
 ---
@@ -61,9 +63,11 @@ Global docs:
 Active Step files:
 
 ```text
-004_Step04_ApartmentFixtures_Plan.md     (Completed; pending move to legacy/step04/ at Step 05 kickoff)
-004_Step04_ApartmentFixtures_Tracker.md  (Completed; pending move to legacy/step04/ at Step 05 kickoff)
+005_Step05_GeometryKernel_Plan.md     (In progress)
+005_Step05_GeometryKernel_Tracker.md  (In progress)
 ```
+
+Step 04 docs archived to `legacy/step04/` (during Step 05 §4.1).
 
 Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
 Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
@@ -152,8 +156,8 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 01 | Done | Project Skeleton / Global Docs (2026-05-03) |
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
-| 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; pending merge) |
-| 05 | Not started | Geometry Kernel / Atom Resolution Commitments |
+| 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
+| 05 | In progress | Geometry Kernel — v3.2 algorithm import + per-family proportional atom (D019) |
 | 06 | Not started | Program & Domain Constraint Engine |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |

@@ -63,8 +63,9 @@ def test_runconfig_defaults() -> None:
 
     c = RunConfig()
     assert c.target_type == "apartment"
-    assert c.atom_size_mm == 600
-    assert c.min_atom_side_mm == 300
+    assert c.atom_size_mm == 300                 # D019 amended from 600 → 300
+    assert c.atom_inclusion_threshold == 0.5     # D019 NEW (v3.2 50% rule)
+    assert c.min_atom_side_mm == 300             # deprecated by D019, kept for backward compat
     assert c.door_min_boundary_mm == 800
     assert c.random_seed is None
     assert c.debug_run_id is None

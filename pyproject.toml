@@ -7,6 +7,10 @@ name = "proto3"
 version = "0.0.0"
 description = "Spine-first floor layout generation framework (proto3)"
 requires-python = ">=3.11"
+dependencies = [
+    "shapely>=2.0",
+    "numpy>=1.24",
+]
 
 [project.optional-dependencies]
 dev = ["jupyter", "nbstripout", "pytest"]

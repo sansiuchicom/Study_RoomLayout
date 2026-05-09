@@ -33,6 +33,13 @@ MATRIX: dict[str, dict] = {
         "expected_failure": "AreaGateFailure",
         "verified_at": "Step 06",
     },
+    "D1": {
+        "file": "apartment_diagonal.json",
+        "expected_failure": None,
+        "verified_at": "Step 05",
+        "shape": "rotated_rect_20deg",
+        "note": "non-Manhattan footprint (S04 Def-1 resolved); validates v3.2 LIR theta detection",
+    },
 }
 
 

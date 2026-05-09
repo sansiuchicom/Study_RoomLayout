@@ -30,7 +30,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 4.4 | `proto3/geometry/recursive.py` + `decompose.py` 통합 | `feat: geometry recursive + decompose wrapper (S05-D1, D4)` | [x] | 2026-05-08 |
 | 4.5 | `proto3/schema/geometry.py` — GeometricPiece + Decomposition dataclass | `feat: GeometricPiece + Decomposition schema (S05-D5)` | [x] | 2026-05-08 |
 | 4.6 | Algorithm tests (LIR + grid + recursive + small-fixture decompose; matplotlib leak fix; unit mismatch R-S05-7) | `feat: geometry tests + matplotlib leak fix + unit mismatch ad-hoc fix (S05-D2 amend, R-S05-7)` | [x] | 2026-05-08 |
-| 4.7 | 사선 fixture (D1, apartment_diagonal.json) + matrix 갱신 + render smoke 6 fixture 확장 | `feat: diagonal fixture (D1, S04 Def-1 resolved, S05-D7)` | [ ] | |
+| 4.7 | 사선 fixture (D1, apartment_diagonal.json) + matrix 갱신 + render smoke 6 fixture 확장 | `feat: diagonal fixture (D1, S04 Def-1 resolved, S05-D7)` | [x] | 2026-05-08 |
 | 4.8 | `notebooks/step05_decomposition.ipynb` (6 fixture × decomposition 시각화) | `feat: step05 decomposition notebook (S05-D9)` | [ ] | |
 | 4.9 | D019 정식 등록 + D006 amendment 텍스트 + Pipeline §8 numerical defaults table update + Step 05 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step05 cleanup + D019 D006 amendment (per-family proportional atom + 300mm)` | [ ] | |
 

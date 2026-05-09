@@ -1,0 +1,24 @@
+{
+  "target_type": "apartment",
+  "floors": [
+    {
+      "footprint": [
+        [2052, 0],
+        [9569, 2736],
+        [7517, 8374],
+        [0, 5638]
+      ],
+      "floor_root": [5810, 1368],
+      "floor_program": null,
+      "anchor_projections": []
+    }
+  ],
+  "program_request": {
+    "spaces": [
+      {"name": "living",     "role": "public"},
+      {"name": "bedroom_1",  "role": "private"},
+      {"name": "bathroom_1", "role": "wet"}
+    ]
+  },
+  "persistent_anchors": []
+}

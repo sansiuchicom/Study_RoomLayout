@@ -265,22 +265,25 @@ Regression rule:
 
 The region/atom dual layer is not meaningful unless atoms have a shared resolution contract.
 
-Initial geometry commitments:
+Geometry commitments (revised 2026-05-08 per [D019](000_Architecture_Decisions.md); superseded values noted):
 
-| Item | Initial default | Notes |
+| Item | Default | Notes |
 |---|---:|---|
 | Internal coordinate unit | millimeter | Avoid unit ambiguity. |
-| Default layout atom size | 600mm nominal side | Replaceable but must be explicit. |
-| Minimum atom side | 300mm | Below this is usually sliver/tiny geometry. |
-| Tiny atom area threshold | 0.18㎡ | 300mm × 600mm equivalent. Configurable. |
+| Default layout atom size | **300mm** nominal side | D019 (was 600mm in initial D006). Per-family proportional — see D019. |
+| `atom_inclusion_threshold` | **0.5** | D019 NEW — area-fraction threshold; boundary cells below this are merged into the longest-shared-boundary neighbor (v3.2 50% rule). |
+| ~~Minimum atom side~~ | ~~300mm~~ | **Deprecated by D019** — sliver detection is now area-based, not side-based. Field retained in `RunConfig` for backward-compat. |
+| ~~Tiny atom area threshold~~ | ~~0.18㎡~~ | **Deprecated by D019** — same; superseded by `atom_inclusion_threshold`. |
 | Door-capable shared boundary | 800mm minimum | Configurable by Target and local rules. |
 | Preferred door boundary | 900mm or more | Used as a stronger positive score. |
 
+Atom shape (D019): interior atoms are axis-aligned cells of size (cell_w × cell_h) within the family's rotated frame; boundary atoms are simple polygons clipped by the region edge. Same-theta family shares one cell size + phase chain (seamless across leftover pieces); different-theta families compute their own cell size from their own main rect.
+
 These values are first-pass defaults. They are not universal architectural laws, but the implementation must commit to initial values so decomposition, graph construction, growth, validation, and visualization use the same assumptions.
 
-Step 05 Geometry Kernel must confirm or revise these values before region/atom decomposition becomes serious.
+Step 05 Geometry Kernel confirmed/revised these values via D019 (2026-05-08). Future Steps may revise again as fixtures broaden (e.g., Target B/C/D/E may require different defaults).
 
-**Open issue — door capability granularity (TBD).** The 800mm threshold above applies to a *contact segment*, not to individual cell-cell adjacencies. With atom_size = 600mm, a single cell-cell boundary is 600mm and would falsely reject doors that are physically installable across two or more contiguous cells along the same wall. Provisional operative definition: for each region pair, group their cell-cell adjacencies into maximal contiguous runs along a single axis-aligned wall; door-capable iff any such run has length ≥ door_min_boundary_mm. Disjoint segments between the same region pair (e.g., U-shaped wraparound) are *not* summed — the threshold applies per segment. Step 05/08 must confirm this definition once the first fixture is decomposed and inspected.
+**Open issue — door capability granularity (TBD).** The 800mm threshold above applies to a *contact segment*, not to individual cell-cell adjacencies. With atom_size = 300mm (D019), a single cell-cell boundary is 300mm and would falsely reject doors physically installable across multiple contiguous cells along the same wall. Provisional operative definition: for each region pair, group their cell-cell adjacencies into maximal contiguous runs along a single axis-aligned wall; door-capable iff any such run has length ≥ door_min_boundary_mm. Disjoint segments between the same region pair (e.g., U-shaped wraparound) are *not* summed — the threshold applies per segment. Step 08 (Graph Construction) must confirm this definition once cell adjacency graph is built.
 
 ---
 

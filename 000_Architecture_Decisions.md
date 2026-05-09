@@ -184,6 +184,7 @@ The previous BSP/R1 failures were not caused by weak vocabulary alone. They came
 
 Status: Accepted  
 Type: Architecture invariant
+Amended by: [D019](#d019-per-family-proportional-atom-sizing-d006-amendment) (2026-05-08) — atom shape + sizing policy revised.
 
 Decision:
 
@@ -608,6 +609,71 @@ Discovered: Step 03 review followups #6 (2026-05-06). The reviewer noted Pipelin
 
 ---
 
+## D019. Per-family proportional atom sizing (D006 amendment)
+
+Status: Accepted (2026-05-08)  
+Type: Architecture amendment (supersedes D006 numerical defaults)
+
+Decision:
+
+Step 05 imports the v3.2 cell-partition algorithm (`references/cell_v3_2.{py,md}`) into `src/proto3/geometry/`. This concretizes D006's "first-pass commitments, not universal laws" provision and revises the atom layer's numerical and shape policy.
+
+**Atom size — per-family proportional**:
+
+- `atom = "target cell size proportional to family main rect"` (was: fixed 600mm cube).
+- Each *family* (same theta + phase chain) shares a single cell width / height computed by fitting the family's main rect to integer N×M cells nearest `target_cell_size`. This eliminates sliver inside the family.
+- Different-theta families compute their own cell size from their own main rect — multi-axis footprints (mirror wings, rotated extensions) get correct atom alignment per family.
+
+**Atom shape — interior grid + boundary polygon**:
+
+- Interior atoms: full axis-aligned cells of size (cell_w × cell_h) within the family's rotated frame.
+- Boundary atoms: simple polygons clipped by the region edge (single ring, no holes; v3.2 cells are always single-polygon).
+- Atoms with intersection-area-fraction < `atom_inclusion_threshold` (default 0.5, "50% rule") are merged into the longest-shared-boundary neighbor.
+
+**Numerical defaults (revises D006 "Initial atom defaults")**:
+
+| Item | Initial (D006) | Revised (D019) | Notes |
+|---|---:|---:|---|
+| Internal coordinate unit | mm | **mm** | unchanged |
+| Default layout atom size | 600mm | **300mm** | finer mission resolution |
+| `atom_inclusion_threshold` | — | **0.5** | NEW — area-fraction (v3.2 50% rule) |
+| Door-capable shared boundary | 800mm | **800mm** | unchanged |
+| Preferred door boundary | 900mm | **900mm** | unchanged |
+
+**Deprecated by this amendment** (concept superseded by `atom_inclusion_threshold`):
+
+- `min_atom_side_mm` (was 300; sliver detection now area-based, not side-based).
+- `tiny_atom_area_m2` (was 0.18㎡; same).
+
+`RunConfig` retains the deprecated fields with their original defaults for backward compatibility but they are no longer consulted by the algorithm. They will be removed in a future Step once external callers no longer rely on them.
+
+**Retained from D006 (no change)**:
+
+- region/atom dual-layer principle,
+- atom layer purpose ("fine geometric growth unit"),
+- mm internal coordinate unit,
+- door-capability thresholds.
+
+Reason:
+
+- D006 explicitly invited revision: *"Step 05 Geometry Kernel must confirm or revise these defaults before serious decomposition and growth work."* This is that revision.
+- The v3.2 algorithm is externally validated against 30 stress-test footprints (15 한글 자모/mirror/회전/multi-wing + 15 LIR-unfriendly edges: star/blob/swiss cheese/circle/ellipse/triangle); 29/30 cases reach 100% coverage, the remaining 1 is a 0.17% gap from a 45° floating-point edge case. This is far stronger than ad-hoc design speculation could have been.
+- The proto3 mission (scan-to-BIM training-data generation, Target A apartment) requires sloped/curved footprint diversity. Per-family proportional sizing preserves sloped boundaries through boundary-polygon atoms, which fixed-grid 600mm sizing cannot do without staircasing.
+- Korean residential modular grid commonly uses 300mm / 600mm / 900mm units (3M/6M/9M). 300mm default keeps the modular intuition while halving cell area for finer growth resolution.
+
+References:
+
+- Algorithm code (ported into proto3): `src/proto3/geometry/{lir,grid,recursive,decompose}.py`.
+- External origin (preserved): `references/cell_v3_2.{py,md}`, `references/cell_v3_2_{stress,edges}.png`.
+- Schema additions (Step 05 §4.5): `proto3.schema.geometry.GeometricPiece` + `proto3.schema.geometry.Decomposition`; `proto3.schema.region_atom.Atom` extended with `parent_piece_id`, `family_id`.
+- Risk noted in Step 05: R-S05-7 unit mismatch (proto3 schema mm vs algorithm m). Stage 00 normalization layer in Step 07 (Plan §5 Def-14) will own the mm↔m conversion; Step 05 callers (tests, notebook) handle it inline.
+
+Discovered:
+
+Step 05 §4.6 (algorithm tests) revealed the unit-mismatch and the resulting LIR-mask blow-up (8000mm × 6000mm at 0.05m grid → 19 GB bool array). The amendment text was finalized once the v3.2 algorithm was fully imported and verified against all 6 fixtures (Step 05 §4.4–§4.8).
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.
@@ -737,6 +803,17 @@ Policy: **`legacy/stepNN/*.md` is treated as a frozen historical record; relativ
 - mechanical fix on archive is possible but adds churn for low value (legacy reference frequency is near zero in practice).
 
 Codified on 2026-05-07 (Step 04 kickoff, review followup #8). Pipeline Overview §16 mirrors this policy.
+
+## H013. Atom layer revised via D019 (per-family proportional sizing)
+
+D006 had committed to "atom = 600mm cube" as the default and explicitly invited Step 05 to confirm/revise. Step 05 imported the externally-developed v3.2 cell-partition algorithm (`references/cell_v3_2.{py,md}`), validated against 30 stress-test footprints, and the algorithm's per-family proportional sizing replaces the fixed-grid default.
+
+D019 was registered on 2026-05-08 with this revised atom shape + sizing policy. Three substantive changes:
+1. atom default size lowered from 600mm to 300mm (Korean modular grid; finer mission resolution).
+2. atom shape generalized: interior cells stay axis-aligned grid, but boundary cells become polygons clipped by the region edge — required for sloped/curved footprint preservation (mission diversity).
+3. sliver detection moved from side-based (`min_atom_side_mm`) to area-fraction (`atom_inclusion_threshold = 0.5`); the v3.2 50% rule absorbs partial cells into the longest-shared-boundary neighbor.
+
+Pipeline Overview §8 numerical-defaults table updated to mirror D019. `RunConfig` retains the deprecated fields (`min_atom_side_mm`, `tiny_atom_area_m2`) for backward-compat.
 
 ---
 

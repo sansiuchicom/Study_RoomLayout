@@ -1,13 +1,12 @@
 """Tests for proto3.geometry.decompose (S05-D1, D5) — high-level integration.
 
-**Unit conversion note (R-S05-7)**: proto3 schema uses mm (D006), v3.2 algorithm
-uses m. Direct fixture loading without conversion blows the LIR rasterize mask
-(8000mm × 6000mm at 0.05m grid → 160000×120000 bool = 19 GB). Stage 00 unit
-normalization (mm → m) is Step 07's responsibility (Plan §5 Def-14); for now,
-this test file converts fixture coordinates inline before calling auto_partition.
+Uses `proto3.geometry.decompose.run()` (mm-friendly proto3 entry; R-S05-7
+mitigation) for fixture-based tests. Synthetic m-unit polygons still call
+`auto_partition()` directly to exercise the v3.2 origin path.
 
-Memory budget: smaller subset (A1 + R2) at converted m-unit; A2 (13×10m) is
-also small enough but kept out for parametrize compactness.
+Memory budget: smaller subset (A1 + R2 + D1). A2 (13×10m) is excluded for
+parametrize compactness; broader fixture coverage lives in the §4.8 notebook
+and the v3.2 stress-test artifacts in `references/`.
 """
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ import shapely.geometry as sg
 import shapely.ops
 import pytest
 
-from proto3.geometry.decompose import auto_partition, to_schema
+from proto3.geometry.decompose import auto_partition, run, to_schema
 from proto3.schema.geometry import Decomposition, GeometricPiece
 from proto3.schema.input import BuildingInput
 from proto3.schema.region_atom import Atom
@@ -24,44 +23,49 @@ from proto3.schema.serialize import from_dict, from_json, to_dict
 from .fixture_matrix import MATRIX, fixture_path
 
 
-def _footprint_polygon_m(matrix_id):
-    """Load fixture and convert mm → m for v3.2 algorithm consumption.
-
-    proto3 schema stores coordinates in mm (D006); v3.2 algorithm expects m.
-    Stage 00 normalization will own this conversion in Step 07; here we do it
-    inline so the LIR rasterize mask stays small.
-    """
+def _footprint_polygon_mm(matrix_id):
+    """Load fixture and return its first floor's footprint as a shapely Polygon (mm)."""
     b = from_json(BuildingInput, fixture_path(matrix_id))
-    coords_m = [(x / 1000.0, y / 1000.0) for x, y in b.floors[0].footprint]
-    return sg.Polygon(coords_m)
+    return sg.Polygon(b.floors[0].footprint)
 
 
 @pytest.mark.parametrize("matrix_id", ["A1", "R2", "D1"])
-def test_auto_partition_small_fixtures_zero_gap(matrix_id):
-    """A1 (8×6m), R2 (4×4m), D1 (~9.5×8.4m rotated 20°) decompose with effectively zero gap (≤ 0.5%).
+def test_run_small_fixtures_zero_gap(matrix_id):
+    """A1 (8×6m), R2 (4×4m), D1 (~9.5×8.4m rotated 20°) decompose with effectively zero gap.
 
-    D1 exercises the mm→m conversion path together with v3.2 LIR rotation auto-detection
-    (Step 05 §4.7, S04 Def-1 resolved).
+    D1 exercises the v3.2 LIR rotation auto-detection through the proto3
+    mm-friendly `run()` wrapper (Step 05 §4.7, S04 Def-1 resolved).
     """
-    poly = _footprint_polygon_m(matrix_id)
-    raw = auto_partition(poly)
+    poly_mm = _footprint_polygon_mm(matrix_id)
+    raw = run(poly_mm)
     total = sum(c.area for c, _ in raw['cells'])
-    gap = (poly.area - total) / poly.area
+    gap = (poly_mm.area - total) / poly_mm.area
     assert abs(gap) < 0.005, f"{matrix_id} gap {gap*100:.4f}% exceeds 0.5%"
 
 
-def test_auto_partition_returns_pieces_and_cells():
-    """A1 fixture (m-unit converted) should produce ≥1 piece, ≥1 cell, root main rect."""
-    poly = _footprint_polygon_m("A1")
-    raw = auto_partition(poly)
+def test_run_returns_pieces_and_cells():
+    """A1 fixture (mm) should produce ≥1 piece, ≥1 cell, root main rect."""
+    poly_mm = _footprint_polygon_mm("A1")
+    raw = run(poly_mm)
     assert len(raw['pieces']) >= 1
     assert len(raw['cells']) >= 1
     assert raw['root_main_rect'] is not None
 
 
+def test_run_output_in_mm():
+    """`run()` should return cells/pieces in mm (proto3 schema convention)."""
+    poly_mm = _footprint_polygon_mm("A1")
+    raw = run(poly_mm)
+    sample_cell = raw['cells'][0][0]
+    minx, miny, maxx, maxy = sample_cell.bounds
+    # A 300mm-target cell should be on the order of hundreds of mm, not <1
+    assert (maxx - minx) > 50, f"cell width {maxx-minx} too small — output may still be in m"
+    assert (maxy - miny) > 50
+
+
 def test_to_schema_atom_to_piece_mapping_consistent():
     """Each atom's parent_piece_id indexes a valid piece, family_id is consistent."""
-    poly = sg.box(0, 0, 5, 5)  # synthetic small m-unit polygon
+    poly = sg.box(0, 0, 5, 5)  # synthetic small m-unit polygon for the auto_partition path
     schema = to_schema(auto_partition(poly))
     n_pieces = len(schema.pieces)
     for atom in schema.atoms:
@@ -71,9 +75,12 @@ def test_to_schema_atom_to_piece_mapping_consistent():
 
 
 def test_decomposition_round_trip():
-    """Decomposition → to_dict → from_dict round-trip preserves piece + atom data."""
-    poly = _footprint_polygon_m("R2")  # 4×4m, smallest
-    schema = to_schema(auto_partition(poly))
+    """Decomposition → to_dict → from_dict round-trip preserves piece + atom data.
+
+    Uses the mm-unit `run()` wrapper on R2 (4×4m), since that is the proto3 default path.
+    """
+    poly_mm = _footprint_polygon_mm("R2")
+    schema = to_schema(run(poly_mm))
 
     d = to_dict(schema)
     schema2 = from_dict(Decomposition, d)

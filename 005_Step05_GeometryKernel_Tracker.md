@@ -83,6 +83,9 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | §4.7 완료 — `fixtures/apartment_diagonal.json` (D1, ~20° rotated rect, footprint 4 vertices) + `fixture_matrix.py` D1 entry. test_fixtures_render_smoke 자동 6 fixture 확장. **80 passed** (DoD-5/6/7 검증). S04 Def-1 (사선 footprint) 해결. |
 | 2026-05-08 | §4.8 완료 — `notebooks/step05_decomposition.ipynb` (5 cells: walk-up resolver / fixture_matrix import + mm→m converter / 6 fixture × auto_partition + 결과 print / matplotlib subplot 6개 + family color / Notes). 사용자 VSCode 실행 검증: A1=540 / A2=1419 / B1=680 / R1=540 / R2=169 / D1=540 atoms; D1 atoms grid가 footprint 회전을 정확히 따라감 (사선 보존 mission 검증). PNG `outputs/notebooks/step05_decomposition/<run_id>/step05_6_fixtures.png`. |
 | 2026-05-08 | §4.9 — D019 정식 등록 (000_Architecture_Decisions.md, D018 다음, "# 4. Deferred decisions" 앞). D006 본문에 "Amended by D019" cross-reference 한 줄. H013 history entry 추가. Pipeline §8 numerical defaults 표 update (atom_size 300mm + atom_inclusion_threshold 0.5 + min_atom_side/tiny_atom_area deprecated 마커). 000_Progress_Tracker.md (Step 05 → Done, Active files, Step status table) 갱신. Plan §9 + Tracker §6 변경이력 마무리. Tracker §1 4.9 [x] + §2 모든 DoD [x] (DoD-14 [~]) + §5 cleanup checklist [x] (merge 줄만 [ ]). 80 passed. merge --no-ff 사용자 확인 대기. |
+| 2026-05-08 | merge `--no-ff` to main as `7064132`. branch `step05-geometry-kernel` deleted. push to origin. DoD-14 [x]. |
+| 2026-05-08 | review followup #1 (post-merge cleanup) — main 직접 commit `24223fa`. 외부 + 친구 review 6 issues fix: doc state dedupe, dates, docstring, tiny_atom_area_m2 정리, AtomSet 주석, D1 decompose test 추가. 81 passed. |
+| 2026-05-08 | review followup #2 — main 직접 commit. `decompose.run()` mm-friendly wrapper (X3 pattern). R-S05-7 mitigation upgrade: caller mm 직접 사용. test_geometry_decompose + notebook 모두 `run()`로 변경. 82 passed. |
 
 ---
 

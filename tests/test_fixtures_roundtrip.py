@@ -1,4 +1,4 @@
-"""Round-trip tests for all 5 fixtures in MATRIX (DoD-6)."""
+"""Round-trip tests for all fixtures in MATRIX (DoD-6 + Step 05 D1 extension)."""
 from __future__ import annotations
 
 import json

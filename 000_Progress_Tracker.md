@@ -29,7 +29,7 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 05 complete (pending merge to main). Ready for Step 06 kickoff.
+Step 05 done (merged `7064132`). Ready for Step 06 kickoff.
 ```
 
 Current Step:
@@ -41,8 +41,8 @@ Step 05. Geometry Kernel / Atom Resolution Commitments
 Current Step status:
 
 ```text
-Completed 2026-05-08; 9 work-item commits on `step05-geometry-kernel`; awaiting
-`git merge --no-ff` to main + branch deletion (user-confirmed step).
+Done 2026-05-08; 9 work-item commits + 2 review-followup commits merged via
+`--no-ff` to main as `7064132`; `step05-geometry-kernel` branch deleted.
 v3.2 algorithm imported (LIR + per-family recursive + 50% rule); D006 amended
 via D019 (atom_size 300mm + atom_inclusion_threshold 0.5; per-family proportional
 sizing; interior grid + boundary polygon). 80 pytest passed. D1 sloped fixture
@@ -160,7 +160,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
-| 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; pending merge) |
+| 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; merged `7064132`) |
 | 06 | Not started | Program & Domain Constraint Engine |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |

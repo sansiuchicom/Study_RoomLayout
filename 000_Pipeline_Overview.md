@@ -2,7 +2,7 @@
 
 Status: Canonical global reference  
 Scope: proto3 framework, terminology, runtime pipeline, search orchestration, target model, and implementation Step map  
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ---
 

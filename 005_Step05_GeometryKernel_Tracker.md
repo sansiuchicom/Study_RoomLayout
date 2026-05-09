@@ -1,15 +1,10 @@
 # 005 Step 05 — Geometry Kernel Tracker
 
-Status: Completed (pending merge)
+Status: Done (merged 7064132)
 Started: 2026-05-08
 Completed: 2026-05-08
-Branch: `step05-geometry-kernel`
-Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Plan.md)
-
-
-Status: In progress
-Started: 2026-05-08
-Branch: `step05-geometry-kernel`
+Merged: 2026-05-08 (`7064132`)
+Branch: `step05-geometry-kernel` (deleted post-merge)
 Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Plan.md)
 
 ---
@@ -64,7 +59,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | DoD-11 | `notebooks/step05_decomposition.ipynb` 실행 시 6 SVG 생성 | [x] | 2026-05-08 (사용자 VSCode 실행 검증; D1 사선 atoms ~20° 회전 확인) |
 | DoD-12 | `D019` 정식 등록 in `000_Architecture_Decisions.md` | [x] | 2026-05-08 (§4.9: D019 + H013 + D006 cross-reference) |
 | DoD-13 | references/ origin 보존 (4 files + README) | [x] | 2026-05-08 (§4.1 + chore commit: cell_v3_2.* 4 files + zone_v12.* 6 files + README, 11 total) |
-| DoD-14 | §4 commits all on step05 branch + merge --no-ff + branch 삭제 | [~] | merge 사용자 확인 대기 (§4.9 commit까지 완료) |
+| DoD-14 | §4 commits all on step05 branch + merge --no-ff + branch 삭제 | [x] | 2026-05-08 (merged `7064132`; branch deleted) |
 | DoD-15 | 4.1 commit에 Progress Tracker In progress 갱신 포함 | [x] | 2026-05-08 (§4.1 commit `7201781`) |
 | DoD-16 | RunConfig.atom_size_mm=300 + atom_inclusion_threshold=0.5 + deprecation 마커 (4.1 코드 + 4.9 텍스트) | [x] | 2026-05-08 (§4.1 코드 + §4.9 D019 텍스트 + Pipeline §8 표) |
 
@@ -107,7 +102,7 @@ Step 종료 시 순서대로:
 - [x] `000_Progress_Tracker.md` 갱신: Current step → "Step 05 complete (pending merge); ready for Step 06 kickoff"; Step 05 docs as "Completed; pending move to legacy/step05/ at Step 06 kickoff"; Step status table → Step 05 Done
 - [ ] (D016 amendment) Step 05 docs는 **Step 06 kickoff 시** `legacy/step05/`로 이동 — 이 Step에서는 옮기지 않음
 - [x] git commit (4.9)
-- [ ] `git checkout main && git merge --no-ff step05-geometry-kernel && git branch -d step05-geometry-kernel && git push origin main` (사용자 확인 후)
+- [x] `git checkout main && git merge --no-ff step05-geometry-kernel && git branch -d step05-geometry-kernel && git push origin main` (2026-05-08 merged `7064132`)
 
 ---
 

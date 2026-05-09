@@ -49,7 +49,7 @@ class AtomSet:
     """Candidate set of atoms tied to parent regions."""
     atoms: list[Atom] = field(default_factory=list)
     sliver_warnings: list[str] = field(default_factory=list)
-    # TBD: tiny atom flags per RunConfig.min_atom_side_mm
+    # TBD (Step 08): tiny atom flags per RunConfig.atom_inclusion_threshold (D019 area-fraction rule supersedes earlier min_atom_side_mm-based plan)
 
 
 @dataclass

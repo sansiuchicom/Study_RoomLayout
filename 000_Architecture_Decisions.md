@@ -2,7 +2,7 @@
 
 Status: Canonical decision record  
 Scope: accepted proto3 architecture decisions, invariant vs replaceable choices, and decision history appendix  
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ---
 
@@ -642,10 +642,10 @@ Step 05 imports the v3.2 cell-partition algorithm (`references/cell_v3_2.{py,md}
 
 **Deprecated by this amendment** (concept superseded by `atom_inclusion_threshold`):
 
-- `min_atom_side_mm` (was 300; sliver detection now area-based, not side-based).
-- `tiny_atom_area_m2` (was 0.18㎡; same).
+- `min_atom_side_mm` — was a `RunConfig` field with default 300 (D006). Sliver detection is now area-based, not side-based. Field retained in `RunConfig` for backward compatibility; no longer consulted by the algorithm.
+- `tiny_atom_area_m2` — was a Pipeline §8 conceptual default (0.18㎡, never reified into `RunConfig`). Now formally retired; same area-fraction concept absorbed by `atom_inclusion_threshold`.
 
-`RunConfig` retains the deprecated fields with their original defaults for backward compatibility but they are no longer consulted by the algorithm. They will be removed in a future Step once external callers no longer rely on them.
+The deprecated `RunConfig.min_atom_side_mm` field will be removed in a future Step once external callers no longer rely on it.
 
 **Retained from D006 (no change)**:
 
@@ -813,7 +813,7 @@ D019 was registered on 2026-05-08 with this revised atom shape + sizing policy. 
 2. atom shape generalized: interior cells stay axis-aligned grid, but boundary cells become polygons clipped by the region edge — required for sloped/curved footprint preservation (mission diversity).
 3. sliver detection moved from side-based (`min_atom_side_mm`) to area-fraction (`atom_inclusion_threshold = 0.5`); the v3.2 50% rule absorbs partial cells into the longest-shared-boundary neighbor.
 
-Pipeline Overview §8 numerical-defaults table updated to mirror D019. `RunConfig` retains the deprecated fields (`min_atom_side_mm`, `tiny_atom_area_m2`) for backward-compat.
+Pipeline Overview §8 numerical-defaults table updated to mirror D019. `RunConfig` retains the deprecated `min_atom_side_mm` field for backward-compat (the algorithm no longer consults it). `tiny_atom_area_m2` was a Pipeline §8 conceptual default that was never reified into `RunConfig`, so no code change was needed — only documentation updates marking it deprecated.
 
 ---
 

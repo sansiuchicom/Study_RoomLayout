@@ -36,9 +36,13 @@ def _footprint_polygon_m(matrix_id):
     return sg.Polygon(coords_m)
 
 
-@pytest.mark.parametrize("matrix_id", ["A1", "R2"])
+@pytest.mark.parametrize("matrix_id", ["A1", "R2", "D1"])
 def test_auto_partition_small_fixtures_zero_gap(matrix_id):
-    """A1 (8×6m) and R2 (4×4m) decompose with effectively zero gap (≤ 0.5%)."""
+    """A1 (8×6m), R2 (4×4m), D1 (~9.5×8.4m rotated 20°) decompose with effectively zero gap (≤ 0.5%).
+
+    D1 exercises the mm→m conversion path together with v3.2 LIR rotation auto-detection
+    (Step 05 §4.7, S04 Def-1 resolved).
+    """
     poly = _footprint_polygon_m(matrix_id)
     raw = auto_partition(poly)
     total = sum(c.area for c, _ in raw['cells'])

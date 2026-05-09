@@ -29,7 +29,7 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 05 in progress.
+Step 05 complete (pending merge to main). Ready for Step 06 kickoff.
 ```
 
 Current Step:
@@ -41,10 +41,13 @@ Step 05. Geometry Kernel / Atom Resolution Commitments
 Current Step status:
 
 ```text
-In progress 2026-05-08; §4.1 scaffold landing on `step05-geometry-kernel` branch.
-v3.2 algorithm imported from external user research (per-family recursive progressive
-fill; references/ origin preserved). D006 amendment (D019) per-family proportional
-atom sizing. X2 scope split (Step 05 algorithm only / Step 07 schema integration).
+Completed 2026-05-08; 9 work-item commits on `step05-geometry-kernel`; awaiting
+`git merge --no-ff` to main + branch deletion (user-confirmed step).
+v3.2 algorithm imported (LIR + per-family recursive + 50% rule); D006 amended
+via D019 (atom_size 300mm + atom_inclusion_threshold 0.5; per-family proportional
+sizing; interior grid + boundary polygon). 80 pytest passed. D1 sloped fixture
+added. X2 scope split honored (Step 05 algorithm only; Step 07 will integrate
+Decomposition → RegionSet/AtomSet via M2 layered approach + v12 zoning).
 ```
 
 ---
@@ -63,11 +66,11 @@ Global docs:
 Active Step files:
 
 ```text
-005_Step05_GeometryKernel_Plan.md     (In progress)
-005_Step05_GeometryKernel_Tracker.md  (In progress)
+005_Step05_GeometryKernel_Plan.md     (Completed; pending move to legacy/step05/ at Step 06 kickoff)
+005_Step05_GeometryKernel_Tracker.md  (Completed; pending move to legacy/step05/ at Step 06 kickoff)
 ```
 
-Step 04 docs archived to `legacy/step04/` (during Step 05 §4.1).
+Step 04 docs archived to `legacy/step04/` (during Step 05 §4.1, 2026-05-08).
 
 Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
 Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
@@ -76,7 +79,7 @@ Step 03 docs archived to `legacy/step03/` (during Step 04 §4.1, 2026-05-07).
 Next Step files to create:
 
 ```text
-TBD at Step 05 kickoff (e.g., 005_Step05_GeometryKernel_Plan.md, 005_Step05_GeometryKernel_Tracker.md)
+TBD at Step 06 kickoff (e.g., 006_Step06_ProgramConstraintEngine_Plan.md, _Tracker.md)
 ```
 
 ---
@@ -157,7 +160,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 02 | Done | Core Schema / Run Config / Debug Output Contract (2026-05-04) |
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
-| 05 | In progress | Geometry Kernel — v3.2 algorithm import + per-family proportional atom (D019) |
+| 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; pending merge) |
 | 06 | Not started | Program & Domain Constraint Engine |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |

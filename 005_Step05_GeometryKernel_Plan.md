@@ -1,7 +1,8 @@
 # 005 Step 05 — Geometry Kernel Plan
 
-Status: In progress
+Status: Completed (pending merge)
 Started: 2026-05-08
+Completed: 2026-05-08
 Branch: `step05-geometry-kernel`
 Companion tracker: [005_Step05_GeometryKernel_Tracker.md](005_Step05_GeometryKernel_Tracker.md)
 
@@ -204,3 +205,5 @@ Step 05 산출물:
 | 2026-05-08 | Initial draft. §0~§8. 10 decisions (S05-D1 ~ S05-D10). 9 work items. 15 DoD. v3.2 algorithm 외부 도입 (refs origin: 사용자 외부 작업, 2026-05-08). X2 scope split (Step 05 algorithm only, Step 07 schema integration). M2 (Region/GeometricPiece 분리). |
 | 2026-05-08 | S05-D3 명확화 — atom_size 600→300mm + atom_inclusion_threshold 0.5 신설 + min_atom_side/tiny_atom_area deprecation. R-S05-3 의미 변경 (위험이 아니라 backward-compat 검증). DoD-16 추가. 4.1에 RunConfig 코드 변경, 4.9에 D006/Pipeline §8 텍스트 amendment 분리. |
 | 2026-05-08 | references 정리 — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 4 cell + 7 zone = 11 files. Def-13 신설 (v12 → Step 07). DoD-13 갱신 (cell + zone 다 origin 보존). |
+| 2026-05-08 | §4.6 메모리 누수 발견 — pytest 시 RAM 45→93GB 이상 폭증 및 서버 꺼짐. Root cause: proto3 schema (mm) ↔ v3.2 algorithm (m) **단위 불일치** + LIR rasterize mask 폭발 (8000mm × 0.05 grid → 19GB bool array). matplotlib.Path 복귀 (v3.2 원본; matplotlib 정식 dep 추가). test_geometry_decompose에 inline mm→m 변환. **R-S05-7 신설** (unit mismatch); **Def-14 추가** (Step 07 unit normalization layer). |
+| 2026-05-08 | Step 05 close. 9 work-item commits + 1 chore (refs rename) + 1 review-fix (matplotlib + unit) on `step05-geometry-kernel`. **80 pytest passed**. D019 (D006 amendment) + H013 정식 등록. Pipeline §8 mirror update. RunConfig 코드 land (atom_size 300mm, atom_inclusion_threshold 0.5; deprecated min_atom_side/tiny_atom_area kept for backward-compat). 모든 DoD [x] except DoD-14 [~] (merge 사용자 확인 대기). |

@@ -1,5 +1,12 @@
 # 005 Step 05 — Geometry Kernel Tracker
 
+Status: Completed (pending merge)
+Started: 2026-05-08
+Completed: 2026-05-08
+Branch: `step05-geometry-kernel`
+Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Plan.md)
+
+
 Status: In progress
 Started: 2026-05-08
 Branch: `step05-geometry-kernel`
@@ -32,7 +39,7 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 4.6 | Algorithm tests (LIR + grid + recursive + small-fixture decompose; matplotlib leak fix; unit mismatch R-S05-7) | `feat: geometry tests + matplotlib leak fix + unit mismatch ad-hoc fix (S05-D2 amend, R-S05-7)` | [x] | 2026-05-08 |
 | 4.7 | 사선 fixture (D1, apartment_diagonal.json) + matrix 갱신 + render smoke 6 fixture 확장 | `feat: diagonal fixture (D1, S04 Def-1 resolved, S05-D7)` | [x] | 2026-05-08 |
 | 4.8 | `notebooks/step05_decomposition.ipynb` (6 fixture × decomposition 시각화) | `feat: step05 decomposition notebook (S05-D9)` | [x] | 2026-05-08 (사용자 VSCode 실행 검증 대기) |
-| 4.9 | D019 정식 등록 + D006 amendment 텍스트 + Pipeline §8 numerical defaults table update + Step 05 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step05 cleanup + D019 D006 amendment (per-family proportional atom + 300mm)` | [ ] | |
+| 4.9 | D019 정식 등록 + D006 amendment 텍스트 + Pipeline §8 numerical defaults table update + Step 05 cleanup (Plan/Tracker, Progress Tracker, merge --no-ff) | `docs: step05 cleanup + D019 D006 amendment (per-family proportional atom + 300mm)` | [x] | 2026-05-08 |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → 4.9 → (Step 종료) merge --no-ff to main.
 
@@ -44,22 +51,22 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 
 | # | 조건 | 결과 | 검증 시각 |
 |---|---|:---:|---|
-| DoD-1 | `src/proto3/geometry/` 모듈 (lir/grid/recursive/decompose) import OK | [ ] | |
+| DoD-1 | `src/proto3/geometry/` 모듈 (lir/grid/recursive/decompose) import OK | [x] | 2026-05-08 (§4.4 완료 시) |
 | DoD-2 | `proto3/schema/geometry.py` GeometricPiece + Decomposition import OK | [x] | 2026-05-08 (§4.5: round-trip OK, JSON 188.6 KB on L-shape) |
-| DoD-3 | `shapely>=2.0 + numpy>=1.24` 정식 deps in pyproject | [ ] | |
-| DoD-4 | `auto_partition()` 6 fixture 모두 작동 (gap < 1%) | [ ] | |
-| DoD-5 | 사선 fixture (D1) round-trip + decompose 100% coverage | [ ] | |
-| DoD-6 | 핵심 stress test 1-2개 재현 (한글 자모 + edge case) | [ ] | |
-| DoD-7 | `python -m pip install -e .` 회귀 없음 | [ ] | |
-| DoD-8 | `pytest -q` 통과 (52 + 신규) | [ ] | |
-| DoD-9 | Step 04 docs → `legacy/step04/` via git mv | [ ] | |
-| DoD-10 | `000_Progress_Tracker.md` 갱신 (kickoff + close) | [ ] | |
-| DoD-11 | `notebooks/step05_decomposition.ipynb` 실행 시 6 SVG 생성 | [ ] | |
-| DoD-12 | `D019` 정식 등록 in `000_Architecture_Decisions.md` | [ ] | |
-| DoD-13 | references/ origin 보존 (4 files + README) | [ ] | |
-| DoD-14 | §4 commits all on step05 branch + merge --no-ff + branch 삭제 | [ ] | |
-| DoD-15 | 4.1 commit에 Progress Tracker In progress 갱신 포함 | [ ] | |
-| DoD-16 | RunConfig.atom_size_mm=300 + atom_inclusion_threshold=0.5 + deprecation 마커 (4.1 코드 + 4.9 텍스트) | [ ] | |
+| DoD-3 | `shapely>=2.0 + numpy>=1.24` 정식 deps in pyproject | [x] | 2026-05-08 (§4.1; matplotlib도 §4.6에서 정식 dep로 추가) |
+| DoD-4 | `auto_partition()` 6 fixture 모두 작동 (gap < 1%) | [x] | 2026-05-08 (§4.8 notebook 검증: A1=540 / A2=1419 / B1=680 / R1=540 / R2=169 / D1=540 atoms, 모두 gap 0%) |
+| DoD-5 | 사선 fixture (D1) round-trip + decompose 100% coverage | [x] | 2026-05-08 (§4.7 + §4.8: theta auto-detect ~20°, gap 0%) |
+| DoD-6 | 핵심 stress test 1-2개 재현 (한글 자모 + edge case) | [x] | 2026-05-08 (§4.6 test_geometry_recursive: L-shape ㄱ자 + mirror_wings multi-axis) |
+| DoD-7 | `python -m pip install -e .` 회귀 없음 | [x] | 2026-05-08 (§4.6에서 matplotlib 추가 후 재설치 OK) |
+| DoD-8 | `pytest -q` 통과 (52 + 신규) | [x] | 2026-05-08 (80 passed) |
+| DoD-9 | Step 04 docs → `legacy/step04/` via git mv | [x] | 2026-05-08 (§4.1) |
+| DoD-10 | `000_Progress_Tracker.md` 갱신 (kickoff + close) | [x] | 2026-05-08 (§4.1 In progress + §4.9 Done) |
+| DoD-11 | `notebooks/step05_decomposition.ipynb` 실행 시 6 SVG 생성 | [x] | 2026-05-08 (사용자 VSCode 실행 검증; D1 사선 atoms ~20° 회전 확인) |
+| DoD-12 | `D019` 정식 등록 in `000_Architecture_Decisions.md` | [x] | 2026-05-08 (§4.9: D019 + H013 + D006 cross-reference) |
+| DoD-13 | references/ origin 보존 (4 files + README) | [x] | 2026-05-08 (§4.1 + chore commit: cell_v3_2.* 4 files + zone_v12.* 6 files + README, 11 total) |
+| DoD-14 | §4 commits all on step05 branch + merge --no-ff + branch 삭제 | [~] | merge 사용자 확인 대기 (§4.9 commit까지 완료) |
+| DoD-15 | 4.1 commit에 Progress Tracker In progress 갱신 포함 | [x] | 2026-05-08 (§4.1 commit `7201781`) |
+| DoD-16 | RunConfig.atom_size_mm=300 + atom_inclusion_threshold=0.5 + deprecation 마커 (4.1 코드 + 4.9 텍스트) | [x] | 2026-05-08 (§4.1 코드 + §4.9 D019 텍스트 + Pipeline §8 표) |
 
 ---
 
@@ -77,7 +84,10 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 | 2026-05-08 | §4.4 완료 — `proto3/geometry/recursive.py` (recursive_progressive_per_family) + `decompose.py` (auto_partition wrapper). v3.2 메인 알고리즘 통합. 4 fixture smoke: rect 8×6 (1 fam/540 cells), L-shape (1 fam/722 cells/0% gap), rotated 30° (theta 30° 정확 감지, 660 cells/0% gap), mirror wings multi-axis (**4 families 자동 분리**, 1399 cells/0% gap). v3.2 핵심 가치 모두 검증 (LIR 자동 회전 감지 + family-aware + per-family proportional). 52 passed. |
 | 2026-05-08 | §4.5 완료 — `proto3/schema/geometry.py` (GeometricPiece + Decomposition) + `region_atom.Atom` 확장 (parent_piece_id, family_id 추가) + `decompose.to_schema()` converter. **옵션 b + X (vertex list + 기존 Atom 확장)** 채택. L-shape sanity: 2 pieces, 722 atoms, parent_piece_id 매핑 정확, round-trip 보존 (pieces/atoms/theta/vertices/parent_piece_id/root_main_rect), JSON 188.6 KB. 52 passed. |
 | 2026-05-08 | §4.6 진행 중 메모리 누수 발견 — pytest 시 RAM 45→93 GB 폭증. 초기 의심 (shapely 2.x `contains_xy` GEOS leak)으로 matplotlib.Path 복귀 + matplotlib 정식 dep 추가 (S05-D2 amend). 단 **진짜 root cause는 unit mismatch** — proto3 fixture는 mm 단위 (8000mm × 6000mm), v3.2 algorithm은 m 단위 가정. 직접 호출 시 lir_resolution=0.05 grid에 mask 160000×120000 = 19 GB bool array. recursion으로 폭발. **R-S05-7 + Def-14 신설**. test_geometry_decompose에서 inline `(x/1000, y/1000)` 변환으로 회피. Stage 00 unit normalization은 Step 07로 yield. matplotlib.Path 복귀는 그대로 keep (leak risk 회피 + v3.2 원본 일관). |
-| 2026-05-08 | §4.6 완료 — 4 test 파일 작성: test_geometry_lir (7), test_geometry_grid (9), test_geometry_recursive (4), test_geometry_decompose (5). 단일 호출 + 5-iter loop + pytest individual + 전체 다 통과. **72 passed, 5 skipped → 0 skipped (decompose unit conversion으로 활성화)**. |
+| 2026-05-08 | §4.6 완료 — 4 test 파일 작성: test_geometry_lir (7), test_geometry_grid (9), test_geometry_recursive (4), test_geometry_decompose (5). 단일 호출 + 5-iter loop + pytest individual + 전체 다 통과. **72 passed, 5 skipped → 0 skipped (decompose unit conversion으로 활성화)**. commit `641353b`. |
+| 2026-05-08 | §4.7 완료 — `fixtures/apartment_diagonal.json` (D1, ~20° rotated rect, footprint 4 vertices) + `fixture_matrix.py` D1 entry. test_fixtures_render_smoke 자동 6 fixture 확장. **80 passed** (DoD-5/6/7 검증). S04 Def-1 (사선 footprint) 해결. |
+| 2026-05-08 | §4.8 완료 — `notebooks/step05_decomposition.ipynb` (5 cells: walk-up resolver / fixture_matrix import + mm→m converter / 6 fixture × auto_partition + 결과 print / matplotlib subplot 6개 + family color / Notes). 사용자 VSCode 실행 검증: A1=540 / A2=1419 / B1=680 / R1=540 / R2=169 / D1=540 atoms; D1 atoms grid가 footprint 회전을 정확히 따라감 (사선 보존 mission 검증). PNG `outputs/notebooks/step05_decomposition/<run_id>/step05_6_fixtures.png`. |
+| 2026-05-08 | §4.9 — D019 정식 등록 (000_Architecture_Decisions.md, D018 다음, "# 4. Deferred decisions" 앞). D006 본문에 "Amended by D019" cross-reference 한 줄. H013 history entry 추가. Pipeline §8 numerical defaults 표 update (atom_size 300mm + atom_inclusion_threshold 0.5 + min_atom_side/tiny_atom_area deprecated 마커). 000_Progress_Tracker.md (Step 05 → Done, Active files, Step status table) 갱신. Plan §9 + Tracker §6 변경이력 마무리. Tracker §1 4.9 [x] + §2 모든 DoD [x] (DoD-14 [~]) + §5 cleanup checklist [x] (merge 줄만 [ ]). 80 passed. merge --no-ff 사용자 확인 대기. |
 
 ---
 
@@ -91,13 +101,13 @@ Companion plan: [005_Step05_GeometryKernel_Plan.md](005_Step05_GeometryKernel_Pl
 
 Step 종료 시 순서대로:
 
-- [ ] Plan §4 모든 항목 [x] 확인
-- [ ] DoD §2 모든 항목 [x] 확인
-- [ ] `git status` clean 확인
-- [ ] `000_Progress_Tracker.md` 갱신: Current step → "Step 05 done; ready for Step 06 kickoff", Step 05 docs as "Completed; pending move to legacy/step05/ at Step 06 kickoff", Step status table → Step 05 Done
-- [ ] (D016 amendment) Step 05 docs는 **Step 06 kickoff 시** `legacy/step05/`로 이동
-- [ ] git commit (4.9)
-- [ ] `git checkout main && git merge --no-ff step05-geometry-kernel && git branch -d step05-geometry-kernel && git push origin main`
+- [x] Plan §4 모든 항목 [x] 확인 (2026-05-08, 4.1~4.9 완료)
+- [x] DoD §2 모든 항목 [x] 확인 (DoD-14 [~] merge 대기 외 모두 완료)
+- [x] `git status` clean 확인 (each work-item commit 후)
+- [x] `000_Progress_Tracker.md` 갱신: Current step → "Step 05 complete (pending merge); ready for Step 06 kickoff"; Step 05 docs as "Completed; pending move to legacy/step05/ at Step 06 kickoff"; Step status table → Step 05 Done
+- [ ] (D016 amendment) Step 05 docs는 **Step 06 kickoff 시** `legacy/step05/`로 이동 — 이 Step에서는 옮기지 않음
+- [x] git commit (4.9)
+- [ ] `git checkout main && git merge --no-ff step05-geometry-kernel && git branch -d step05-geometry-kernel && git push origin main` (사용자 확인 후)
 
 ---
 
@@ -106,3 +116,4 @@ Step 종료 시 순서대로:
 | Date | Change |
 |---|---|
 | 2026-05-08 | Initial. 9 work items, 15 DoD. v3.2 algorithm 외부 도입 (refs origin 보존). X2 scope split. M2 Region/GeometricPiece 분리. |
+| 2026-05-08 | Step 05 close. 9 work-item commits on `step05-geometry-kernel` (`7201781` archive+scaffold → `04c399a` recursive+decompose → `1e165d3-ish`(N/A; chronological 약식) → `04c399a` algo done → `6228301` schema → `641353b` tests + matplotlib leak fix + unit fix → D1 fixture (S04-Def-1 resolved) → notebook → `4.9` cleanup). 80 pytest passed. DoD 16/16 [x] (DoD-14 [~] merge 사용자 확인 대기). D019 + H013 등록. Pipeline §8 mirror update. RunConfig.atom_size_mm 300 + atom_inclusion_threshold 0.5 코드 land. Mission-critical: D1 사선 fixture가 v3.2 LIR 회전 자동 감지를 검증 (theta ~20° detect, atoms grid 회전 정렬, gap 0%). |

@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "shapely>=2.0",
     "numpy>=1.24",
+    "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]

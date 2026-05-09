@@ -154,6 +154,7 @@ legacy/step04/                      # 신설 (archive)
 | Def-11 | Variable atom_size per region (F4 reconsider) | per-family proportional이 충분; 추가 variable size는 graph 복잡도만 늘림 | Step 07+ if fixtures show insufficient resolution |
 | Def-12 | Stage 03 anchor projection 본격 구현 | apartment-only는 no-op. multi-floor (Target B+) 진입 시 | Step 14 |
 | Def-13 | v12 zoning algorithm (`references/zone_v12.{py,md}`) 통합 — `proto3.zoning.*` 또는 `proto3.stages.stage04_decompose`에 land. v12 zone polygon → proto3 `Region` candidate 매핑. label assign은 Step 09 spine candidate에서. | Step 07 (Region/Atom Decomposition 본격) 책임. v12 + v3.2가 짝 맞아 Stage 04 통합이 plug-and-play 수준. | Step 07 |
+| **Def-14** | **Unit normalization layer (mm ↔ m) — Stage 00 또는 그 직후에서 BuildingInput (mm) → algorithm-friendly polygon (m) 변환.** atom output을 다시 mm로 복원하는 reverse 변환도 포함. | proto3 internal mm 정책 (D006) vs v3.2 algorithm m 가정 충돌 정형 해결. R-S05-7 ad-hoc 변환을 정식화. | Step 07 |
 
 ---
 
@@ -167,6 +168,7 @@ legacy/step04/                      # 신설 (archive)
 | R-S05-4 | 사선 fixture가 v3.2 algorithm으로 잘 작동 안 할 수도 — vertex 좌표가 mm 단위 정수면 OK | DoD-5에서 round-trip + decompose 검증 |
 | R-S05-5 | numpy/shapely 새 deps로 dev install 회귀 — 기존 사용자 환경 영향 | DoD-7 (`python -m pip install -e .` 회귀 없음). shapely 2.0+ 은 stable. README/CHANGELOG 갱신은 Step 06+ |
 | R-S05-6 | v3.2 한국어 식별자/주석을 영어로 옮길 때 의미 drift | 4.2~4.4 작업 시 `references/cell_v3_2.md` 영문 docstring로 직접 매핑 |
+| **R-S05-7** | **Unit mismatch — proto3 schema (mm, D006) vs v3.2 algorithm (m). Direct fixture → algorithm 호출 시 LIR mask 폭증 (8000mm × 0.05 grid → 160000×120000 bool = 19 GB). 컴퓨터 hang 위험.** | §4.6 test 작업 중 발견. test_geometry_decompose에서 inline `(x/1000, y/1000)` 변환으로 회피. Stage 00 unit normalization layer는 Step 07 §5 Def-14에서 본격 land. 단기적으로 caller (test, notebook, future stage)가 변환 책임. |
 
 ---
 

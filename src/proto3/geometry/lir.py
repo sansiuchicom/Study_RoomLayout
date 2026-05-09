@@ -17,31 +17,38 @@ outer boundary; later cell-level intersection naturally avoids holes.
 from __future__ import annotations
 
 import numpy as np
-import shapely
 import shapely.affinity as sa
 import shapely.geometry as sg
+from matplotlib.path import Path
 
 
 def rasterize_polygon(polygon, resolution=0.1):
     """Rasterize polygon interior to a binary 2D mask.
 
-    Uses `shapely.contains_xy` (vectorized; shapely>=2.0) over a uniform grid
-    of cell-center sample points spaced by `resolution` in polygon-coordinate
-    units. v3.2 reference uses matplotlib.Path; switched to shapely.contains_xy
-    here to keep matplotlib out of runtime dependencies.
+    Uses `matplotlib.Path.contains_points` (vectorized; v3.2 reference) over a
+    uniform grid of cell-center sample points spaced by `resolution` in polygon-
+    coordinate units.
+
+    Note (S05-D2 amendment): originally we tried `shapely.contains_xy` to keep
+    matplotlib out of runtime deps, but shapely 2.x's GEOS-backed contains_xy
+    leaks memory across many calls (each LIR rasterize calls it on tens of
+    thousands of points; recursion compounds it). matplotlib.Path is leak-free
+    in this usage; matplotlib is now a main runtime dep.
 
     Returns:
         (mask, (minx, miny, resolution)) — `mask` is a (ny, nx) bool array;
         the tuple gives the world-coordinate origin and pitch needed to map
         mask indices back to coordinates.
     """
+    coords = list(polygon.exterior.coords)
     minx, miny, maxx, maxy = polygon.bounds
     nx = int(np.ceil((maxx - minx) / resolution)) + 1
     ny = int(np.ceil((maxy - miny) / resolution)) + 1
     xs = minx + (np.arange(nx) + 0.5) * resolution
     ys = miny + (np.arange(ny) + 0.5) * resolution
     grid_x, grid_y = np.meshgrid(xs, ys)
-    inside = shapely.contains_xy(polygon, grid_x.ravel(), grid_y.ravel()).reshape(ny, nx)
+    points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+    inside = Path(coords).contains_points(points).reshape(ny, nx)
     return inside, (minx, miny, resolution)
 
 

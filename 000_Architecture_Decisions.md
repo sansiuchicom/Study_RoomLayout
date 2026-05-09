@@ -607,6 +607,8 @@ Reason:
 
 Discovered: Step 03 review followups #6 (2026-05-06). The reviewer noted Pipeline §9 listed `InvalidCandidateReport` while the schema lacked any such class. Investigation showed the schema's `valid: bool` already implied unification; this decision codifies that alignment.
 
+**Enforcement note** (added 2026-05-08 from Step 05 review): the `failure_records: list[FailureRecord]` field defaults to `[]` at the dataclass level so `valid=True` candidates can carry an empty list naturally. The "**must be non-empty when `valid=False`**" requirement is therefore an *architectural* contract, not a dataclass-level invariant. Stage 13 implementation (Step 12+) must enforce it through a factory function or a `validate_layout_candidate()` guard before emission; the Search Orchestrator should treat any `LayoutCandidate(valid=False, failure_records=[])` as a programming error.
+
 ---
 
 ## D019. Per-family proportional atom sizing (D006 amendment)

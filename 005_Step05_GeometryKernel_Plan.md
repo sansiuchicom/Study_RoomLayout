@@ -154,7 +154,7 @@ legacy/step04/                      # 신설 (archive)
 | Def-10 | `from_dict()` multi-arm Union 명시적 raise | Step 04 §5 Def-10 그대로 | Step 05+ minor |
 | Def-11 | Variable atom_size per region (F4 reconsider) | per-family proportional이 충분; 추가 variable size는 graph 복잡도만 늘림 | Step 07+ if fixtures show insufficient resolution |
 | Def-12 | Stage 03 anchor projection 본격 구현 | apartment-only는 no-op. multi-floor (Target B+) 진입 시 | Step 14 |
-| Def-13 | v12 zoning algorithm (`references/zone_v12.{py,md}`) 통합 — `proto3.zoning.*` 또는 `proto3.stages.stage04_decompose`에 land. v12 zone polygon → proto3 `Region` candidate 매핑. label assign은 Step 09 spine candidate에서. | Step 07 (Region/Atom Decomposition 본격) 책임. v12 + v3.2가 짝 맞아 Stage 04 통합이 plug-and-play 수준. | Step 07 |
+| Def-13 | v12 zoning algorithm (`references/zone_v12.{py,md}`) 통합 — `proto3.zoning.*` 또는 `proto3.stages.stage04_decompose`에 land. v12 zone polygon → proto3 `Region` candidate 매핑. label assign은 Step 09 spine candidate에서. **Port 시 broad `except Exception` (e.g., `split_polygon`, `piece_aspect`) + post-hoc gap merge 디버깅 가독성을 위해 좁은 exception type으로 정리하고 gap merge는 명시적 invariant check로 대체.** | Step 07 (Region/Atom Decomposition 본격) 책임. v12 + v3.2가 짝 맞아 Stage 04 통합이 plug-and-play 수준. | Step 07 |
 | **Def-14** | **Unit normalization layer (mm ↔ m) — Stage 00 또는 그 직후에서 BuildingInput (mm) → algorithm-friendly polygon (m) 변환.** atom output을 다시 mm로 복원하는 reverse 변환도 포함. | proto3 internal mm 정책 (D006) vs v3.2 algorithm m 가정 충돌 정형 해결. R-S05-7 ad-hoc 변환을 정식화. | Step 07 |
 
 ---
@@ -169,7 +169,7 @@ legacy/step04/                      # 신설 (archive)
 | R-S05-4 | 사선 fixture가 v3.2 algorithm으로 잘 작동 안 할 수도 — vertex 좌표가 mm 단위 정수면 OK | DoD-5에서 round-trip + decompose 검증 |
 | R-S05-5 | numpy/shapely 새 deps로 dev install 회귀 — 기존 사용자 환경 영향 | DoD-7 (`python -m pip install -e .` 회귀 없음). shapely 2.0+ 은 stable. README/CHANGELOG 갱신은 Step 06+ |
 | R-S05-6 | v3.2 한국어 식별자/주석을 영어로 옮길 때 의미 drift | 4.2~4.4 작업 시 `references/cell_v3_2.md` 영문 docstring로 직접 매핑 |
-| **R-S05-7** | **Unit mismatch — proto3 schema (mm, D006) vs v3.2 algorithm (m). Direct fixture → algorithm 호출 시 LIR mask 폭증 (8000mm × 0.05 grid → 160000×120000 bool = 19 GB). 컴퓨터 hang 위험.** | §4.6 test 작업 중 발견. test_geometry_decompose에서 inline `(x/1000, y/1000)` 변환으로 회피. Stage 00 unit normalization layer는 Step 07 §5 Def-14에서 본격 land. 단기적으로 caller (test, notebook, future stage)가 변환 책임. |
+| **R-S05-7** | **Unit mismatch — proto3 schema (mm, D006) vs v3.2 algorithm (m). Direct fixture → algorithm 호출 시 LIR mask 폭증 (8000mm × 0.05 grid → 160000×120000 bool = 19 GB). 컴퓨터 hang 위험.** | §4.6 test 작업 중 발견. **§4.9 review followup #2**에서 `proto3.geometry.decompose.run()` mm-friendly wrapper 추가 (X3 pattern; v3.2 algorithm 그대로 보존 + on-entry mm→m / on-exit m→mm shapely.affinity.scale). test_geometry_decompose + notebook 모두 `run()` 사용으로 변경, inline `(x/1000, y/1000)` 제거. caller mm 직접 사용 가능. Stage 00 unit normalization layer (broader scope: BuildingInput→run dispatch, ContactGraph mm-aware door checks)는 Step 07 §5 Def-14에서 land. |
 
 ---
 
@@ -207,3 +207,6 @@ Step 05 산출물:
 | 2026-05-08 | references 정리 — v12 zoning artifacts 추가 + 이름 통일 (`cell_v3_2.*` / `zone_v12.*` prefix). `12_compare.py` 삭제 (v11 모듈 의존, 실행 불가). 4 cell + 7 zone = 11 files. Def-13 신설 (v12 → Step 07). DoD-13 갱신 (cell + zone 다 origin 보존). |
 | 2026-05-08 | §4.6 메모리 누수 발견 — pytest 시 RAM 45→93GB 이상 폭증 및 서버 꺼짐. Root cause: proto3 schema (mm) ↔ v3.2 algorithm (m) **단위 불일치** + LIR rasterize mask 폭발 (8000mm × 0.05 grid → 19GB bool array). matplotlib.Path 복귀 (v3.2 원본; matplotlib 정식 dep 추가). test_geometry_decompose에 inline mm→m 변환. **R-S05-7 신설** (unit mismatch); **Def-14 추가** (Step 07 unit normalization layer). |
 | 2026-05-08 | Step 05 close. 9 work-item commits + 1 chore (refs rename) + 1 review-fix (matplotlib + unit) on `step05-geometry-kernel`. **80 pytest passed**. D019 (D006 amendment) + H013 정식 등록. Pipeline §8 mirror update. RunConfig 코드 land (atom_size 300mm, atom_inclusion_threshold 0.5; deprecated min_atom_side/tiny_atom_area kept for backward-compat). 모든 DoD [x] except DoD-14 [~] (merge 사용자 확인 대기). |
+| 2026-05-08 | merged to main (`7064132`). DoD-14 [x]. |
+| 2026-05-08 | review followup #1 (post-merge cleanup) — Tracker 헤더 dedupe + "pending merge" → "merged" 표기 / Last updated 2026-05-07 → 2026-05-08 / test_fixtures_roundtrip docstring "5 → 6 fixtures" / D019/H013 tiny_atom_area_m2 deprecated 표기 정확화 (RunConfig에 없던 conceptual default였음 명시) / region_atom.AtomSet 주석 D019 area-fraction 기반으로 redirect / test_geometry_decompose D1 추가. 81 passed. main 직접 commit `24223fa`. |
+| 2026-05-08 | review followup #2 — `proto3.geometry.decompose.run()` mm-friendly wrapper 추가 (X3 pattern). v3.2 algorithm `auto_partition()` 그대로 origin 보존 + 새 `run(footprint_mm)`이 mm↔m 변환 책임. R-S05-7 mitigation 갱신: caller (test, notebook) mm 직접 사용, inline `(x/1000)` 제거. test_geometry_decompose + step05_decomposition notebook 모두 `run()` 사용으로 변경. **82 passed** (test_run_output_in_mm 신규). |

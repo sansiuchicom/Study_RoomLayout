@@ -32,7 +32,7 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | 4.5 | Stage 01 full program preservation + dup/unknown/type guards | `feat: stage 01 full program preservation + dup/unknown/type guards (S06-D7, D10, D023)` | [x] | 2026-05-09 (`bb6a32a`) |
 | 4.6 | Stage 02 gate + Pipeline §9.10 update + R2 regression | `feat: stage 02 gate + R2 AreaGateFailure regression (S06-D6, D24, review #2)` | [x] | 2026-05-09 |
 | 4.7 | Fail-loud sweep — RunConfig + threshold wiring + palette + render strict | `feat: fail-loud sweep — RunConfig + threshold wiring + palette + render strict (S06-D11, D14, review #3, #11, #12)` | [x] | 2026-05-09 |
-| 4.8 | step06 program gate overview notebook | `feat: step06 program gate overview notebook (S06-D16)` | [ ] | |
+| 4.8 | step06 program gate overview notebook | `feat: step06 program gate overview notebook (S06-D16)` | [x] | 2026-05-09 |
 | 4.9 | Step 06 cleanup (Plan/Tracker, Progress Tracker, D020/D021) | `docs: step06 cleanup (Plan/Tracker, Progress Tracker, D020/D021)` | [ ] | |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → 4.9 → (Step 종료) merge --no-ff to main.
@@ -64,7 +64,7 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | DoD-17 | viz.svg.render 미지원 kwarg ValueError | [x] | 2026-05-09 (§4.7, atoms/regions/spine 만; 나머지 silent) |
 | DoD-18 | R2 → AreaGateFailure 회로 작동 | [x] | 2026-05-09 (§4.6) |
 | DoD-19 | A1/A2/B1/D1 Stage 02 통과 (false-reject 없음) | [x] | 2026-05-09 (§4.6) |
-| DoD-20 | step06_program_gate_overview notebook | [ ] | |
+| DoD-20 | step06_program_gate_overview notebook | [x] | 2026-05-09 (§4.8, 17 cells / 6 visualizations / 4 PNG charts) |
 | DoD-21 | pytest 통과 (현재 82 + 신규) | [ ] | |
 | DoD-22 | python -m pip install -e . 회귀 없음 | [ ] | |
 | DoD-23 | Pipeline §9.10 Stage 02 outputs 갱신 | [x] | 2026-05-09 (`01e42d3` design commit) |

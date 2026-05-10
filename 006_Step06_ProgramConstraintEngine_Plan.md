@@ -1,7 +1,8 @@
 # 006 Step 06 — Program & Domain Constraint Engine Plan
 
-Status: In progress
+Status: Completed (pending merge)
 Started: 2026-05-09
+Completed: 2026-05-09
 Branch: `step06-program-constraint-engine`
 Companion tracker: [006_Step06_ProgramConstraintEngine_Tracker.md](006_Step06_ProgramConstraintEngine_Tracker.md)
 
@@ -324,6 +325,7 @@ Step 06 산출물:
 | Date | Change |
 |---|---|
 | 2026-05-09 | Initial draft (v1). §0~§8. 16 decisions (S06-D1 ~ S06-D16). 9 work items. 23 DoD. Future work 명시 (Def-1~3). |
+| 2026-05-09 | v5 — Step 06 close. 10 work items 모두 land (4.1 `3f09cbe` archive+scaffold, 4.2 `f241d58` ProgramRequest+Role, 4.3 `0da364b` TargetRules+JSON, 4.3a `372090b` generic adapter reform, cleanup `be906b4` review followups, design `01e42d3` 모델링 결함 8 항목, 4.4 `8c1903d` DomainGateFailure+gates, 4.5 `bb6a32a` Stage 01 본격, 4.6 `c920c4e` Stage 02 + R2 회로, 4.7 `bd27fa5` fail-loud sweep, 4.8 `17c852f` notebook). DoD 28/28 [x]. 221 passed (Step 05 80 + Step 06 신규 141). D020/D021/D022/D023 Status Accepted. R2 `verified_at: Step 06` 약속 실현 (`AreaGateFailure` live trigger). 다음 = Step 07 Region/Atom Decomposition. |
 | 2026-05-09 | v4 — 두 번째 외부 review (또 다른 Claude 인스턴스) 의 모델링 결함 8 항목 정리. (1) D023 신설 — required-only cardinality / area summation (Stage 01/02 가 `required=True` 만 본다). (2) D020 본문 강화 — Stage 02 fail-only (repair → Stage 12) + 3 active gates (area/dim/multi-floor) + access dormant scaffold. (3) D022 본문 강화 — "JSON + 한 줄" boundary (기존 5×6 grid 안에서만; 새 TargetType/Role 은 schema diff). (4) Pipeline §9.10 갱신 — cardinality check 제거 (Stage 01 책임), repair 출력 제거, single-floor 가정 명시. (5) Plan §0 산출물 5번 fail-only / required-only / gross / single-floor 명시. (6) S06-D6/D7/D12/D22 보강 + S06-D23/D24 신설. (7) §5 Def-14 추가 (Decomposition 단위 일관성, Step 07 entry). 21 decisions (S06-D1~D18 + D22~D24) / 10 work items (4.1~4.3 + 4.3a + 4.4~4.9). 또한 README + Architecture Decisions 일치. |
 | 2026-05-09 | v3 — §4.3a generic adapter reform (S06-D22 신설). per-typology Adapter 클래스 폐기 → 단일 `TargetAdapter` concrete class. typology 식별자 JSON `target_type` 필드로 이전. README 대폭 강화 (3-layer model + mission scope). D021/D022 본문 갱신. `.gitignore` 에 `build/`, `dist/` 추가. 이유: typology 4개 (B/C/D/E) 본격 진입 확정 (사용자 답 2026-05-09) → per-typology 클래스 boilerplate 4 × ~25줄 회피. proto3 = engine, 외부 데이터 분리. 19 decisions (S06-D1~D18 + D22) / 10 work items (4.1~4.3 + 4.3a + 4.4~4.9). |
 | 2026-05-09 | v2 — 외부 review (다른 Claude 인스턴스) 16 항목 반영. 주요 변경: (1) `config/` repo root → `src/proto3/data/target_rules/` 패키지 내 (외부 review #6, S06-D4). (2) Stage 01 본격화 — `SpaceUnitSpec` 모든 필드 보존 + dup name / unknown role / type mismatch (외부 review #4, S06-D7 보강). (3) `atom_inclusion_threshold` dead config wiring — `decompose.run()` 시그니처 + `recursive.py` 0.5 hardcoded 제거 (외부 review #3, S06-D14 보강). (4) `viz.svg.render` 미지원 kwarg ValueError + `palette` 통일 (외부 review #11/#12, S06-D11 신설). (5) `ApartmentAdapter.load_fixture` target_type 검사 (외부 review #8, S06-D15 신설). (6) Pipeline §9.10 Stage 02 outputs 갱신 (외부 review #7, DoD-23 추가). (7) `schema.__init__` + test_smoke 22→24 (외부 review #12, DoD-24, 4.1 흡수). (8) Step 05 Plan header `Completed (merged 7064132)` 갱신 (외부 review #15, DoD-25, 4.1 흡수). (9) S06-D13 (AccessPolicy `__post_init__` 검증) 제거 — Def-9 (Step 09-10) 그대로 (외부 review #5). (10) `serialize.py` `list[T]` 강화 — ProgramRequest.spaces 영역 한정 (외부 review #2, 일반화는 Def-7 Step 08). (11) Hole-aware decompose Def-11 신설 (외부 review #1, Step 07). (12) `references/` docstring Def-13 신설 (외부 review #16, Step 07). 18 decisions / 9 work items / 28 DoD / 13 deferred / 11 risks. |

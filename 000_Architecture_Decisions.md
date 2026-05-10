@@ -678,7 +678,7 @@ Step 05 §4.6 (algorithm tests) revealed the unit-mismatch and the resulting LIR
 
 ## D020. Stage 02 Domain Feasibility Gate design (Step 06)
 
-Status: Placeholder (body finalized at Step 06 §4.9 close)
+Status: Accepted (2026-05-09)
 Type: Architecture decision
 
 Decision summary:
@@ -724,10 +724,10 @@ Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_Program
 
 ## D021. TargetRules + external JSON config (Step 06)
 
-Status: Placeholder (finalized at Step 06 §4.9 close)
+Status: Accepted (2026-05-09)
 Type: Architecture decision
 
-Decision summary (full text lands at Step 06 close):
+Decision:
 
 - proto3 domain rules (cardinality / area / density) live in `src/proto3/data/target_rules/<target>.json` (package data, not Python).
 - `TargetRules` dataclass = typed in-memory contract; `proto3.target.rules_loader.load_target_rules(path)` parses + validates (target_type / density_factor range / unknown roles / negative values).
@@ -741,10 +741,10 @@ Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_Program
 
 ## D022. Generic TargetAdapter + 3-layer typology extensibility (Step 06)
 
-Status: Placeholder (body finalized at Step 06 §4.9 close)
+Status: Accepted (2026-05-09)
 Type: Architecture decision
 
-Decision summary:
+Decision:
 
 - **Single concrete `TargetAdapter` class** drives every typology.
   Per-typology subclasses (`ApartmentAdapter`, `HotelAdapter`, ...)

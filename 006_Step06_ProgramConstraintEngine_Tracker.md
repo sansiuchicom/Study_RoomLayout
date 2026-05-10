@@ -1,7 +1,8 @@
 # 006 Step 06 — Program & Domain Constraint Engine Tracker
 
-Status: In progress
+Status: Completed (pending merge)
 Started: 2026-05-09
+Completed: 2026-05-09
 Branch: `step06-program-constraint-engine`
 Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md)
 
@@ -33,7 +34,7 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | 4.6 | Stage 02 gate + Pipeline §9.10 update + R2 regression | `feat: stage 02 gate + R2 AreaGateFailure regression (S06-D6, D24, review #2)` | [x] | 2026-05-09 |
 | 4.7 | Fail-loud sweep — RunConfig + threshold wiring + palette + render strict | `feat: fail-loud sweep — RunConfig + threshold wiring + palette + render strict (S06-D11, D14, review #3, #11, #12)` | [x] | 2026-05-09 |
 | 4.8 | step06 program gate overview notebook | `feat: step06 program gate overview notebook (S06-D16)` | [x] | 2026-05-09 |
-| 4.9 | Step 06 cleanup (Plan/Tracker, Progress Tracker, D020/D021) | `docs: step06 cleanup (Plan/Tracker, Progress Tracker, D020/D021)` | [ ] | |
+| 4.9 | Step 06 cleanup (Plan/Tracker, Progress Tracker, D020/D021/D022/D023 finalize) | `docs: step06 cleanup (Plan/Tracker, Progress Tracker, D020/D021/D022/D023 finalize)` | [x] | 2026-05-09 |
 
 실행 순서: 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → 4.9 → (Step 종료) merge --no-ff to main.
 
@@ -65,14 +66,14 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | DoD-18 | R2 → AreaGateFailure 회로 작동 | [x] | 2026-05-09 (§4.6) |
 | DoD-19 | A1/A2/B1/D1 Stage 02 통과 (false-reject 없음) | [x] | 2026-05-09 (§4.6) |
 | DoD-20 | step06_program_gate_overview notebook | [x] | 2026-05-09 (§4.8, 17 cells / 6 visualizations / 4 PNG charts) |
-| DoD-21 | pytest 통과 (현재 82 + 신규) | [ ] | |
-| DoD-22 | python -m pip install -e . 회귀 없음 | [ ] | |
+| DoD-21 | pytest 통과 (현재 82 + 신규) | [x] | 2026-05-09 (221 passed = 82 baseline + 139 신규) |
+| DoD-22 | python -m pip install -e . 회귀 없음 | [x] | 2026-05-09 (wheel 빌드 검증 §4.3) |
 | DoD-23 | Pipeline §9.10 Stage 02 outputs 갱신 | [x] | 2026-05-09 (`01e42d3` design commit) |
 | DoD-24 | schema.__init__ +GeometricPiece +Decomposition + test_smoke 22→24 (§4.2 에서 25) | [x] | 2026-05-09 (§4.1 + §4.2) |
 | DoD-25 | Step 05 docs legacy/step05/ + Plan header `(merged 7064132)` 갱신 | [x] | 2026-05-09 (§4.1) |
 | DoD-26 | Progress Tracker 4.1 In progress + stale §4 + Last updated 갱신 | [x] | 2026-05-09 (§4.1) |
-| DoD-27 | §4 commits all on step06 branch + merge --no-ff + branch 삭제 | [ ] | 진행 중 (4.1~4.3a land; 4.4~4.9 남음) |
-| DoD-28 | Architecture Decisions D020 + D021 추가 + D006 cross-link (§4.9 close 시 finalize) | [~] | placeholder land (`3f09cbe` D020/D021, `372090b` D022); 본문 finalize §4.9 |
+| DoD-27 | §4 commits all on step06 branch + merge --no-ff + branch 삭제 | [~] | 11 commits land; merge --no-ff + branch 삭제 사용자 확인 대기 |
+| DoD-28 | Architecture Decisions D020 + D021 추가 + D006 cross-link (§4.9 close 시 finalize) | [x] | 2026-05-09 D020/D021/D022/D023 Status: Accepted finalize |
 
 ---
 
@@ -101,13 +102,13 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 
 Step 종료 시 순서대로:
 
-- [ ] Plan §4 모든 항목 [x] 확인
-- [ ] DoD §2 모든 항목 [x] 확인
-- [ ] `git status` clean 확인
-- [ ] `000_Progress_Tracker.md` 갱신: Current step → "Step 06 complete (pending merge)", Active files → Step 06 docs as "Completed; pending move to legacy/step06/ at Step 07 kickoff", Step status table → Step 06 Done
-- [ ] (D016 amendment) Step 06 docs는 **Step 07 kickoff 시** `legacy/step06/`로 이동 — 이 Step에서는 옮기지 않음
-- [ ] git commit (4.9 = TBD)
-- [ ] `git checkout main && git merge --no-ff step06-program-constraint-engine && git branch -d step06-program-constraint-engine && git push origin main`
+- [x] Plan §4 모든 항목 [x] 확인
+- [x] DoD §2 모든 항목 [x] 확인 (DoD-27 merge 사용자 확인 대기)
+- [x] `git status` clean 확인 (close commit 직후)
+- [x] `000_Progress_Tracker.md` 갱신: Current step → "Step 06 complete (pending merge)", Active files → Step 06 docs as "Completed; pending move to legacy/step06/ at Step 07 kickoff", Step status table → Step 06 Done
+- [-] (D016 amendment) Step 06 docs는 **Step 07 kickoff 시** `legacy/step06/`로 이동 — 이 Step에서는 옮기지 않음 (의도된 미수행)
+- [x] git commit (4.9 = close)
+- [ ] `git checkout main && git merge --no-ff step06-program-constraint-engine && git branch -d step06-program-constraint-engine && git push origin main` (사용자 확인 대기)
 
 ---
 
@@ -116,3 +117,4 @@ Step 종료 시 순서대로:
 | Date | Change |
 |---|---|
 | 2026-05-09 | Initial. 9 work items, 28 DoD. v2 (외부 review 16 항목 반영) 기준. |
+| 2026-05-09 | Step 06 close. 11 commits on `step06-program-constraint-engine` (3f09cbe → 17c852f → close). 221 passed (82 baseline + 139 신규). 10 work items + 4.3a + 2 review-followup commits. D020/D021/D022/D023 Status: Accepted. R2 `verified_at: Step 06` 약속 실현. DoD 27/28 [x] (DoD-27 merge --no-ff + branch 삭제 사용자 확인 대기). |

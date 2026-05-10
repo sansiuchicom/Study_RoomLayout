@@ -46,13 +46,22 @@ _ROLE_TO_PALETTE_KEY: dict[str, str] = {
 
 
 def role_to_palette_key(role: str) -> str:
-    """Map SpaceUnitSpec.role enum to LAYER_COLORS key.
+    """Map SpaceUnitSpec.role to LAYER_COLORS key.
 
-    Unknown roles fall back to "private". Formal mapping from
-    ProgramInstance.category to palette key is yielded to Step 06
-    (Program & Domain Constraint Engine) per S04-D7 (R-S03-2).
+    Step 06 §4.7 (S06-D11): unknown roles raise ValueError. The Step 03 frame
+    silently fell back to "private" — that hid typo bugs and conflicted with
+    Stage 01's strict role validation (S06-D10). Failing here is consistent
+    with D004/D005 fail-loud policy. Schema diff is the explicit path to
+    add a new role (extend `Role` Literal in proto3.schema.program +
+    `_ROLE_TO_PALETTE_KEY` here).
     """
-    return _ROLE_TO_PALETTE_KEY.get(role, "private")
+    try:
+        return _ROLE_TO_PALETTE_KEY[role]
+    except KeyError:
+        raise ValueError(
+            f"role_to_palette_key: unknown role {role!r}; "
+            f"allowed roles: {sorted(_ROLE_TO_PALETTE_KEY)}"
+        ) from None
 
 
 GRID_SPACING_MM: int = 100

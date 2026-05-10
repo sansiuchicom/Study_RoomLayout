@@ -31,7 +31,7 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | 4.4 | DomainGateFailure hierarchy + gates module | `feat: DomainGateFailure hierarchy + gates module (S06-D6, D12, D13, D023, D024)` | [x] | 2026-05-09 (`8c1903d`) |
 | 4.5 | Stage 01 full program preservation + dup/unknown/type guards | `feat: stage 01 full program preservation + dup/unknown/type guards (S06-D7, D10, D023)` | [x] | 2026-05-09 (`bb6a32a`) |
 | 4.6 | Stage 02 gate + Pipeline §9.10 update + R2 regression | `feat: stage 02 gate + R2 AreaGateFailure regression (S06-D6, D24, review #2)` | [x] | 2026-05-09 |
-| 4.7 | Fail-loud sweep — RunConfig + threshold wiring + palette + render strict | `feat: fail-loud sweep — RunConfig + threshold wiring + palette + render strict (S06-D11, D14, review #3, #11, #12)` | [ ] | |
+| 4.7 | Fail-loud sweep — RunConfig + threshold wiring + palette + render strict | `feat: fail-loud sweep — RunConfig + threshold wiring + palette + render strict (S06-D11, D14, review #3, #11, #12)` | [x] | 2026-05-09 |
 | 4.8 | step06 program gate overview notebook | `feat: step06 program gate overview notebook (S06-D16)` | [ ] | |
 | 4.9 | Step 06 cleanup (Plan/Tracker, Progress Tracker, D020/D021) | `docs: step06 cleanup (Plan/Tracker, Progress Tracker, D020/D021)` | [ ] | |
 
@@ -58,10 +58,10 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | DoD-11 | DomainGateFailure 부모 + 3 자식 | [x] | 2026-05-09 (§4.4) |
 | DoD-12 | stage02_gate.run gates 호출 + raise | [x] | 2026-05-09 (§4.6) |
 | DoD-13 | Stage 01 모든 SpaceUnitSpec 필드 보존 + dup/unknown/type 가드 | [x] | 2026-05-09 (§4.5) |
-| DoD-14 | RunConfig.__post_init__ value validation | [ ] | |
-| DoD-15 | decompose.run() threshold 인자 + recursive.py 0.5 hardcoded 제거 | [ ] | |
-| DoD-16 | viz.palette 미지 role ValueError | [ ] | |
-| DoD-17 | viz.svg.render 미지원 kwarg ValueError | [ ] | |
+| DoD-14 | RunConfig.__post_init__ value validation | [x] | 2026-05-09 (§4.7) |
+| DoD-15 | decompose.run() threshold 인자 + recursive.py 0.5 hardcoded 제거 | [x] | 2026-05-09 (§4.7) |
+| DoD-16 | viz.palette 미지 role ValueError | [x] | 2026-05-09 (§4.7) |
+| DoD-17 | viz.svg.render 미지원 kwarg ValueError | [x] | 2026-05-09 (§4.7, atoms/regions/spine 만; 나머지 silent) |
 | DoD-18 | R2 → AreaGateFailure 회로 작동 | [x] | 2026-05-09 (§4.6) |
 | DoD-19 | A1/A2/B1/D1 Stage 02 통과 (false-reject 없음) | [x] | 2026-05-09 (§4.6) |
 | DoD-20 | step06_program_gate_overview notebook | [ ] | |

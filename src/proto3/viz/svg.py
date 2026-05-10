@@ -83,7 +83,29 @@ def render(
     All optional kwargs default to None; the corresponding layer registers as
     an empty <g> group. Step 03 only draws the footprint and the 100mm grid;
     later Steps populate the remaining layers.
+
+    Step 06 §4.7 (S06-D11) tightens the contract for `atoms` / `regions` /
+    `spine`: passing a non-None value raises ValueError because the renderer
+    cannot honor those layers yet. Silently ignoring (Step 03 frame) hid
+    Step 05 atoms render bugs (외부 review #11). Real atoms / regions / spine
+    rendering arrives in Step 07 (Plan Def-12). Other kwargs (graph / anchors
+    / role_scores / slots / seeds / grown / doors / failure) remain silent
+    no-ops until their producing Stage lands.
     """
+    _step07_unsupported = []
+    if atoms is not None:
+        _step07_unsupported.append("atoms")
+    if regions is not None:
+        _step07_unsupported.append("regions")
+    if spine is not None:
+        _step07_unsupported.append("spine")
+    if _step07_unsupported:
+        raise ValueError(
+            f"render() received non-None values for {_step07_unsupported}; "
+            f"actual rendering of those layers is Step 07 territory "
+            f"(Plan Def-12). Pass None or omit to keep the layer empty."
+        )
+
     if not building.floors:
         raise ValueError("BuildingInput.floors must contain at least one floor")
     floor = building.floors[0]

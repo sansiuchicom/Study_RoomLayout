@@ -15,6 +15,7 @@ files; once validated, downstream code can trust the `TargetRules` shape.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, get_args
 
@@ -40,6 +41,17 @@ def _is_real_number(x: Any) -> bool:
 
 def _is_real_int(x: Any) -> bool:
     return type(x) is int
+
+
+def _is_finite_number(x: Any) -> bool:
+    """Real number that is also finite (rejects NaN, +Inf, -Inf).
+
+    JSON allows `NaN` / `Infinity` via `json.loads(..., parse_constant=...)`,
+    and even with default settings `1e9999` parses to `inf`. Stage 02 area
+    gate must not silently accept inf area or nan thresholds — D005
+    fail-loud applies.
+    """
+    return _is_real_number(x) and not math.isnan(x) and not math.isinf(x)
 
 
 def load_target_rules(path: Path) -> TargetRules:
@@ -74,9 +86,9 @@ def load_target_rules(path: Path) -> TargetRules:
         )
 
     df = data["density_factor"]
-    if not _is_real_number(df) or not (0 < df <= 1):
+    if not _is_finite_number(df) or not (0 < df <= 1):
         raise ValueError(
-            f"target_rules.density_factor must be a number in (0, 1], got {df!r} (path={p})"
+            f"target_rules.density_factor must be a finite number in (0, 1], got {df!r} (path={p})"
         )
 
     rsf = data["requires_single_floor"]
@@ -85,6 +97,9 @@ def load_target_rules(path: Path) -> TargetRules:
             f"target_rules.requires_single_floor must be bool, got {type(rsf).__name__} (path={p})"
         )
 
+    # min_cardinality: SPARSE map — roles not listed are implicitly 0.
+    # Listed roles must be in Role Literal and have non-negative int values
+    # (D023 / S06-D9 — silent typo at role keys forbidden).
     mc = data["min_cardinality"]
     if not isinstance(mc, dict):
         raise ValueError(
@@ -100,19 +115,33 @@ def load_target_rules(path: Path) -> TargetRules:
                 f"target_rules.min_cardinality[{role!r}] must be int ≥ 0, got {count!r} (path={p})"
             )
 
+    # default_min_area_m2: FULL map — every Role must have an explicit
+    # default. Stage 01 fill (S06-D7) treats default_min_area_m2[role] as
+    # always-present; missing-role would be a KeyError at runtime. Loader
+    # fails loud at load time instead.
     da = data["default_min_area_m2"]
     if not isinstance(da, dict):
         raise ValueError(
             f"target_rules.default_min_area_m2 must be object, got {type(da).__name__} (path={p})"
         )
+    da_keys = set(da.keys())
+    missing_da = _ALLOWED_ROLES - da_keys
+    if missing_da:
+        raise ValueError(
+            f"target_rules.default_min_area_m2 must specify every Role; "
+            f"missing {sorted(missing_da)} (path={p})"
+        )
+    extra_da = da_keys - _ALLOWED_ROLES
+    if extra_da:
+        raise ValueError(
+            f"target_rules.default_min_area_m2 has unknown roles {sorted(extra_da)} "
+            f"(allowed: {sorted(_ALLOWED_ROLES)}, path={p})"
+        )
     for role, area in da.items():
-        if role not in _ALLOWED_ROLES:
+        if not _is_finite_number(area) or area < 0:
             raise ValueError(
-                f"target_rules.default_min_area_m2 role {role!r} not in {sorted(_ALLOWED_ROLES)} (path={p})"
-            )
-        if not _is_real_number(area) or area < 0:
-            raise ValueError(
-                f"target_rules.default_min_area_m2[{role!r}] must be number ≥ 0, got {area!r} (path={p})"
+                f"target_rules.default_min_area_m2[{role!r}] must be finite number ≥ 0, "
+                f"got {area!r} (path={p})"
             )
 
     return TargetRules(

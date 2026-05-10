@@ -72,6 +72,34 @@ lives in the JSON's `target_type` field, not in a class name.
 - External pipelines override by passing their own `rules_path` — proto3
   code is not modified for project-specific tuning.
 
+### "Data-only" promise — exact boundary
+
+The "**new typology = JSON file + 1-line dispatch entry**" promise holds
+**within the existing 5×6 schema grid**:
+
+- Existing 5 `TargetType` Literal values: `apartment`, `house`, `hotel`,
+  `warehouse`, `office`.
+- Existing 6 `Role` Literal values: `public`, `private`, `service`, `wet`,
+  `hub`, `corridor`.
+
+A typology *outside* this grid requires a Python schema diff alongside
+the JSON:
+
+- A new typology not in the Literal (e.g., `dormitory`): extend
+  `TargetType` Literal in `proto3.schema.input` (one line). 1-line schema
+  diff + JSON.
+- A typology that needs a role not in the Literal (e.g., warehouse needing
+  `storage` or `loading_dock`): extend `Role` Literal in
+  `proto3.schema.program` (one line per role). 1-line schema diff per
+  new role + JSON.
+
+These extensions are intentionally narrow (single-line Literal additions)
+because typing safety wins over arbitrary string flexibility — silent
+typo failure at JSON load is the failure mode we want to prevent
+(D004/D005 fail-loud spirit). The "data-only" framing applies to
+typologies that fit the established grid; typologies that don't need
+both a 1-line schema diff and JSON.
+
 ---
 
 ## Adding a new typology — workflow

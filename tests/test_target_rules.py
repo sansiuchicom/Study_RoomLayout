@@ -159,8 +159,40 @@ def test_load_min_cardinality_non_int(tmp_path: Path):
 def test_load_default_min_area_unknown_role(tmp_path: Path):
     payload = _valid_payload()
     payload["default_min_area_m2"]["bogus"] = 5.0
-    with pytest.raises(ValueError, match="default_min_area_m2 role 'bogus'"):
+    with pytest.raises(ValueError, match="unknown roles"):
         load_target_rules(_write(tmp_path, payload))
+
+
+def test_load_default_min_area_missing_role(tmp_path: Path):
+    """default_min_area_m2 must specify every Role (D023 fill semantics)."""
+    payload = _valid_payload()
+    del payload["default_min_area_m2"]["hub"]
+    with pytest.raises(ValueError, match="must specify every Role.*missing"):
+        load_target_rules(_write(tmp_path, payload))
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_load_default_min_area_rejects_nan_inf(tmp_path: Path, bad):
+    payload = _valid_payload()
+    payload["default_min_area_m2"]["public"] = bad
+    with pytest.raises(ValueError, match=r"default_min_area_m2\['public'\].*finite"):
+        load_target_rules(_write(tmp_path, payload))
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_load_density_factor_rejects_nan_inf(tmp_path: Path, bad):
+    payload = _valid_payload()
+    payload["density_factor"] = bad
+    with pytest.raises(ValueError, match="density_factor.*finite"):
+        load_target_rules(_write(tmp_path, payload))
+
+
+def test_load_min_cardinality_sparse_ok(tmp_path: Path):
+    """min_cardinality is intentionally sparse — unspecified roles imply 0."""
+    payload = _valid_payload()
+    payload["min_cardinality"] = {"public": 1}  # sparse: only public
+    r = load_target_rules(_write(tmp_path, payload))
+    assert r.min_cardinality == {"public": 1}
 
 
 def test_load_default_min_area_negative(tmp_path: Path):

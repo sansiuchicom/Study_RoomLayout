@@ -18,13 +18,17 @@ import json
 from pathlib import Path
 from typing import Any, get_args
 
+from proto3.schema.input import TargetType
 from proto3.schema.program import Role
 
 from .base import TargetRules
 
+_ALLOWED_TARGET_TYPES: frozenset[str] = frozenset(get_args(TargetType))
+
 _ALLOWED_ROLES: frozenset[str] = frozenset(get_args(Role))
 _REQUIRED_FIELDS: frozenset[str] = frozenset(
-    {"min_cardinality", "default_min_area_m2", "density_factor", "requires_single_floor"}
+    {"target_type", "min_cardinality", "default_min_area_m2",
+     "density_factor", "requires_single_floor"}
 )
 
 
@@ -61,6 +65,13 @@ def load_target_rules(path: Path) -> TargetRules:
     extra = keys - _REQUIRED_FIELDS
     if extra:
         raise ValueError(f"target_rules has unknown fields {sorted(extra)} (path={p})")
+
+    tt = data["target_type"]
+    if not isinstance(tt, str) or tt not in _ALLOWED_TARGET_TYPES:
+        raise ValueError(
+            f"target_rules.target_type must be one of {sorted(_ALLOWED_TARGET_TYPES)}, "
+            f"got {tt!r} (path={p})"
+        )
 
     df = data["density_factor"]
     if not _is_real_number(df) or not (0 < df <= 1):
@@ -105,6 +116,7 @@ def load_target_rules(path: Path) -> TargetRules:
             )
 
     return TargetRules(
+        target_type=tt,
         min_cardinality=dict(mc),
         default_min_area_m2={k: float(v) for k, v in da.items()},
         density_factor=float(df),

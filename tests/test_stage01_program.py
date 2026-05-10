@@ -16,7 +16,7 @@ from proto3.schema.program import ProgramInstance
 from proto3.schema.serialize import from_json
 from proto3.schema.validation import ProgramInstantiationFailure
 from proto3.stages import stage01_program
-from proto3.target import DEFAULT_APARTMENT_RULES_PATH, ApartmentAdapter
+from proto3.target import DEFAULT_APARTMENT_RULES_PATH, TargetAdapter
 
 from .fixture_matrix import fixture_path
 
@@ -25,8 +25,8 @@ def _load(matrix_id: str) -> BuildingInput:
     return from_json(BuildingInput, fixture_path(matrix_id))
 
 
-def _adapter() -> ApartmentAdapter:
-    return ApartmentAdapter(DEFAULT_APARTMENT_RULES_PATH)
+def _adapter() -> TargetAdapter:
+    return TargetAdapter(DEFAULT_APARTMENT_RULES_PATH)
 
 
 @pytest.mark.parametrize("matrix_id", ["A1", "A2", "B1", "R2"])

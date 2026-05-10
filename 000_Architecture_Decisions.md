@@ -699,11 +699,30 @@ Type: Architecture decision
 Decision summary (full text lands at Step 06 close):
 
 - proto3 domain rules (cardinality / area / density) live in `src/proto3/data/target_rules/<target>.json` (package data, not Python).
-- `TargetRules` dataclass = typed in-memory contract; `proto3.target.rules_loader.load_target_rules(path)` parses + validates.
-- `ApartmentAdapter(rules_path: Path)` requires explicit path; `DEFAULT_APARTMENT_RULES_PATH` constant exported for callers.
+- `TargetRules` dataclass = typed in-memory contract; `proto3.target.rules_loader.load_target_rules(path)` parses + validates (target_type / density_factor range / unknown roles / negative values).
+- `TargetAdapter(rules_path: Path)` requires explicit path (S06-D5); `DEFAULT_APARTMENT_RULES_PATH` constant exported for callers; `stage00_load._DEFAULT_ADAPTERS` is the **sole** site that uses default path implicitly.
+- pyproject.toml `[tool.setuptools.package-data]` ships JSON + README in wheel/sdist.
 - 4-layer separation (S06-D17): L1 invariant + L2 baseline = proto3, L3 project override = external pipeline (whole-file swap, no merge), L4 external metadata = out-of-scope.
 
 Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D4, D5, D9, D17. Cross-references D006 (region/atom dual layer) — atom-based gate computation is Step 12 territory.
+
+---
+
+## D022. Generic TargetAdapter + 3-layer typology extensibility (Step 06)
+
+Status: Placeholder (finalized at Step 06 §4.9 close)
+Type: Architecture decision
+
+Decision summary (full text lands at Step 06 close):
+
+- **Single concrete `TargetAdapter` class** drives every typology. Per-typology subclasses (`ApartmentAdapter`, `HotelAdapter`, ...) deliberately absent. Typology identity lives in the rules JSON's `target_type` field, not in a class name.
+- New typology that shares all algorithms with apartment = **JSON file + 1-line dispatch entry** in `stage00_load._DEFAULT_ADAPTERS`. No new code module per typology.
+- Typology-specific algorithm variants (e.g., hotel "explicit corridor" pattern) — when introduced — go into a **strategy registry** (L2 in the 3-layer model documented in `src/proto3/data/target_rules/README.md`). Strategies are typology-agnostic: a single explicit-corridor function can be used by hotel + large office. Selected by JSON enum, dispatched by Stage code (no `if target_type == "hotel"` branches).
+- L2 strategy registry not present today; introduced during Step 09 (Spine Generation) when first apartment strategy lands.
+- Rationale: proto3 is the engine component of an external scan-to-BIM training-data pipeline. Engines that ship data separately scale to new typologies without code changes. Per-typology classes (8-10 lines of boilerplate each, only string-different) violate DRY and force Stage code to do isinstance dispatch.
+- Rejected alternatives: (a) per-typology Adapter classes — 25-line boilerplate per typology, isinstance dispatch in Stages, code-level typology hardcoding; (b) free-string `target_type` (no Literal) — silent typo failure at fixture load.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D5, D17, D22. Cross-references D004 (ProgramInstance owns cardinality), D005 (constraints-as-gates), D012 (dataclass-first).
 
 ---
 

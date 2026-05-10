@@ -27,11 +27,13 @@ def test_target_rules_requires_all_fields():
 
 def test_target_rules_construct_with_explicit_fields():
     r = TargetRules(
+        target_type="apartment",
         min_cardinality={"public": 1},
         default_min_area_m2={"public": 12.0},
         density_factor=0.85,
         requires_single_floor=True,
     )
+    assert r.target_type == "apartment"
     assert r.density_factor == 0.85
 
 
@@ -40,6 +42,7 @@ def test_target_rules_construct_with_explicit_fields():
 def test_load_default_apartment_rules():
     r = load_target_rules(DEFAULT_APARTMENT_RULES_PATH)
     assert isinstance(r, TargetRules)
+    assert r.target_type == "apartment"
     assert r.density_factor == 0.85
     assert r.requires_single_floor is True
     assert r.min_cardinality == {"public": 1, "private": 1, "wet": 1}
@@ -59,6 +62,7 @@ def _write(tmp: Path, payload: dict) -> Path:
 
 def _valid_payload() -> dict:
     return {
+        "target_type": "apartment",
         "density_factor": 0.85,
         "requires_single_floor": True,
         "min_cardinality": {"public": 1, "private": 1, "wet": 1},
@@ -92,6 +96,20 @@ def test_load_missing_field(tmp_path: Path):
     payload = _valid_payload()
     del payload["density_factor"]
     with pytest.raises(ValueError, match="missing required fields"):
+        load_target_rules(_write(tmp_path, payload))
+
+
+def test_load_unknown_target_type(tmp_path: Path):
+    payload = _valid_payload()
+    payload["target_type"] = "bunker"
+    with pytest.raises(ValueError, match="target_rules.target_type"):
+        load_target_rules(_write(tmp_path, payload))
+
+
+def test_load_target_type_wrong_type(tmp_path: Path):
+    payload = _valid_payload()
+    payload["target_type"] = 42
+    with pytest.raises(ValueError, match="target_rules.target_type"):
         load_target_rules(_write(tmp_path, payload))
 
 

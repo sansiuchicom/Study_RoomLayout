@@ -1,4 +1,5 @@
 {
+  "target_type": "apartment",
   "density_factor": 0.85,
   "requires_single_floor": true,
   "min_cardinality": {

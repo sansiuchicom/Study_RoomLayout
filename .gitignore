@@ -19,6 +19,8 @@ experiments/runs/*
 
 # Python build / packaging artifacts
 *.egg-info/
+build/
+dist/
 
 # IDE / tool work dirs
 .claude/

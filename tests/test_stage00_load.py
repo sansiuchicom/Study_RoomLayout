@@ -10,7 +10,7 @@ from proto3.schema.input import BuildingInput
 from proto3.stages import stage00_load
 from proto3.target import (
     DEFAULT_APARTMENT_RULES_PATH,
-    ApartmentAdapter,
+    TargetAdapter,
     TargetRules,
 )
 
@@ -26,7 +26,7 @@ def test_stage00_default_adapter_returns_building_input():
 def test_stage00_explicit_adapter():
     b = stage00_load.run(
         FIXTURES / "apartment_minimal.json",
-        adapter=ApartmentAdapter(DEFAULT_APARTMENT_RULES_PATH),
+        adapter=TargetAdapter(DEFAULT_APARTMENT_RULES_PATH),
     )
     assert b.target_type == "apartment"
 
@@ -39,7 +39,7 @@ def test_stage00_consistent_run_config_passes():
 
 def test_stage00_unregistered_target_type_raises():
     rc = RunConfig(target_type="hotel")
-    with pytest.raises(ValueError, match="no TargetAdapter registered"):
+    with pytest.raises(ValueError, match="no default TargetAdapter registered"):
         stage00_load.run(FIXTURES / "apartment_minimal.json", run_config=rc)
 
 

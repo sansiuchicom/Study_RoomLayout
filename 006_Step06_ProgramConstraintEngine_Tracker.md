@@ -28,9 +28,9 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | 4.2 | ProgramRequest dataclass + Role literal + spaces strict deserialize | `feat: ProgramRequest dataclass + Role literal + spaces strict deserialize (S06-D8, D10)` | [x] | 2026-05-09 (`f241d58`) |
 | 4.3 | TargetRules + apartment.json data package + adapter target check | `feat: TargetRules + apartment.json data package + adapter target check (S06-D4, D5, D9, D15, D17)` | [x] | 2026-05-09 (`0da364b`) |
 | 4.3a | Generic TargetAdapter reform (S06-D22) | `refactor: generic TargetAdapter + JSON self-describing typology + 3-layer extensibility (S06-D5, D17, D22 + .gitignore build/dist)` | [x] | 2026-05-09 (`372090b`) |
-| 4.4 | DomainGateFailure hierarchy + gates module | `feat: DomainGateFailure hierarchy + gates module (S06-D6, D12, D13)` | [ ] | |
-| 4.5 | Stage 01 full program preservation + dup/unknown/type guards | `feat: stage 01 full program preservation + dup/unknown/type guards (S06-D7, D10)` | [ ] | |
-| 4.6 | Stage 02 gate + Pipeline §9.10 update + R2 regression | `feat: stage 02 gate + Pipeline §9.10 update + R2 regression (S06-D6, review #2, #7)` | [ ] | |
+| 4.4 | DomainGateFailure hierarchy + gates module | `feat: DomainGateFailure hierarchy + gates module (S06-D6, D12, D13, D023, D024)` | [x] | 2026-05-09 (`8c1903d`) |
+| 4.5 | Stage 01 full program preservation + dup/unknown/type guards | `feat: stage 01 full program preservation + dup/unknown/type guards (S06-D7, D10, D023)` | [x] | 2026-05-09 (`bb6a32a`) |
+| 4.6 | Stage 02 gate + Pipeline §9.10 update + R2 regression | `feat: stage 02 gate + R2 AreaGateFailure regression (S06-D6, D24, review #2)` | [x] | 2026-05-09 |
 | 4.7 | Fail-loud sweep — RunConfig + threshold wiring + palette + render strict | `feat: fail-loud sweep — RunConfig + threshold wiring + palette + render strict (S06-D11, D14, review #3, #11, #12)` | [ ] | |
 | 4.8 | step06 program gate overview notebook | `feat: step06 program gate overview notebook (S06-D16)` | [ ] | |
 | 4.9 | Step 06 cleanup (Plan/Tracker, Progress Tracker, D020/D021) | `docs: step06 cleanup (Plan/Tracker, Progress Tracker, D020/D021)` | [ ] | |
@@ -54,20 +54,20 @@ Companion plan: [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramC
 | DoD-7 | TargetAdapter(rules_path) required + DEFAULT_APARTMENT_RULES_PATH 상수 (§4.3a generic) | [x] | 2026-05-09 (§4.3 + §4.3a) |
 | DoD-8 | TargetAdapter.load_fixture target_type 검사 | [x] | 2026-05-09 (§4.3 + §4.3a) |
 | DoD-9 | stage00_load._DEFAULT_ADAPTERS uses DEFAULT_APARTMENT_RULES_PATH | [x] | 2026-05-09 (§4.3 + §4.3a) |
-| DoD-10 | constraints.gates 4 pure functions | [ ] | |
-| DoD-11 | DomainGateFailure 부모 + 3 자식 | [ ] | |
-| DoD-12 | stage02_gate.run gates 호출 + raise | [ ] | |
-| DoD-13 | Stage 01 모든 SpaceUnitSpec 필드 보존 + dup/unknown/type 가드 | [ ] | |
+| DoD-10 | constraints.gates 4 pure functions | [x] | 2026-05-09 (§4.4) |
+| DoD-11 | DomainGateFailure 부모 + 3 자식 | [x] | 2026-05-09 (§4.4) |
+| DoD-12 | stage02_gate.run gates 호출 + raise | [x] | 2026-05-09 (§4.6) |
+| DoD-13 | Stage 01 모든 SpaceUnitSpec 필드 보존 + dup/unknown/type 가드 | [x] | 2026-05-09 (§4.5) |
 | DoD-14 | RunConfig.__post_init__ value validation | [ ] | |
 | DoD-15 | decompose.run() threshold 인자 + recursive.py 0.5 hardcoded 제거 | [ ] | |
 | DoD-16 | viz.palette 미지 role ValueError | [ ] | |
 | DoD-17 | viz.svg.render 미지원 kwarg ValueError | [ ] | |
-| DoD-18 | R2 → AreaGateFailure 회로 작동 | [ ] | |
-| DoD-19 | A1/A2/B1/D1 Stage 02 통과 (false-reject 없음) | [ ] | |
+| DoD-18 | R2 → AreaGateFailure 회로 작동 | [x] | 2026-05-09 (§4.6) |
+| DoD-19 | A1/A2/B1/D1 Stage 02 통과 (false-reject 없음) | [x] | 2026-05-09 (§4.6) |
 | DoD-20 | step06_program_gate_overview notebook | [ ] | |
 | DoD-21 | pytest 통과 (현재 82 + 신규) | [ ] | |
 | DoD-22 | python -m pip install -e . 회귀 없음 | [ ] | |
-| DoD-23 | Pipeline §9.10 Stage 02 outputs 갱신 | [ ] | |
+| DoD-23 | Pipeline §9.10 Stage 02 outputs 갱신 | [x] | 2026-05-09 (`01e42d3` design commit) |
 | DoD-24 | schema.__init__ +GeometricPiece +Decomposition + test_smoke 22→24 (§4.2 에서 25) | [x] | 2026-05-09 (§4.1 + §4.2) |
 | DoD-25 | Step 05 docs legacy/step05/ + Plan header `(merged 7064132)` 갱신 | [x] | 2026-05-09 (§4.1) |
 | DoD-26 | Progress Tracker 4.1 In progress + stale §4 + Last updated 갱신 | [x] | 2026-05-09 (§4.1) |

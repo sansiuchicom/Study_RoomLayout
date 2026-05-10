@@ -676,6 +676,37 @@ Step 05 §4.6 (algorithm tests) revealed the unit-mismatch and the resulting LIR
 
 ---
 
+## D020. Stage 02 Domain Feasibility Gate design (Step 06)
+
+Status: Placeholder (finalized at Step 06 §4.9 close)
+Type: Architecture decision
+
+Decision summary (full text lands at Step 06 close):
+
+- Stage 02 = total-area + min-dimension(bbox-level) + access-schema + multi-floor-feasibility 4 gates as pure functions in `proto3.constraints.gates`.
+- `DomainGateFailure(Exception)` parent + `AreaGateFailure` / `DimGateFailure` / `AccessSchemaFailure` children, each holding a `FailureRecord` (S04-D11 pattern).
+- Pipeline §9.10 Stage 02 outputs row updated to reflect this hierarchy.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D6, D11–D14, D17.
+
+---
+
+## D021. TargetRules + external JSON config (Step 06)
+
+Status: Placeholder (finalized at Step 06 §4.9 close)
+Type: Architecture decision
+
+Decision summary (full text lands at Step 06 close):
+
+- proto3 domain rules (cardinality / area / density) live in `src/proto3/data/target_rules/<target>.json` (package data, not Python).
+- `TargetRules` dataclass = typed in-memory contract; `proto3.target.rules_loader.load_target_rules(path)` parses + validates.
+- `ApartmentAdapter(rules_path: Path)` requires explicit path; `DEFAULT_APARTMENT_RULES_PATH` constant exported for callers.
+- 4-layer separation (S06-D17): L1 invariant + L2 baseline = proto3, L3 project override = external pipeline (whole-file swap, no merge), L4 external metadata = out-of-scope.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D4, D5, D9, D17. Cross-references D006 (region/atom dual layer) — atom-based gate computation is Step 12 territory.
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.

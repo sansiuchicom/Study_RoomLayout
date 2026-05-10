@@ -1,6 +1,6 @@
 # 005 Step 05 — Geometry Kernel Plan
 
-Status: Completed (pending merge)
+Status: Completed (merged 7064132)
 Started: 2026-05-08
 Completed: 2026-05-08
 Branch: `step05-geometry-kernel`

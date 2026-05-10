@@ -2,7 +2,7 @@
 
 Status: Current working status only  
 Scope: active Step, active files, completed work, next actions, blockers  
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 ---
 
@@ -29,25 +29,27 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 05 done (merged `7064132`). Ready for Step 06 kickoff.
+Step 06 in progress (kickoff §4.1, 2026-05-09). Branch `step06-program-constraint-engine`.
 ```
 
 Current Step:
 
 ```text
-Step 05. Geometry Kernel / Atom Resolution Commitments
+Step 06. Program & Domain Constraint Engine
 ```
 
 Current Step status:
 
 ```text
-Done 2026-05-08; 9 work-item commits + 2 review-followup commits merged via
-`--no-ff` to main as `7064132`; `step05-geometry-kernel` branch deleted.
-v3.2 algorithm imported (LIR + per-family recursive + 50% rule); D006 amended
-via D019 (atom_size 300mm + atom_inclusion_threshold 0.5; per-family proportional
-sizing; interior grid + boundary polygon). 80 pytest passed. D1 sloped fixture
-added. X2 scope split honored (Step 05 algorithm only; Step 07 will integrate
-Decomposition → RegionSet/AtomSet via M2 layered approach + v12 zoning).
+Started 2026-05-09. Plan v2 (after external review by another Claude
+instance, 16 items folded in): 18 decisions / 9 work items / 28 DoD /
+13 deferred / 11 risks. §4.1 kickoff lands Step 05 archive + step06
+module scaffold (constraints/, data/target_rules/) + Step 05 schema
+__init__ export cleanup (GeometricPiece, Decomposition; test_smoke
+22→24) + D020/D021 placeholders + Progress Tracker kickoff update.
+Remaining: 4.2 ProgramRequest+Role, 4.3 TargetRules+apartment.json,
+4.4 DomainGateFailure+gates, 4.5 Stage 01 본격, 4.6 Stage 02 + R2,
+4.7 fail-loud sweep, 4.8 notebook, 4.9 cleanup.
 ```
 
 ---
@@ -66,20 +68,20 @@ Global docs:
 Active Step files:
 
 ```text
-005_Step05_GeometryKernel_Plan.md     (Completed; pending move to legacy/step05/ at Step 06 kickoff)
-005_Step05_GeometryKernel_Tracker.md  (Completed; pending move to legacy/step05/ at Step 06 kickoff)
+006_Step06_ProgramConstraintEngine_Plan.md     (In progress)
+006_Step06_ProgramConstraintEngine_Tracker.md  (In progress)
 ```
 
+Step 05 docs archived to `legacy/step05/` (during Step 06 §4.1, 2026-05-09).
 Step 04 docs archived to `legacy/step04/` (during Step 05 §4.1, 2026-05-08).
-
-Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
-Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
 Step 03 docs archived to `legacy/step03/` (during Step 04 §4.1, 2026-05-07).
+Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
+Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
 
 Next Step files to create:
 
 ```text
-TBD at Step 06 kickoff (e.g., 006_Step06_ProgramConstraintEngine_Plan.md, _Tracker.md)
+TBD at Step 07 kickoff (e.g., 007_Step07_RegionAtomDecomposition_Plan.md, _Tracker.md)
 ```
 
 ---
@@ -116,22 +118,22 @@ Completed:
 Immediate next action:
 
 ```text
-Confirm Step 04 close: git merge --no-ff step04-apartment-fixtures into main,
-delete branch, push to origin. Then Step 05 kickoff (Geometry Kernel /
-Atom Resolution Commitments) per Pipeline §15.
+Step 06 §4.2 — ProgramRequest dataclass + Role Literal + spaces strict
+deserialize. After §4.1 kickoff commit lands, advance through 4.2 → 4.9
+sequentially per Plan §4.
 ```
 
-Step 04 delivered:
+Step 05 delivered (merged `7064132`, 2026-05-08):
 
 ```text
-- proto3.target.{TargetAdapter, ApartmentAdapter}
-- proto3.stages.{stage00_load, stage01_program} (frame; Step 06 replaces/extends)
-- proto3.schema.validation.ProgramInstantiationFailure
-- 5 fixtures (apartment_minimal, _4bed_2bath, _l_shape, _no_bath, _too_small)
-- tests/fixture_matrix.py (MATRIX dict + expected_failure metadata)
-- tests/test_target_adapter.py + test_stage00_load.py + test_stage01_program.py + test_fixtures_roundtrip.py (17 신규 tests; total 39 passed)
-- notebooks/step04_fixture_overview.ipynb
-- D-decisions: D016 amendment H012 (legacy link policy)
+- proto3.geometry.{lir, grid, recursive, decompose} (v3.2 algorithm import)
+- proto3.schema.geometry.{GeometricPiece, Decomposition} (M2 layer separation)
+- proto3.schema.region_atom.Atom extended with parent_piece_id, family_id
+- proto3.geometry.decompose.run() mm-friendly wrapper (X3 pattern, R-S05-7 mitigation)
+- D1 sloped fixture (apartment_diagonal.json)
+- D-decisions: D019 (per-family proportional atom sizing, D006 amendment)
+- 80 pytest passed (39 + 41 신규)
+- notebooks/step05_decomposition_overview.ipynb
 ```
 
 ---
@@ -161,7 +163,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
 | 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; merged `7064132`) |
-| 06 | Not started | Program & Domain Constraint Engine |
+| 06 | In progress | Program & Domain Constraint Engine (kickoff 2026-05-09; branch `step06-program-constraint-engine`) |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |
 | 09 | Not started | Hub / Terminal / Spine Candidate Generation |

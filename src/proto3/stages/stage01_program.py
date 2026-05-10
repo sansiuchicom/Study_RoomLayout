@@ -28,7 +28,7 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
     space_units = list(building.program_request.spaces)
     instance = ProgramInstance(space_units=space_units)
 
-    min_card: dict = adapter.target_rules().get("min_cardinality", {})
+    min_card = adapter.target_rules().min_cardinality
     actual = Counter(unit.role for unit in space_units)
 
     for role, required in min_card.items():

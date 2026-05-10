@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import types
+import typing
 from dataclasses import fields, is_dataclass
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin, get_type_hints
@@ -88,8 +89,9 @@ def _reconstruct(type_hint: Any, value: Any, *, strict_unknown: bool = True) -> 
         if args:
             return tuple(_reconstruct(args[0], v, strict_unknown=strict_unknown) for v in value)
         return tuple(value)
-    # X | None / X | Y  (PEP 604 union)
-    if origin is types.UnionType:
+    # X | None / X | Y  (PEP 604 union — and typing.Union, which `from __future__
+    # import annotations` produces from the same `X | Y` source via get_type_hints)
+    if origin is types.UnionType or origin is typing.Union:
         for arg in args:
             if arg is type(None):
                 continue

@@ -26,13 +26,16 @@ def test_from_dict_missing_keys_use_defaults() -> None:
     """Backward-compat (S02-D4): missing keys fall back to dataclass defaults.
 
     Simulates loading an older run_config.json after schema added new fields.
+    Step 06 §4.2: program_request default = ProgramRequest() (was {}).
     """
+    from proto3.schema.program import ProgramRequest
+
     minimal = {"target_type": "hotel"}
     b = from_dict(BuildingInput, minimal)
     assert b.target_type == "hotel"
     assert b.floors == []
     assert b.persistent_anchors == []
-    assert b.program_request == {}
+    assert b.program_request == ProgramRequest()
 
 
 def test_runconfig_round_trip_and_defaults() -> None:

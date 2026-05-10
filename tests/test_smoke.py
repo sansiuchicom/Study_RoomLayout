@@ -16,10 +16,11 @@ def test_subpackage_imports() -> None:
     from proto3 import config, debug, schema  # noqa: F401
 
 
-def test_24_schema_dataclasses_instantiate() -> None:
-    """All 24 schema dataclasses must construct with defaults.
+def test_25_schema_dataclasses_instantiate() -> None:
+    """All 25 schema dataclasses must construct with defaults.
 
-    22 from Step 02 + 2 from Step 05 D019 (GeometricPiece, Decomposition).
+    22 from Step 02 + 2 from Step 05 D019 (GeometricPiece, Decomposition)
+    + 1 from Step 06 (ProgramRequest, S06-D8).
     """
     from proto3.schema import (
         AccessPolicy,
@@ -38,6 +39,7 @@ def test_24_schema_dataclasses_instantiate() -> None:
         NoGoodRecord,
         PersistentAnchor,
         ProgramInstance,
+        ProgramRequest,
         Region,
         RegionSet,
         SeedCandidate,
@@ -50,14 +52,14 @@ def test_24_schema_dataclasses_instantiate() -> None:
 
     classes = [
         BuildingInput, FloorInput, PersistentAnchor,                              # input
-        ProgramInstance, SpaceUnitSpec, ClusterSpec, AccessPolicy,                # program
+        ProgramRequest, ProgramInstance, SpaceUnitSpec, ClusterSpec, AccessPolicy,  # program (Step 06 +ProgramRequest)
         Region, RegionSet, Atom, AtomSet, ContactGraph,                           # region/atom
         GeometricPiece, Decomposition,                                             # geometry (Step 05 D019)
         HubCandidate, TerminalCandidate, SpineCandidate, SlotCandidate, SeedCandidate,  # candidate
         GrowthResult, LayoutCandidate,                                             # growth
         ValidationResult, FailureRecord, NoGoodRecord,                             # validation
     ]
-    assert len(classes) == 24
+    assert len(classes) == 25
     for c in classes:
         inst = c()
         assert inst is not None

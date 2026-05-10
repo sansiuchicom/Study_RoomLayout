@@ -1,4 +1,12 @@
-"""Tests for stages.stage01_program (S04-D4, S04-D11, S04-D12)."""
+"""Tests for stages.stage01_program (S04-D4, S04-D11, S04-D12).
+
+Step 06 §4.2 transitional: shape-validity tests (spaces-not-list etc.) moved
+to test_program_request.py since `ProgramRequest.__post_init__` now owns that
+boundary. This file keeps cardinality-fail (R1) + happy paths.
+
+§4.5 will reintroduce duplicate-name / unknown-role / type-mismatch guards
+at the Stage 01 layer (S06-D7).
+"""
 from __future__ import annotations
 
 import pytest
@@ -22,7 +30,7 @@ def test_stage01_passes_when_cardinality_satisfied(matrix_id):
     b = _load(matrix_id)
     inst = stage01_program.run(b, adapter=ApartmentAdapter())
     assert isinstance(inst, ProgramInstance)
-    assert len(inst.space_units) == len(b.program_request["spaces"])
+    assert len(inst.space_units) == len(b.program_request.spaces)
 
 
 def test_stage01_r1_raises_program_instantiation_failure():
@@ -34,24 +42,3 @@ def test_stage01_r1_raises_program_instantiation_failure():
     assert failure.affected_space == "wet"
     assert failure.evidence == {"role": "wet", "required": 1, "actual": 0}
     assert failure.detected_stage == "01"
-
-
-def test_stage01_raises_when_spaces_not_list():
-    b = BuildingInput(program_request={"spaces": "not_a_list"})
-    with pytest.raises(ProgramInstantiationFailure) as exc_info:
-        stage01_program.run(b, adapter=ApartmentAdapter())
-    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"
-
-
-def test_stage01_raises_when_space_missing_role():
-    b = BuildingInput(program_request={"spaces": [{"name": "living"}]})
-    with pytest.raises(ProgramInstantiationFailure) as exc_info:
-        stage01_program.run(b, adapter=ApartmentAdapter())
-    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"
-
-
-def test_stage01_raises_when_space_item_not_dict():
-    b = BuildingInput(program_request={"spaces": ["just_a_string"]})
-    with pytest.raises(ProgramInstantiationFailure) as exc_info:
-        stage01_program.run(b, adapter=ApartmentAdapter())
-    assert exc_info.value.failure.failure_type == "program_request_schema_invalid"

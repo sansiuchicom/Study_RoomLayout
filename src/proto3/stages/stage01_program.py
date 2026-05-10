@@ -1,15 +1,19 @@
 """Stage 01 — program resolution + cardinality gate (S04-D4, D11, D12).
 
-Step 04 frame; Step 06 (Program & Domain Constraint Engine) will replace/extend
-this module with full ProgramRequest dataclass, area gates, min-dimension
-checks, and access-policy gates.
+Step 04 frame; Step 06 §4.5 will replace/extend this with full SpaceUnitSpec
+field preservation (`required` / `min_area_m2` / `min_dimension_mm`) +
+duplicate-name / unknown-role / type-mismatch guards (S06-D7, D10).
+
+§4.2 transitional change: `building.program_request` is now `ProgramRequest`
+(typed) instead of `dict`. spaces shape validation moved to
+`ProgramRequest.__post_init__`; this module now reads `pr.spaces` directly.
 """
 from __future__ import annotations
 
 from collections import Counter
 
 from proto3.schema.input import BuildingInput
-from proto3.schema.program import ProgramInstance, SpaceUnitSpec
+from proto3.schema.program import ProgramInstance
 from proto3.schema.validation import FailureRecord, ProgramInstantiationFailure
 from proto3.target import TargetAdapter
 
@@ -21,24 +25,7 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
     `adapter.target_rules()['min_cardinality']` is under-supplied
     (D004 / DH-004 regression).
     """
-    spaces = building.program_request.get("spaces", [])
-    if not isinstance(spaces, list):
-        raise ProgramInstantiationFailure(FailureRecord(
-            failure_type="program_request_schema_invalid",
-            detected_stage="01",
-            evidence={"reason": "'spaces' is not a list", "got": type(spaces).__name__},
-            diagnosis={"likely_layer": "program_request"},
-        ))
-    space_units = []
-    for i, s in enumerate(spaces):
-        if not (isinstance(s, dict) and "name" in s and "role" in s):
-            raise ProgramInstantiationFailure(FailureRecord(
-                failure_type="program_request_schema_invalid",
-                detected_stage="01",
-                evidence={"index": i, "item": s, "expected": "dict with name+role"},
-                diagnosis={"likely_layer": "program_request"},
-            ))
-        space_units.append(SpaceUnitSpec(name=s["name"], role=s["role"]))
+    space_units = list(building.program_request.spaces)
     instance = ProgramInstance(space_units=space_units)
 
     min_card: dict = adapter.target_rules().get("min_cardinality", {})

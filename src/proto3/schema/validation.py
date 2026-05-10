@@ -49,13 +49,56 @@ class NoGoodRecord:
 
 
 class ProgramInstantiationFailure(Exception):
-    """Stage 01 cardinality gate failure (D004 / DH-004 regression, S04-D11).
+    """Stage 01 cardinality / role-validity gate failure (D004 / DH-004 regression, S04-D11).
 
-    Raised when a role required by `TargetAdapter.target_rules()['min_cardinality']`
-    is under-supplied by `BuildingInput.program_request`. Step 06 (Program
-    Engine) may catch this and convert it into a ValidationResult.
+    Raised when a role required by `TargetAdapter.target_rules().min_cardinality`
+    is under-supplied by `BuildingInput.program_request`, when an unknown role
+    is encountered (S06-D10), or when duplicate `name` values appear (S06-D7).
+    Step 06+ may catch this and convert it into a ValidationResult.
     """
 
     def __init__(self, failure: FailureRecord, message: str | None = None) -> None:
         self.failure = failure
         super().__init__(message or failure.failure_type or "program instantiation failed")
+
+
+# Stage 02 Domain Feasibility Gate failures (S06-D6, D020). Parent + 3 children;
+# each holds a FailureRecord (S04-D11 pattern). Stage 02 invokes 3 active gates
+# (area/dim/multi-floor); AccessSchemaFailure is dormant scaffold through Step 06
+# and activates at Step 09-10 when AccessPolicy gets concrete instances (Plan Def-9).
+
+
+class DomainGateFailure(Exception):
+    """Stage 02 Domain Feasibility Gate failure parent (S06-D6, D020).
+
+    Subclassed by `AreaGateFailure`, `DimGateFailure`, `AccessSchemaFailure`.
+    Catch the parent for any-gate handling, the child for gate-specific logic.
+    """
+
+    def __init__(self, failure: FailureRecord, message: str | None = None) -> None:
+        self.failure = failure
+        super().__init__(message or failure.failure_type or "domain gate failed")
+
+
+class AreaGateFailure(DomainGateFailure):
+    """Total required min_area exceeds gross footprint × density_factor.
+
+    D023 — required-only summation. D024 — gross footprint (anchor-aware
+    refinement deferred to Step 12 / Stage 11).
+    """
+
+
+class DimGateFailure(DomainGateFailure):
+    """A required space's min_dimension_mm exceeds the footprint bounding box short side.
+
+    Bbox-level check only (S06-D12). LIR-aware refinement deferred to Step 12.
+    """
+
+
+class AccessSchemaFailure(DomainGateFailure):
+    """Access policy schema invariant violated (dormant in Step 06).
+
+    Raised by `proto3.constraints.gates.check_access_schema`. Stage 02 does not
+    invoke this gate during Step 06 — `ProgramRequest` is slim (S06-D8) so no
+    AccessPolicy reaches Stage 02. Activation = Step 09-10 (Plan Def-9).
+    """

@@ -7,8 +7,13 @@ Steps (Polygon/Enum/datetime/numpy etc.).
 from_dict input policy (S02-D13):
   - non-dict `data` for a dataclass `cls` -> TypeError
   - unknown keys in `data` -> ValueError (set strict_unknown=False to allow)
+  - Literal[...] values not in allowed set -> ValueError (D017)
   - missing keys (cls field absent in data) -> dataclass default kicks in
-    (S02-D4 backward-compat path; the only silent-fallback case)
+    (S02-D4 backward-compat path)
+  - list[T] / tuple[T, ...] hints with non-list/non-list value: pass through
+    raw (current scope: not strict). Step 06 §4.2 hardens this for
+    `ProgramRequest.spaces` via `__post_init__`. General list[T] / tuple
+    strictness is deferred to Step 06 Plan Def-7 / Step 08 schema growth.
 """
 from __future__ import annotations
 

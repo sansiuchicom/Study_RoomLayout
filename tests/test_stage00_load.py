@@ -51,6 +51,7 @@ class _MismatchAdapter:
 
     def target_rules(self) -> TargetRules:
         return TargetRules(
+            target_type="hotel",
             min_cardinality={},
             default_min_area_m2={},
             density_factor=1.0,

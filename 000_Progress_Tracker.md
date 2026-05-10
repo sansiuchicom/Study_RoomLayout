@@ -41,15 +41,26 @@ Step 06. Program & Domain Constraint Engine
 Current Step status:
 
 ```text
-Started 2026-05-09. Plan v2 (after external review by another Claude
-instance, 16 items folded in): 18 decisions / 9 work items / 28 DoD /
-13 deferred / 11 risks. §4.1 kickoff lands Step 05 archive + step06
-module scaffold (constraints/, data/target_rules/) + Step 05 schema
-__init__ export cleanup (GeometricPiece, Decomposition; test_smoke
-22→24) + D020/D021 placeholders + Progress Tracker kickoff update.
-Remaining: 4.2 ProgramRequest+Role, 4.3 TargetRules+apartment.json,
-4.4 DomainGateFailure+gates, 4.5 Stage 01 본격, 4.6 Stage 02 + R2,
-4.7 fail-loud sweep, 4.8 notebook, 4.9 cleanup.
+Started 2026-05-09. Plan v3 (after two external reviews by other Claude
+instances): 19 decisions / 10 work items (4.3a 신설) / 28 DoD / 13
+deferred / 11 risks. Landed:
+  §4.1 (`3f09cbe`) — Step 05 archive + step06 module scaffold + step05
+       schema export cleanup. 82 passed.
+  §4.2 (`f241d58`) — ProgramRequest dataclass + Role Literal + spaces
+       strict deserialize + serialize.py typing.Union fix. 92 passed.
+  §4.3 (`0da364b`) — TargetRules + apartment.json data package +
+       adapter target check + pyproject package-data. 117 passed.
+  §4.3a (`372090b`) — generic TargetAdapter reform (S06-D22) + 3-layer
+       extensibility model README + D022 placeholder + .gitignore
+       build/dist. 120 passed.
+Remaining:
+  §4.4 DomainGateFailure + gates module
+  §4.5 Stage 01 본격화 (모든 SpaceUnitSpec 필드 + dup/unknown/type guards)
+  §4.6 Stage 02 gate + Pipeline §9.10 update + R2 regression
+  §4.7 fail-loud sweep (RunConfig validation + threshold wiring +
+       palette/render strict)
+  §4.8 step06 program gate overview notebook
+  §4.9 close (Plan/Tracker, Progress Tracker, D020/D021/D022 finalize)
 ```
 
 ---
@@ -118,9 +129,13 @@ Completed:
 Immediate next action:
 
 ```text
-Step 06 §4.2 — ProgramRequest dataclass + Role Literal + spaces strict
-deserialize. After §4.1 kickoff commit lands, advance through 4.2 → 4.9
-sequentially per Plan §4.
+Step 06 §4.4 — DomainGateFailure hierarchy + proto3.constraints.gates
+module (4 pure functions). Note: pre-§4.4 cleanup commits land first
+to absorb two external reviews (chore: serialize docstring / Tracker
+drift / ApartmentAdapter remnants / _MismatchAdapter target_type;
+design: required-only policy, Stage 02 fail-only, cardinality dedup,
+access gate dormant scaffold, rules_loader completeness, area gate
+boundary, multi-floor assumption). After cleanup, proceed 4.4→4.9.
 ```
 
 Step 05 delivered (merged `7064132`, 2026-05-08):

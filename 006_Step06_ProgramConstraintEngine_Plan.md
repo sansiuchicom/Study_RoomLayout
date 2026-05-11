@@ -185,13 +185,13 @@ JSON 주석 미지원 → 출처는 `src/proto3/data/target_rules/README.md` 별
 ```python
 def load_target_rules(path: Path) -> TargetRules:
     """JSON 파일 로드 + 검증 + TargetRules 반환.
-    
+
     검증:
     - 모든 필드 존재
     - density_factor: 0 < x ≤ 1
     - default_min_area_m2 / min_cardinality 의 모든 키 ∈ Role Literal
     - 모든 area / cardinality ≥ 0
-    
+
     실패 시 ValueError(상세 메시지).
     """
 ```
@@ -199,7 +199,7 @@ def load_target_rules(path: Path) -> TargetRules:
 ### 3.3 `DEFAULT_APARTMENT_RULES_PATH` 명세
 
 ```python
-# src/proto3/target/apartment.py
+# src/proto3/target/adapter.py  (§4.3a 이후 — 단일 generic TargetAdapter)
 from pathlib import Path
 
 DEFAULT_APARTMENT_RULES_PATH: Path = (
@@ -246,7 +246,7 @@ editable install 시 즉시 작동. wheel 시 setuptools 가 `package-data` 로 
 | Def-8 | **`FloorInput.floor_program: dict` typed** | apartment 단일 floor라 floor_program null. multi-floor 진입 시 의미 | Step 14 |
 | Def-9 | **ClusterSpec / AccessPolicy 본격 인스턴스화** (S06-D8) | Step 09–10 (Hub/Spine/Slot) territory. Step 06 에선 `check_access_schema` gate 의 함수 시그니처만, fixture 사용 X | Step 09–10 |
 | Def-10 | **Target B/C/D/E rules json + (필요시) strategy plugins** (S06-D22) | apartment 외 typology 추가 시: parameter-only면 JSON + `_DEFAULT_ADAPTERS` 한 줄. logic-different면 추가로 strategy registry (L2) 도입 — Step 09 (Spine Generation) 에서 첫 strategy 표 만들고 그 이후 typology가 enum 으로 dispatch. 어떤 경우에도 per-typology 클래스 새로 만들지 않음 | 각 Target 진입 시 |
-| Def-11 | **Hole-aware decompose / schema** (외부 review #1, 메모리 review #10) — `decompose.run()`이 footprint exterior 만 mm→m 변환, `to_schema()` 도 exterior vertices, `geometry.py` schema 도 single-ring 전제. 10×10 - 2×2 hole footprint 면적 96㎡ 기대인데 100㎡ 산출 | Stage 03 anchor (void/core) 진입 직전 단계. Step 05 v3.2 import 시 LIR 도 holes 무시 가정 | Step 07 (Region/Atom Decomposition) |
+| Def-11 | **Hole-aware decompose / schema** (외부 review #1, 메모리 review #10, 3rd review deferred-A) — `decompose.run()`이 footprint exterior 만 mm→m 변환, `to_schema()` 도 exterior vertices, `geometry.py` schema 도 single-ring 전제. 10×10 - 2×2 hole footprint 면적 96㎡ 기대인데 100㎡ 산출. **Step 07 entry blocker** — anchor/void/core 진입 전에 반드시 해결 (3rd review 권장). LIR + decompose + schema 셋 다 손봐야 fix | Stage 03 anchor (void/core) 진입 직전 단계. Step 05 v3.2 import 시 LIR 도 holes 무시 가정 | Step 07 (Region/Atom Decomposition) — entry-blocker tier |
 | Def-12 | **`viz.svg.render(...)` 의 atoms/regions/spine 실제 렌더링** | Step 06 에선 fail-loud 만 (S06-D11). 본격 렌더는 Stage 04 산출물이 들어오는 시점 | Step 07 |
 | Def-13 | **`references/cell_v3_2.py` / `zone_v12.py` 외부 의존 docstring 명시** (`/home/claude/work` 경로 + 누락 모듈) — "보존용 reference, 자체 실행 불가" 표시. broad except / post-hoc gap merge 정리 (Step 05 §5 Def-13 + 메모리 review #13) | references/ 는 보존 원본. 포팅 시점에 fix | Step 07 |
 | Def-14 | **Decomposition 단위 일관성** (두 번째 review #7) — `proto3.schema.geometry.GeometricPiece.cell_w/cell_h` docstring 은 m, 그러나 `proto3.geometry.decompose.run()` 결과를 `to_schema()` 로 넣으면 mm 가 들어감. Stage 00 normalize 책임 확장 (Def-6) 와 함께 mm↔m 경계 명시. 현재 Step 05 callers (test, notebook) 가 inline 처리 (R-S05-7 mitigation) | Stage 00 normalize 가 mm↔m 경계 통합. graph/door boundary 계산 시 단위 버그 회피 | Step 07 (Stage 00 normalize) |
@@ -278,7 +278,7 @@ Step 06 산출물:
 - `proto3.schema.program.ProgramRequest` (typed dataclass) — 모든 향후 Stage 가 dict 대신 사용.
 - `proto3.schema.program.Role` (Literal) — viz / palette / 미래 게이트 / 향후 fixture 검증.
 - `proto3.target.TargetRules` + `proto3.data.target_rules/apartment.json` + `rules_loader` — Target B/C/D/E 추가 시 동일 패턴 (Def-10).
-- `proto3.target.apartment.DEFAULT_APARTMENT_RULES_PATH` — 모든 호출자 명시적 import.
+- `proto3.target.DEFAULT_APARTMENT_RULES_PATH` (§4.3a 이후 `proto3.target.adapter` 에 정의, `proto3.target` 에서 re-export) — 모든 호출자 명시적 import.
 - `proto3.constraints.gates` — Step 12 binding (Def-5).
 - `proto3.stages.stage02_gate.run(...)` — Stage 02 본체.
 - `proto3.schema.validation.DomainGateFailure` 계층 — Step 12 ValidationResult 변환 layer.

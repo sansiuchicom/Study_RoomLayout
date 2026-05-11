@@ -2,8 +2,8 @@
 
 Step 06 §4.3a: TargetAdapter Protocol removed in favor of a single concrete
 TargetAdapter class (proto3.target.adapter). Typology identity moves from
-class name to JSON `target_type` field — see config/target_rules/README.md
-for the 3-layer extensibility model.
+class name to JSON `target_type` field — see
+`src/proto3/data/target_rules/README.md` for the 3-layer extensibility model.
 
 TargetRules is the typed contract returned by `TargetAdapter.target_rules()`.
 All fields required (no dataclass-level defaults) so silent fallbacks cannot

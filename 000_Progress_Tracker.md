@@ -163,14 +163,17 @@ Step 06 delivered (pending merge, 2026-05-09):
 
 # 5. Known open issues
 
-These are not blockers for Step 04.
+Cross-cutting / deferred items that span multiple Steps. Step-specific deferred items live in each Step Plan's §5.
 
 ```text
-- Exact geometry library choice is not yet fixed (Step 05).
-- Exact decomposition algorithm is not yet fixed (Step 07).
-- Exact growth scoring formula is not yet fixed (Step 11).
-- Exact multi-floor anchor behavior is deferred to Step 14.
-- Curved / non-Manhattan footprint normalization strategy is jointly deferred to Step 05.
+- Geometry library: shapely + numpy (Step 05 D019).
+- Decomposition algorithm: v3.2 per-family proportional + 50% rule (Step 05 D019); RegionSet/AtomSet 통합은 Step 07.
+- Hole-aware decompose: footprint exterior 만 처리 — ㅁ자/atrium 진입 시 Step 07 entry blocker (Step 06 Plan Def-11).
+- Decomposition 단위 일관성 (mm↔m): Step 07 Stage 00 normalize 책임 확장과 묶음 (Step 06 Plan Def-14).
+- Growth scoring formula: Step 11.
+- Multi-floor anchor 본격: Step 14 (Stage 02 단정으로 차단 중).
+- 외부 파이프라인 override layer (부분 override merge / RunConfig.target_rules_override 채널 / override 값 검증): 외부 scan-to-BIM 파이프라인 통합 시점 (Step 06 Plan Def-1).
+- L2 strategy plugin registry (typology-specific spine / program-expand 변형): Step 09 first apartment strategy 진입 시 (Step 06 D022).
 ```
 
 ---

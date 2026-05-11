@@ -1,9 +1,9 @@
 # 006 Step 06 — Program & Domain Constraint Engine Plan
 
-Status: Completed (pending merge)
+Status: Completed (merged `5e6de90` 2026-05-10)
 Started: 2026-05-09
 Completed: 2026-05-09
-Branch: `step06-program-constraint-engine`
+Branch: `step06-program-constraint-engine` (deleted post-merge)
 Companion tracker: [006_Step06_ProgramConstraintEngine_Tracker.md](006_Step06_ProgramConstraintEngine_Tracker.md)
 
 ---

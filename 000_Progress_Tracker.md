@@ -2,7 +2,7 @@
 
 Status: Current working status only  
 Scope: active Step, active files, completed work, next actions, blockers  
-Last updated: 2026-05-09
+Last updated: 2026-05-11
 
 ---
 
@@ -29,8 +29,9 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 06 done 2026-05-09 (pending merge). Ready for Step 07 kickoff after
-merge --no-ff to main.
+Step 06 done 2026-05-09, merged to main 2026-05-10 (`5e6de90`). Ready for
+Step 07 kickoff (Region/Atom Decomposition) — awaiting external research
+before locking Plan §4 work-items.
 ```
 
 Current Step:
@@ -57,7 +58,8 @@ Done 2026-05-09. 11 commits on `step06-program-constraint-engine`:
   §4.9    (this)  close (Plan/Tracker/Progress + D020/D021/D022/D023 finalize)
 221 passed (82 baseline + 139 신규). D020/D021/D022/D023 Status: Accepted.
 Plan v5 / Tracker close. R2 `verified_at: Step 06` 약속 실현 — first live
-AreaGateFailure trigger.
+AreaGateFailure trigger. Merged to main 2026-05-10 (`5e6de90`) with 2
+additional merge-prep commits (`856c5a9`, `6f6db5c`) — 260 passed post-merge.
 ```
 
 ---
@@ -126,19 +128,25 @@ Completed:
 Immediate next action:
 
 ```text
-Confirm Step 06 close: git merge --no-ff step06-program-constraint-engine
-into main, delete branch, push to origin. Then Step 07 kickoff
-(Region/Atom Decomposition) per Pipeline §15. Step 07 entry items:
+Step 07 kickoff (Region/Atom Decomposition) per Pipeline §15 — awaiting
+external research before locking Plan §4 work-items. Pre-kickoff post-merge
+cleanup landed 2026-05-11 (this file's Last-updated bump): pending-merge
+text removed, D006 D019-supersede note, Stage 01 default-fill ValueError
+wrap, auto_partition holes docstring, references/ reference-only docstring,
+.gitignore ipynb_checkpoints, README D22 single-floor boundary.
+
+Step 07 entry items (carried forward, to land in Step 07 Plan §1 DoD / §4):
   - Plan Def-6  Stage 00 normalize 책임 확장 (review #4)
   - Plan Def-11 Hole-aware decompose / schema (review #1, ㅁ자/atrium)
   - Plan Def-12 viz.svg.render atoms/regions/spine 본격 렌더
   - Plan Def-13 references docstring (cell_v3_2 / zone_v12 외부 의존)
-  - Plan Def-14 Decomposition 단위 일관성 (mm/m)
+  - Plan Def-14 Decomposition 단위 일관성 (mm/m) — Region/Atom vertices/center
+    + PersistentAnchor.geometry 단위 명시도 함께
   - Step 05 §5 Def-13 v12 zoning port (broad except / gap merge 정리)
   - Step 06 §4.7 atoms render activation (D012)
 ```
 
-Step 06 delivered (pending merge, 2026-05-09):
+Step 06 delivered (merged 2026-05-10 `5e6de90`):
 
 ```text
 - proto3.schema.program.{ProgramRequest, Role} (typed, slim)
@@ -189,7 +197,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
 | 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; merged `7064132`) |
-| 06 | Done | Program & Domain Constraint Engine (2026-05-09; pending merge of `step06-program-constraint-engine` — 11 commits, 221 passed; D020/D021/D022/D023 Accepted; R2 `verified_at: Step 06` 실현) |
+| 06 | Done | Program & Domain Constraint Engine (2026-05-09; merged 2026-05-10 `5e6de90` — 11 commits + 2 merge-prep, 260 passed; D020/D021/D022/D023 Accepted; R2 `verified_at: Step 06` 실현) |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |
 | 09 | Not started | Hub / Terminal / Spine Candidate Generation |

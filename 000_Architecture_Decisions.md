@@ -198,6 +198,12 @@ Region-only is too rigid. Atom-only lacks architectural meaning and can turn the
 
 Initial atom defaults are first-pass commitments, not universal laws:
 
+> **Note (2026-05-08):** the numerical values in the table below are the
+> *original* Step-02-era defaults and have been **superseded by [D019](#d019-per-family-proportional-atom-sizing-d006-amendment)**. The
+> live values used by `RunConfig` and Pipeline Overview §8 are the D019-revised
+> ones (atom size 300mm, area-fraction `atom_inclusion_threshold = 0.5`, etc.).
+> The table is retained as historical record of the pre-revision baseline.
+
 | Item | Initial default |
 |---|---:|
 | Internal coordinate unit | millimeter |
@@ -207,7 +213,7 @@ Initial atom defaults are first-pass commitments, not universal laws:
 | Door-capable shared boundary | 800mm minimum |
 | Preferred door boundary | 900mm or more |
 
-Step 05 Geometry Kernel must confirm or revise these defaults before serious decomposition and growth work.
+Step 05 Geometry Kernel must confirm or revise these defaults before serious decomposition and growth work. *(Done — see D019.)*
 
 ---
 

@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local IDE / agent state
+.claude/
+
+# Environments
+.venv/
+venv/

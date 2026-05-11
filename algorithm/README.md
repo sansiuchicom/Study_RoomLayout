@@ -6,6 +6,9 @@ Footprint polygon을 sub-room building block으로 분할하는 알고리즘.
 
 ```
 algorithm/
+├── demos/
+│   ├── zoning_demo.py       # Current zoning showcase runner
+│   └── layout_demo.py       # Planned room-group + access runner
 ├── celllayout/
 │   ├── __init__.py
 │   ├── atom/                # Cell decomposition (per-family theta extraction)
@@ -16,8 +19,10 @@ algorithm/
 │   │   └── theta.py
 │   ├── zoning.py            # ★ Pipeline 20 algorithm (essence ~360 lines)
 │   └── cases.py             # 33 showcase footprints
-├── demo.py                  # Entry point (run all cases → save figures)
-├── outputs/                 # Generated figures
+├── demo.py                  # Backward-compatible wrapper for demos/zoning_demo.py
+├── outputs/
+│   ├── zoning/              # Generated zoning showcase figures
+│   └── layout/              # Future room-group + access figures
 ├── requirements.txt
 └── README.md (이 파일)
 ```
@@ -29,9 +34,14 @@ cd algorithm
 pip install -r requirements.txt
 python demo.py              # 33 케이스 전체
 python demo.py 4 14 29      # 특정 케이스만 (1-based index)
+python demos/zoning_demo.py # same behavior, canonical zoning demo path
 ```
 
-결과는 `outputs/g{1,2,3}.png`에 저장.
+결과는 `outputs/zoning/g{1,2,3}.png`에 저장.
+
+`demos/layout_demo.py`는 다음 실험(`zone → room_group → hub/corridor`)을
+위한 자리만 잡아둔 상태다. 구현 계획은 repo root의
+`room_layout_experiment_plan.md`를 따른다.
 
 ## 알고리즘 한 페이지 요약
 

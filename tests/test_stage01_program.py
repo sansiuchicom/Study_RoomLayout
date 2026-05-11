@@ -123,6 +123,37 @@ def test_stage01_explicit_min_area_overrides_default():
     assert by_name["bathroom"].min_area_m2 == 5.0
 
 
+def test_stage01_default_fill_max_area_conflict_raises_program_instantiation_failure():
+    """Default fill can flip an originally-valid spec into an invariant
+    violation: min_area_m2=None + max_area_m2=5 + role=private → role default
+    fill 7.0 > declared max 5.0. SpaceUnitSpec.__post_init__ would raise a
+    raw ValueError; Stage 01 wraps it as ProgramInstantiationFailure so that
+    Search Orchestrator / Stage 12 catch paths stay consistent with the rest
+    of Stage 01 (D004 / D005 fail-loud)."""
+    b = _building(
+        SpaceUnitSpec(name="living", role="public"),
+        SpaceUnitSpec(
+            name="closet",
+            role="private",
+            min_area_m2=None,        # → role default fill 7.0
+            max_area_m2=5.0,         # declared cap below default → conflict
+        ),
+        SpaceUnitSpec(name="bathroom", role="wet"),
+    )
+    with pytest.raises(ProgramInstantiationFailure) as exc_info:
+        stage01_program.run(b, adapter=_adapter())
+    fr = exc_info.value.failure
+    assert fr.failure_type == "program_space_post_fill_invalid"
+    assert fr.affected_space == "closet"
+    assert fr.detected_stage == "01"
+    assert fr.evidence["original_min_area_m2"] is None
+    assert fr.evidence["filled_min_area_m2"] == 7.0
+    assert fr.evidence["max_area_m2"] == 5.0
+    assert "max_area_m2" in fr.evidence["error"]
+    # cause chain preserved for debuggers / Stage 12 introspection
+    assert isinstance(exc_info.value.__cause__, ValueError)
+
+
 # --- Duplicate name guard (S06-D7) -------------------------------------------------
 
 def test_stage01_duplicate_name_raises():

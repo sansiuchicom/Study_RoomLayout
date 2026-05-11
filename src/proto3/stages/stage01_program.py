@@ -46,8 +46,11 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
     Raises:
         ProgramInstantiationFailure: on any of —
           - non-ProgramRequest input (`program_request_type_invalid`)
+          - empty space name (`program_space_name_empty`)
           - None / unknown role (`program_space_role_invalid`)
           - duplicate name (`program_space_name_duplicate`)
+          - role-default-fill creates an invariant-violating SpaceUnitSpec
+            (`program_space_post_fill_invalid`, e.g. filled_min > declared max)
           - cardinality under-supply (`program_cardinality_insufficient`,
             D004 / DH-004 regression rule).
     """
@@ -137,15 +140,48 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
             else rules.default_min_area_m2[u.role]
         )
 
-        filled_units.append(SpaceUnitSpec(
-            name=u.name,
-            role=u.role,
-            required=u.required,
-            min_area_m2=filled_min_area,
-            max_area_m2=u.max_area_m2,
-            preferred_area_m2=u.preferred_area_m2,
-            min_dimension_mm=u.min_dimension_mm,
-        ))
+        # SpaceUnitSpec.__post_init__ enforces invariants (e.g. max_area_m2
+        # ≥ min_area_m2 when both set). Default fill can flip an originally-
+        # valid spec (min=None, max=5, role=private) into an invariant
+        # violation (filled_min=7, max=5). Surface that as a structured
+        # ProgramInstantiationFailure rather than a raw ValueError so the
+        # Search Orchestrator / Stage 12 catch paths stay consistent with
+        # the rest of Stage 01 (D004 / D005 fail-loud).
+        try:
+            filled = SpaceUnitSpec(
+                name=u.name,
+                role=u.role,
+                required=u.required,
+                min_area_m2=filled_min_area,
+                max_area_m2=u.max_area_m2,
+                preferred_area_m2=u.preferred_area_m2,
+                min_dimension_mm=u.min_dimension_mm,
+            )
+        except ValueError as e:
+            raise ProgramInstantiationFailure(FailureRecord(
+                failure_type="program_space_post_fill_invalid",
+                affected_space=u.name,
+                detected_stage="01",
+                evidence={
+                    "index": i,
+                    "name": u.name,
+                    "role": u.role,
+                    "original_min_area_m2": u.min_area_m2,
+                    "filled_min_area_m2": filled_min_area,
+                    "max_area_m2": u.max_area_m2,
+                    "preferred_area_m2": u.preferred_area_m2,
+                    "min_dimension_mm": u.min_dimension_mm,
+                    "error": str(e),
+                },
+                diagnosis={
+                    "likely_layer": "program_request",
+                    "reason": (
+                        f"role default fill produced an invalid SpaceUnitSpec "
+                        f"for {u.name!r}: {e}"
+                    ),
+                },
+            )) from e
+        filled_units.append(filled)
 
     instance = ProgramInstance(space_units=filled_units)
 

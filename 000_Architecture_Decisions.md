@@ -676,6 +676,171 @@ Step 05 §4.6 (algorithm tests) revealed the unit-mismatch and the resulting LIR
 
 ---
 
+## D020. Stage 02 Domain Feasibility Gate design (Step 06)
+
+Status: Accepted (2026-05-09)
+Type: Architecture decision
+
+Decision summary:
+
+- **Function module**: `proto3.constraints.gates` exposes 4 pure functions —
+  `check_min_area`, `check_min_dim`, `check_access_schema`,
+  `check_multi_floor_feasibility`.
+- **Stage 02 invokes 3, not 4** (Step 06 scope clarification, 2026-05-09):
+  area + min-dim + multi-floor placeholder. `check_access_schema` stays
+  **dormant** through Step 06 — its function signature exists for unit
+  testing only; Stage 02 does not call it because `ProgramRequest` is
+  slim (`spaces` only, S06-D8) and carries no `access_policies`.
+  Activation = Step 09-10 when Hub/Spine/Slot generation introduces
+  AccessPolicy instances (Plan Def-9).
+- **Failure hierarchy**: `DomainGateFailure(Exception)` parent +
+  `AreaGateFailure` / `DimGateFailure` / `AccessSchemaFailure` children,
+  each holding a `FailureRecord` (S04-D11 pattern).
+- **Stage 02 is fail-only** (no repair output). The "repaired
+  ProgramInstance" listed in Pipeline §9.10's original Outputs section is
+  removed — repair belongs to Stage 12 (Repair) not Stage 02. Stage 02
+  contract: `accepted ProgramInstance | DomainGateFailure`.
+- **Cardinality lives in Stage 01 only** (D004 alignment). Pipeline §9.10
+  Checks list previously included "required cardinality" as a Stage 02
+  check; that line is removed. Stage 01 owns cardinality via
+  `ProgramInstantiationFailure`; Stage 02 owns area/dim/access/multifloor
+  via `DomainGateFailure`.
+- **Area gate boundary**: `total_required_area ≤ gross_footprint_area ×
+  density_factor` (first-pass). The gate uses **gross** footprint area —
+  it does not subtract anchor / void / core regions because those arrive
+  at Stage 03 (after Stage 02). Anchor-aware area accounting is post-
+  growth (Step 12 / Stage 11).
+- **Single-floor assumption**: Stage 02 area + dim gates assume `len(building.floors) == 1`
+  (apartment shape). Multi-floor adapters (house/hotel) need per-floor
+  program allocation before area/dim gates make sense; that work is
+  deferred to Step 14 (Plan Def-8).
+- **Required-only summation**: see D023 — both cardinality (Stage 01)
+  and area sum (Stage 02) consider only `SpaceUnitSpec.required = True`
+  spaces.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D6, D11–D14, D17, D23, D24.
+
+---
+
+## D021. TargetRules + external JSON config (Step 06)
+
+Status: Accepted (2026-05-09)
+Type: Architecture decision
+
+Decision:
+
+- proto3 domain rules (cardinality / area / density) live in `src/proto3/data/target_rules/<target>.json` (package data, not Python).
+- `TargetRules` dataclass = typed in-memory contract; `proto3.target.rules_loader.load_target_rules(path)` parses + validates (target_type / density_factor range / unknown roles / negative values).
+- `TargetAdapter(rules_path: Path)` requires explicit path (S06-D5); `DEFAULT_APARTMENT_RULES_PATH` constant exported for callers; `stage00_load._DEFAULT_ADAPTERS` is the **sole** site that uses default path implicitly.
+- pyproject.toml `[tool.setuptools.package-data]` ships JSON + README in wheel/sdist.
+- 4-layer separation (S06-D17): L1 invariant + L2 baseline = proto3, L3 project override = external pipeline (whole-file swap, no merge), L4 external metadata = out-of-scope.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D4, D5, D9, D17. Cross-references D006 (region/atom dual layer) — atom-based gate computation is Step 12 territory.
+
+---
+
+## D022. Generic TargetAdapter + 3-layer typology extensibility (Step 06)
+
+Status: Accepted (2026-05-09)
+Type: Architecture decision
+
+Decision:
+
+- **Single concrete `TargetAdapter` class** drives every typology.
+  Per-typology subclasses (`ApartmentAdapter`, `HotelAdapter`, ...)
+  deliberately absent. Typology identity lives in the rules JSON's
+  `target_type` field, not in a class name.
+- **3-layer extensibility model** (documented in
+  `src/proto3/data/target_rules/README.md`):
+  - L0 — engine invariant (Python core, typology-agnostic)
+  - L1 — parameters (this directory's JSON files)
+  - L2 — strategy plugins (future Python; typology-agnostic functions
+    selected by JSON enum). L2 not present today; introduced during
+    Step 09 (Spine Generation) when first apartment strategy lands.
+- **Typology-specific algorithm variants** (e.g., hotel "explicit
+  corridor" pattern) — when introduced — go into a strategy registry,
+  not into adapter subclasses. Strategies are typology-agnostic:
+  a single explicit-corridor function can be used by hotel + large
+  office. Selected by JSON enum, dispatched by Stage code (no
+  `if target_type == "hotel"` branches).
+- **"New typology = JSON + 1 line" — exact boundary** (clarified
+  2026-05-09 after second external review): the data-only promise holds
+  **only** within the existing 5 `TargetType` Literal values
+  (`apartment`/`house`/`hotel`/`warehouse`/`office`) **and** the existing
+  6 `Role` Literal values
+  (`public`/`private`/`service`/`wet`/`hub`/`corridor`). A typology
+  outside that Literal (e.g., `dormitory`) requires a Python schema diff
+  to extend `TargetType`; a typology that requires new roles (e.g.,
+  warehouse needing `storage`/`loading_dock`) requires a Python schema
+  diff to extend `Role`. These extensions are 1-line each but are still
+  Python changes — the "data-only" framing applies to typologies that
+  fit the established 5×6 grid. Outside-grid typologies require a
+  schema-diff PR alongside the JSON.
+- **L2 strategy plugin scope**: a typology that shares all algorithms
+  with apartment is JSON-only. A typology that needs a different
+  algorithm variant adds one strategy function to the registry +
+  references it from JSON. Either way, no per-typology adapter class.
+- Rationale: proto3 is the engine component of an external scan-to-BIM
+  training-data pipeline. Engines that ship data separately scale to new
+  typologies without code-class proliferation. Per-typology adapter
+  classes (~25-line boilerplate each, only string-different) violate DRY
+  and force Stage code to do isinstance dispatch.
+- Rejected alternatives: (a) per-typology Adapter classes — boilerplate
+  + isinstance dispatch + code-level typology hardcoding; (b) free-string
+  `target_type` (no Literal) — silent typo failure at fixture load.
+
+Cross-link: Plan [006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md) §2 S06-D5, D17, D22. Cross-references D004 (ProgramInstance owns cardinality), D005 (constraints-as-gates), D012 (dataclass-first).
+
+---
+
+## D023. Required-only cardinality and area summation (Step 06)
+
+Status: Accepted (2026-05-09)
+Type: Architecture decision
+
+Decision:
+
+- Stage 01 cardinality gate compares `min_cardinality[role]` against
+  `Counter(u.role for u in space_units if u.required)` — **only `required=True`
+  spaces count toward cardinality**.
+- Stage 02 area gate sums `min_area_m2` over `[u for u in space_units if
+  u.required]` — **only required spaces contribute to the area total**.
+- Optional spaces (`required=False`) are layout-best-effort: they may be
+  attempted later (Search Orchestrator) or dropped if infeasible. They
+  do not influence Stage 01/02 admission.
+
+Reason:
+
+Without this rule, an optional bedroom can satisfy a `min_cardinality.private:
+1` requirement (silent bug; D004 spirit violated), and Stage 02 can
+false-reject a feasible program because optional spaces inflated the
+total `min_area` sum. Both failure modes are silent — exactly the
+"silent fall-through" pattern that D004 / D005 / DH-004 trauma was
+introduced to prevent.
+
+Application:
+
+- `proto3.stages.stage01_program.run` filters to `required=True` before
+  cardinality counting (Step 06 §4.5).
+- `proto3.constraints.gates.check_min_area` filters to `required=True`
+  before summation (Step 06 §4.4).
+- Stage 02 dim gate uses `required=True` spaces' `min_dimension_mm` only
+  (Step 06 §4.4).
+
+Repair / drop policy for optional spaces:
+
+- Stage 02 does not auto-drop optional spaces (D020: fail-only).
+- Repair (drop optional, retry) is a Stage 12 / Search Orchestrator
+  concern. If a layout fails post-growth and the program contained
+  optionals, Stage 12 may produce a repaired ProgramInstance with one or
+  more optionals removed; that repaired instance re-enters Stage 02.
+
+Cross-link: D004 (ProgramInstance owns cardinality). Plan
+[006_Step06_ProgramConstraintEngine_Plan.md](006_Step06_ProgramConstraintEngine_Plan.md)
+§2 S06-D7 (default fill at Stage 01 instantiation also filters to required).
+
+---
+
 # 4. Deferred decisions
 
 These are intentionally not fully settled yet.

@@ -2,7 +2,7 @@
 
 Status: Current working status only  
 Scope: active Step, active files, completed work, next actions, blockers  
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 ---
 
@@ -29,25 +29,35 @@ Accepted decisions / rationale:
 Current phase:
 
 ```text
-Step 05 done (merged `7064132`). Ready for Step 06 kickoff.
+Step 06 done 2026-05-09 (pending merge). Ready for Step 07 kickoff after
+merge --no-ff to main.
 ```
 
 Current Step:
 
 ```text
-Step 05. Geometry Kernel / Atom Resolution Commitments
+Step 06. Program & Domain Constraint Engine
 ```
 
 Current Step status:
 
 ```text
-Done 2026-05-08; 9 work-item commits + 2 review-followup commits merged via
-`--no-ff` to main as `7064132`; `step05-geometry-kernel` branch deleted.
-v3.2 algorithm imported (LIR + per-family recursive + 50% rule); D006 amended
-via D019 (atom_size 300mm + atom_inclusion_threshold 0.5; per-family proportional
-sizing; interior grid + boundary polygon). 80 pytest passed. D1 sloped fixture
-added. X2 scope split honored (Step 05 algorithm only; Step 07 will integrate
-Decomposition → RegionSet/AtomSet via M2 layered approach + v12 zoning).
+Done 2026-05-09. 11 commits on `step06-program-constraint-engine`:
+  §4.1   3f09cbe  archive + scaffold + step05 schema export cleanup
+  §4.2   f241d58  ProgramRequest dataclass + Role + spaces strict + serialize Union fix
+  §4.3   0da364b  TargetRules + apartment.json + adapter target check + package-data
+  §4.3a  372090b  generic TargetAdapter (S06-D22) + 3-layer extensibility README
+  cleanup be906b4  review followups (serialize docstring + Tracker drift + ApartmentAdapter 잔재)
+  design  01e42d3  모델링 결함 8 항목 (D023 신설 + D020/D022 본문 + Pipeline §9.10 + rules_loader completeness)
+  §4.4   8c1903d  DomainGateFailure 계층 + gates module
+  §4.5   bb6a32a  Stage 01 본격화 (preservation + dup/unknown/type guards + D023)
+  §4.6   c920c4e  Stage 02 wiring + R2 AreaGateFailure 회로 작동
+  §4.7   bd27fa5  fail-loud sweep (RunConfig + threshold wiring + palette + render)
+  §4.8   17c852f  notebook (17 cells / 6 visualizations / 4 PNG charts)
+  §4.9    (this)  close (Plan/Tracker/Progress + D020/D021/D022/D023 finalize)
+221 passed (82 baseline + 139 신규). D020/D021/D022/D023 Status: Accepted.
+Plan v5 / Tracker close. R2 `verified_at: Step 06` 약속 실현 — first live
+AreaGateFailure trigger.
 ```
 
 ---
@@ -66,20 +76,20 @@ Global docs:
 Active Step files:
 
 ```text
-005_Step05_GeometryKernel_Plan.md     (Completed; pending move to legacy/step05/ at Step 06 kickoff)
-005_Step05_GeometryKernel_Tracker.md  (Completed; pending move to legacy/step05/ at Step 06 kickoff)
+006_Step06_ProgramConstraintEngine_Plan.md     (Completed; pending move to legacy/step06/ at Step 07 kickoff)
+006_Step06_ProgramConstraintEngine_Tracker.md  (Completed; pending move to legacy/step06/ at Step 07 kickoff)
 ```
 
+Step 05 docs archived to `legacy/step05/` (during Step 06 §4.1, 2026-05-09).
 Step 04 docs archived to `legacy/step04/` (during Step 05 §4.1, 2026-05-08).
-
-Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
-Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
 Step 03 docs archived to `legacy/step03/` (during Step 04 §4.1, 2026-05-07).
+Step 02 docs archived to `legacy/step02/` (during Step 03 §4.1).
+Step 01 docs archived to `legacy/step01/` (during Step 02 §4.1).
 
 Next Step files to create:
 
 ```text
-TBD at Step 06 kickoff (e.g., 006_Step06_ProgramConstraintEngine_Plan.md, _Tracker.md)
+TBD at Step 07 kickoff (e.g., 007_Step07_RegionAtomDecomposition_Plan.md, _Tracker.md)
 ```
 
 ---
@@ -116,36 +126,54 @@ Completed:
 Immediate next action:
 
 ```text
-Confirm Step 04 close: git merge --no-ff step04-apartment-fixtures into main,
-delete branch, push to origin. Then Step 05 kickoff (Geometry Kernel /
-Atom Resolution Commitments) per Pipeline §15.
+Confirm Step 06 close: git merge --no-ff step06-program-constraint-engine
+into main, delete branch, push to origin. Then Step 07 kickoff
+(Region/Atom Decomposition) per Pipeline §15. Step 07 entry items:
+  - Plan Def-6  Stage 00 normalize 책임 확장 (review #4)
+  - Plan Def-11 Hole-aware decompose / schema (review #1, ㅁ자/atrium)
+  - Plan Def-12 viz.svg.render atoms/regions/spine 본격 렌더
+  - Plan Def-13 references docstring (cell_v3_2 / zone_v12 외부 의존)
+  - Plan Def-14 Decomposition 단위 일관성 (mm/m)
+  - Step 05 §5 Def-13 v12 zoning port (broad except / gap merge 정리)
+  - Step 06 §4.7 atoms render activation (D012)
 ```
 
-Step 04 delivered:
+Step 06 delivered (pending merge, 2026-05-09):
 
 ```text
-- proto3.target.{TargetAdapter, ApartmentAdapter}
-- proto3.stages.{stage00_load, stage01_program} (frame; Step 06 replaces/extends)
-- proto3.schema.validation.ProgramInstantiationFailure
-- 5 fixtures (apartment_minimal, _4bed_2bath, _l_shape, _no_bath, _too_small)
-- tests/fixture_matrix.py (MATRIX dict + expected_failure metadata)
-- tests/test_target_adapter.py + test_stage00_load.py + test_stage01_program.py + test_fixtures_roundtrip.py (17 신규 tests; total 39 passed)
-- notebooks/step04_fixture_overview.ipynb
-- D-decisions: D016 amendment H012 (legacy link policy)
+- proto3.schema.program.{ProgramRequest, Role} (typed, slim)
+- proto3.target.{TargetRules, TargetAdapter (single generic), DEFAULT_APARTMENT_RULES_PATH}
+- proto3.target.rules_loader (JSON full validation incl. NaN/Inf + completeness)
+- src/proto3/data/target_rules/apartment.json + README.md (3-layer model + mission scope)
+- pyproject [tool.setuptools.package-data]: ship JSON + README in wheel/sdist
+- proto3.constraints.gates (4 pure functions; 3 active in Stage 02 + access dormant)
+- proto3.schema.validation.DomainGateFailure 계층 (Area / Dim / AccessSchema)
+- proto3.stages.stage01_program 본격화 (모든 필드 보존 + dup/unknown/type guards + D023 required-only)
+- proto3.stages.stage02_gate 신규 (D020 fail-only, D024 boundary 명시)
+- proto3.config.RunConfig.__post_init__ value validation (S06-D14)
+- atom_inclusion_threshold dead config wiring (recursive.py + decompose.{auto_partition,run})
+- proto3.viz.{palette, svg.render} fail-loud (S06-D11, atoms/regions/spine strict)
+- D-decisions: D020 / D021 / D022 / D023 (Accepted 2026-05-09)
+- 221 pytest passed (82 baseline + 139 신규)
+- notebooks/step06_program_gate_overview.ipynb (17 cells, 4 PNG charts)
+- 11 commits on step06-program-constraint-engine; merge --no-ff 사용자 확인 대기
 ```
 
 ---
 
 # 5. Known open issues
 
-These are not blockers for Step 04.
+Cross-cutting / deferred items that span multiple Steps. Step-specific deferred items live in each Step Plan's §5.
 
 ```text
-- Exact geometry library choice is not yet fixed (Step 05).
-- Exact decomposition algorithm is not yet fixed (Step 07).
-- Exact growth scoring formula is not yet fixed (Step 11).
-- Exact multi-floor anchor behavior is deferred to Step 14.
-- Curved / non-Manhattan footprint normalization strategy is jointly deferred to Step 05.
+- Geometry library: shapely + numpy (Step 05 D019).
+- Decomposition algorithm: v3.2 per-family proportional + 50% rule (Step 05 D019); RegionSet/AtomSet 통합은 Step 07.
+- Hole-aware decompose: footprint exterior 만 처리 — ㅁ자/atrium 진입 시 Step 07 entry blocker (Step 06 Plan Def-11).
+- Decomposition 단위 일관성 (mm↔m): Step 07 Stage 00 normalize 책임 확장과 묶음 (Step 06 Plan Def-14).
+- Growth scoring formula: Step 11.
+- Multi-floor anchor 본격: Step 14 (Stage 02 단정으로 차단 중).
+- 외부 파이프라인 override layer (부분 override merge / RunConfig.target_rules_override 채널 / override 값 검증): 외부 scan-to-BIM 파이프라인 통합 시점 (Step 06 Plan Def-1).
+- L2 strategy plugin registry (typology-specific spine / program-expand 변형): Step 09 first apartment strategy 진입 시 (Step 06 D022).
 ```
 
 ---
@@ -161,7 +189,7 @@ Canonical Step definitions live in `000_Pipeline_Overview.md`. This table only t
 | 03 | Done | Visualization Renderer / Visual Vocabulary (2026-05-06) |
 | 04 | Done | Apartment Fixtures / Target Adapter (2026-05-07; merged `822786a`) |
 | 05 | Done | Geometry Kernel — v3.2 algorithm import + D019 (per-family proportional atom; D006 amendment) (2026-05-08; merged `7064132`) |
-| 06 | Not started | Program & Domain Constraint Engine |
+| 06 | Done | Program & Domain Constraint Engine (2026-05-09; pending merge of `step06-program-constraint-engine` — 11 commits, 221 passed; D020/D021/D022/D023 Accepted; R2 `verified_at: Step 06` 실현) |
 | 07 | Not started | Region / Atom Decomposition |
 | 08 | Not started | Graph Construction / Static Features / Role Scoring |
 | 09 | Not started | Hub / Terminal / Spine Candidate Generation |

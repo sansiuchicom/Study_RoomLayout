@@ -2,7 +2,7 @@
 
 Status: Canonical global reference  
 Scope: proto3 framework, terminology, runtime pipeline, search orchestration, target model, and implementation Step map  
-Last updated: 2026-05-08
+Last updated: 2026-05-09 (Step 06 close — Stage 02 §9.10 갱신)
 
 ---
 
@@ -347,21 +347,37 @@ Rules:
 
 ## Stage 02. Domain Feasibility Gate
 
-Purpose: Reject or repair impossible programs before geometry search.
+Purpose: Reject impossible programs before geometry search. Stage 02 is
+**fail-only** — repair (drop optional spaces, retry) belongs to Stage 12
+(D020, 2026-05-09 amendment).
 
-Checks:
+Checks (Step 06 scope):
 
-- required cardinality,
-- total minimum area vs usable footprint area,
-- obvious floor allocation impossibility,
-- required access/dependency schema validity,
-- target-specific constraints.
+- total minimum area of **required** spaces vs `gross_footprint_area ×
+  density_factor` (D023 — required-only summation; D020 — gross footprint,
+  not anchor-aware),
+- min-dimension feasibility against footprint bounding box (Step 06 first-pass;
+  LIR-aware refinement at Stage 11 / Step 12, Plan Def-4),
+- multi-floor allocation feasibility — placeholder until Step 14 (Plan
+  Def-8). Single-floor (apartment) is the only currently supported shape.
+
+Cardinality is **not** a Stage 02 check. Cardinality is owned by Stage 01
+(D004) and surfaces as `ProgramInstantiationFailure` upstream.
+
+Access policy schema validation lives in `proto3.constraints.gates.check_access_schema`
+but is **dormant in Step 06** — it has no fixture data because
+`ProgramRequest` (S06-D8) is slim. Activation lands at Step 09–10 when
+Hub/Spine/Slot generation introduces concrete `AccessPolicy` instances.
+
+Target-specific feasibility (e.g., apartment `requires_single_floor=true`)
+is enforced via `TargetRules` JSON parameters, not via per-typology
+branches in this stage (D022).
 
 Outputs:
 
-- accepted `ProgramInstance`,
-- repaired `ProgramInstance`, or
-- `ProgramInstantiationFailure`.
+- accepted `ProgramInstance`, or
+- `DomainGateFailure` (subclass: `AreaGateFailure` / `DimGateFailure` /
+  `AccessSchemaFailure`).
 
 ---
 

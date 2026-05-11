@@ -28,7 +28,8 @@ _MM_PER_M = 1000.0
 
 
 def auto_partition(footprint, target_cell_size=0.3, seed=42,
-                   max_depth=3, min_lir_ratio=0.4, min_recurse_area=8.0):
+                   max_depth=3, min_lir_ratio=0.4, min_recurse_area=8.0,
+                   atom_inclusion_threshold=0.5):
     """Decompose a footprint polygon into per-family proportional atom cells.
 
     Args:
@@ -39,6 +40,9 @@ def auto_partition(footprint, target_cell_size=0.3, seed=42,
         max_depth: recursion depth cap (default 3).
         min_lir_ratio: minimum LIR-to-polygon area ratio for recursion (default 0.4).
         min_recurse_area: polygons below this area are always terminal (default 8 m²).
+        atom_inclusion_threshold: cell-area fraction below which a boundary cell
+            is merged into a neighbor (default 0.5 = v3.2 50% rule, RunConfig
+            default; Step 06 §4.7 — was hardcoded in `recursive_progressive_per_family`).
 
     Returns:
         dict with keys:
@@ -53,6 +57,7 @@ def auto_partition(footprint, target_cell_size=0.3, seed=42,
         footprint, target_cell_size=target_cell_size, seed=seed,
         max_depth=max_depth, min_lir_ratio=min_lir_ratio,
         min_recurse_area=min_recurse_area,
+        atom_inclusion_threshold=atom_inclusion_threshold,
     )
     return {'cells': cells, 'pieces': pieces, 'root_main_rect': root_main}
 
@@ -62,7 +67,8 @@ def run(footprint_mm,
         seed=42,
         max_depth=3,
         min_lir_ratio=0.4,
-        min_recurse_area_m2=8.0):
+        min_recurse_area_m2=8.0,
+        atom_inclusion_threshold=0.5):
     """proto3-friendly mm-unit entry point. Wraps `auto_partition` with unit conversion.
 
     proto3 schema (D006) uses mm; the underlying v3.2 algorithm uses m. This
@@ -76,6 +82,10 @@ def run(footprint_mm,
         min_recurse_area_m2: minimum recursable polygon area in m² (kept in m² for
             architectural intuition — 8 m² ≈ small studio; the algorithm sees this
             as 8.0 internally).
+        atom_inclusion_threshold: cell-area fraction below which boundary cells
+            are merged (default 0.5; matches RunConfig.atom_inclusion_threshold).
+            Step 06 §4.7 wiring — was hardcoded 0.5 inside the algorithm; now
+            ablation via RunConfig.
 
     Returns:
         Same dict shape as `auto_partition`, but cells/pieces/root_main_rect are
@@ -97,6 +107,7 @@ def run(footprint_mm,
         max_depth=max_depth,
         min_lir_ratio=min_lir_ratio,
         min_recurse_area=min_recurse_area_m2,
+        atom_inclusion_threshold=atom_inclusion_threshold,
     )
 
     cells_mm = [

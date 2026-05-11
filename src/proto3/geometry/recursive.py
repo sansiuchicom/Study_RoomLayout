@@ -31,6 +31,7 @@ from .lir import find_main_rect_refined
 def recursive_progressive_per_family(polygon, target_cell_size=0.3, seed=42,
                                      max_depth=3, min_lir_ratio=0.4,
                                      min_recurse_area=8.0,
+                                     atom_inclusion_threshold=0.5,
                                      lir_resolution=0.05,
                                      _depth=0,
                                      _parent_theta=None,
@@ -52,6 +53,11 @@ def recursive_progressive_per_family(polygon, target_cell_size=0.3, seed=42,
             polygon and it becomes a terminal (default 0.4).
         min_recurse_area: polygons below this area are always terminal regardless of
             depth (default 8 m²).
+        atom_inclusion_threshold: minimum cell area / nominal cell area for a boundary
+            cell to be kept; smaller cells merge into the longest-shared-boundary
+            neighbor (default 0.5 = v3.2 "50% rule"). Forwarded to
+            `merge_below_50_aniso` at every level (Step 06 §4.7 wiring; previously
+            hardcoded 0.5).
         lir_resolution: rasterization resolution for LIR search (default 0.05 m).
 
     Internal `_*` arguments carry parent context across the recursion (theta, phase,
@@ -127,7 +133,7 @@ def recursive_progressive_per_family(polygon, target_cell_size=0.3, seed=42,
         cells, _ = grid_no_skip_aniso(
             polygon, effective_theta, cell_w, cell_h,
             phase_origin=phase, seed=int(rng.integers(0, 2**31)))
-        cells = merge_below_50_aniso(cells, cell_w, cell_h, 0.5)
+        cells = merge_below_50_aniso(cells, cell_w, cell_h, atom_inclusion_threshold)
         pieces_info.append({
             'polygon': polygon, 'theta': effective_theta,
             'role': 'terminal', 'name': f'd{_depth}_terminal',
@@ -155,7 +161,7 @@ def recursive_progressive_per_family(polygon, target_cell_size=0.3, seed=42,
             sub, effective_theta, cell_w, cell_h,
             phase_origin=main_phase,
             seed=int(rng.integers(0, 2**31)))
-        cells = merge_below_50_aniso(cells, cell_w, cell_h, 0.5)
+        cells = merge_below_50_aniso(cells, cell_w, cell_h, atom_inclusion_threshold)
         if main_phase is None:
             main_phase = p_returned
         piece_id = len(pieces_info)
@@ -184,6 +190,7 @@ def recursive_progressive_per_family(polygon, target_cell_size=0.3, seed=42,
             seed=int(rng.integers(0, 2**31)),
             max_depth=max_depth, min_lir_ratio=min_lir_ratio,
             min_recurse_area=min_recurse_area,
+            atom_inclusion_threshold=atom_inclusion_threshold,
             lir_resolution=lir_resolution,
             _depth=_depth + 1,
             _parent_theta=effective_theta,

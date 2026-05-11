@@ -7,13 +7,19 @@ Steps (Polygon/Enum/datetime/numpy etc.).
 from_dict input policy (S02-D13):
   - non-dict `data` for a dataclass `cls` -> TypeError
   - unknown keys in `data` -> ValueError (set strict_unknown=False to allow)
+  - Literal[...] values not in allowed set -> ValueError (D017)
   - missing keys (cls field absent in data) -> dataclass default kicks in
-    (S02-D4 backward-compat path; the only silent-fallback case)
+    (S02-D4 backward-compat path)
+  - list[T] / tuple[T, ...] hints with non-list/non-list value: pass through
+    raw (current scope: not strict). Step 06 §4.2 hardens this for
+    `ProgramRequest.spaces` via `__post_init__`. General list[T] / tuple
+    strictness is deferred to Step 06 Plan Def-7 / Step 08 schema growth.
 """
 from __future__ import annotations
 
 import json
 import types
+import typing
 from dataclasses import fields, is_dataclass
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin, get_type_hints
@@ -57,7 +63,10 @@ def from_dict(cls: type, data: Any, *, strict_unknown: bool = True) -> Any:
             )
     try:
         hints = get_type_hints(cls)
-    except Exception:
+    except (NameError, TypeError):
+        # Narrow fallback for unresolved forward references / unsubscriptable
+        # generic types. Previously `except Exception` would also swallow
+        # unrelated bugs (Step 06 merge-prep, third external review deferred C).
         hints = {f.name: f.type for f in fields(cls)}
     kwargs: dict[str, Any] = {}
     for f in fields(cls):
@@ -88,8 +97,9 @@ def _reconstruct(type_hint: Any, value: Any, *, strict_unknown: bool = True) -> 
         if args:
             return tuple(_reconstruct(args[0], v, strict_unknown=strict_unknown) for v in value)
         return tuple(value)
-    # X | None / X | Y  (PEP 604 union)
-    if origin is types.UnionType:
+    # X | None / X | Y  (PEP 604 union — and typing.Union, which `from __future__
+    # import annotations` produces from the same `X | Y` source via get_type_hints)
+    if origin is types.UnionType or origin is typing.Union:
         for arg in args:
             if arg is type(None):
                 continue

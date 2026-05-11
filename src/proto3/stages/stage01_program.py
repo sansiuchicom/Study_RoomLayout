@@ -51,6 +51,16 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
           - cardinality under-supply (`program_cardinality_insufficient`,
             D004 / DH-004 regression rule).
     """
+    # Defense in depth (merge-prep, third external review #2). Adapter
+    # already validates target_type at load_fixture time, but Stage 01 can
+    # be called directly without going through Stage 00 — guard explicitly
+    # so adapter/building mismatch fails loud at every entry.
+    if building.target_type != adapter.target_type:
+        raise ValueError(
+            f"Stage 01: building.target_type={building.target_type!r} "
+            f"does not match adapter.target_type={adapter.target_type!r}"
+        )
+
     pr = building.program_request
     if not isinstance(pr, ProgramRequest):
         raise ProgramInstantiationFailure(FailureRecord(
@@ -71,6 +81,19 @@ def run(building: BuildingInput, *, adapter: TargetAdapter) -> ProgramInstance:
     filled_units: list[SpaceUnitSpec] = []
 
     for i, u in enumerate(pr.spaces):
+        # empty name reject (merge-prep, third external review #1). Duplicate
+        # check below would catch two-empty case but not single-empty.
+        if not u.name:
+            raise ProgramInstantiationFailure(FailureRecord(
+                failure_type="program_space_name_empty",
+                detected_stage="01",
+                evidence={"index": i, "name": u.name},
+                diagnosis={
+                    "likely_layer": "program_request",
+                    "reason": "space name must be a non-empty identifier",
+                },
+            ))
+
         # role: must be a known Role Literal (S06-D10).
         # ProgramRequest.__post_init__ guarantees `u` is SpaceUnitSpec; from_dict
         # enforces Role Literal at deserialize time. This guard catches the

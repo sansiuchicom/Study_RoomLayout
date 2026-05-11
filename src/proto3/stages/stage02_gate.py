@@ -26,6 +26,7 @@ from proto3.constraints.gates import (
 )
 from proto3.schema.input import BuildingInput
 from proto3.schema.program import ProgramInstance
+from proto3.schema.validation import DomainGateFailure, FailureRecord
 from proto3.target import TargetAdapter
 
 
@@ -51,15 +52,42 @@ def run(
         DomainGateFailure: parent class — multi-floor not supported when
             `requires_single_floor=True` and floors != 1.
     """
+    # Defense in depth (merge-prep, third external review #2). Adapter
+    # already validates target_type at load_fixture time, but Stage 02 can
+    # be called directly without going through Stage 00.
+    if building.target_type != adapter.target_type:
+        raise ValueError(
+            f"Stage 02: building.target_type={building.target_type!r} "
+            f"does not match adapter.target_type={adapter.target_type!r}"
+        )
+
     rules = adapter.target_rules()
 
-    # Multi-floor placeholder first — cheap and short-circuits non-apartment
-    # multi-floor cases before geometry computation (Step 14 territory).
+    # Stage 02 single-floor scope, unconditional (merge-prep, third external
+    # review #3). Even when rules.requires_single_floor=False (house/hotel),
+    # Step 06's Stage 02 cannot aggregate area/dim across floors — fail loud
+    # rather than silently evaluate floors[0] only. Multi-floor allocation is
+    # Step 14 territory (Plan Def-8). Unblock at that point by replacing this
+    # guard with per-floor aggregation logic.
+    if len(building.floors) != 1:
+        raise DomainGateFailure(FailureRecord(
+            failure_type="stage02_multi_floor_unsupported",
+            detected_stage="02",
+            evidence={"actual_floor_count": len(building.floors)},
+            diagnosis={
+                "likely_layer": "scope",
+                "reason": "Stage 02 single-floor scope; multi-floor = Step 14 (Plan Def-8)",
+            },
+        ))
+
+    # Multi-floor placeholder gate (apartment-only ergonomics — fails fast
+    # if apartment fixture somehow has multiple floors. Above guard already
+    # rejects len != 1; this remains as a parameterized check for future
+    # binding to Stage 11/13 per Plan Def-5).
     check_multi_floor_feasibility(building, rules)
 
     # Step 06 single-floor scope (D024). Apartment fixtures always have
-    # floors=[1]; the multi-floor gate above will have failed before this
-    # for typologies where requires_single_floor=True with len != 1.
+    # floors=[1]; the multi-floor guard above ensures we never see anything else.
     floor = building.floors[0]
     polygon = Polygon(floor.footprint)
 

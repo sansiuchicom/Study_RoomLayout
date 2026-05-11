@@ -118,3 +118,52 @@ def test_building_input_round_trip_typed_program_request():
     # SpaceUnitSpec has more fields than the raw dict; raw subset must match
     assert rebuilt["program_request"]["spaces"][0]["name"] == "living"
     assert rebuilt["program_request"]["spaces"][0]["role"] == "public"
+
+
+# --- SpaceUnitSpec.__post_init__ value validation (merge-prep #1) ------------------
+
+def test_space_unit_spec_default_constructible():
+    """Default placeholder still valid (test_smoke compatibility)."""
+    SpaceUnitSpec()
+
+
+def test_space_unit_spec_name_must_be_str():
+    with pytest.raises(ValueError, match="name must be str"):
+        SpaceUnitSpec(name=123)  # type: ignore[arg-type]
+
+
+def test_space_unit_spec_required_must_be_bool():
+    """`required=1` or `required="true"` are silent-fail traps; type-strict bool."""
+    with pytest.raises(ValueError, match="required must be bool"):
+        SpaceUnitSpec(name="x", role="public", required="true")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="required must be bool"):
+        SpaceUnitSpec(name="x", role="public", required=1)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("field", ["min_area_m2", "max_area_m2", "preferred_area_m2"])
+@pytest.mark.parametrize("bad", [-1.0, -0.01, "large", float("nan"), float("inf"), True, False])
+def test_space_unit_spec_area_fields_reject_invalid(field, bad):
+    kwargs = {"name": "x", "role": "public", field: bad}
+    with pytest.raises(ValueError, match=field):
+        SpaceUnitSpec(**kwargs)
+
+
+@pytest.mark.parametrize("good", [0, 0.0, 7.5, 100])
+def test_space_unit_spec_area_fields_accept_non_negative_finite(good):
+    SpaceUnitSpec(name="x", role="public", min_area_m2=good)
+
+
+@pytest.mark.parametrize("bad", [0, -1, 1.5, "2400", True])
+def test_space_unit_spec_min_dimension_rejects_invalid(bad):
+    with pytest.raises(ValueError, match="min_dimension_mm"):
+        SpaceUnitSpec(name="x", role="public", min_dimension_mm=bad)  # type: ignore[arg-type]
+
+
+def test_space_unit_spec_max_area_must_not_be_less_than_min():
+    with pytest.raises(ValueError, match="max_area_m2.*must be"):
+        SpaceUnitSpec(name="x", role="public", min_area_m2=10.0, max_area_m2=5.0)
+
+
+def test_space_unit_spec_max_area_equal_min_allowed():
+    """Equal bounds are valid (single fixed area)."""
+    SpaceUnitSpec(name="x", role="public", min_area_m2=10.0, max_area_m2=10.0)

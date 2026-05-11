@@ -63,7 +63,10 @@ def from_dict(cls: type, data: Any, *, strict_unknown: bool = True) -> Any:
             )
     try:
         hints = get_type_hints(cls)
-    except Exception:
+    except (NameError, TypeError):
+        # Narrow fallback for unresolved forward references / unsubscriptable
+        # generic types. Previously `except Exception` would also swallow
+        # unrelated bugs (Step 06 merge-prep, third external review deferred C).
         hints = {f.name: f.type for f in fields(cls)}
     kwargs: dict[str, Any] = {}
     for f in fields(cls):

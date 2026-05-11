@@ -129,6 +129,67 @@ def test_stage02_dim_gate_raises_when_min_dim_exceeds_bbox(tmp_path):
 
 # --- Stage 02 multi-floor placeholder (synthetic) -----------------------------------
 
+def test_stage02_target_mismatch_raises():
+    """Defense in depth (merge-prep #2): direct stage02 call with mismatched
+    adapter/building target must fail loud."""
+    b, inst = _stage01("A1")
+    # mutate building target to simulate misuse
+    b.target_type = "hotel"
+    with pytest.raises(ValueError, match="target_type"):
+        stage02_gate.run(b, instance=inst, adapter=_adapter())
+
+
+def test_stage02_unconditional_multi_floor_guard_with_non_single_floor_rule(tmp_path):
+    """Merge-prep #3: even with rules.requires_single_floor=False (multi-floor
+    target like house), Stage 02 cannot aggregate across floors yet.
+    Unconditional guard fails loud — silent floors[0]-only evaluation
+    is the trap that broke Step 14 timing in proto2."""
+    import json
+    floor = {
+        "footprint": [[0, 0], [8000, 0], [8000, 6000], [0, 6000]],
+        "floor_root": [4000, 0],
+        "floor_program": None,
+        "anchor_projections": [],
+    }
+    # build a non-single-floor adapter
+    rules_payload = {
+        "target_type": "apartment",  # adapter still apartment
+        "density_factor": 0.85,
+        "requires_single_floor": False,  # <-- key: rule disables single-floor enforcement
+        "min_cardinality": {"public": 1, "private": 1, "wet": 1},
+        "default_min_area_m2": {
+            "public": 12.0, "service": 5.0, "private": 7.0,
+            "wet": 3.0, "hub": 2.0, "corridor": 0.0,
+        },
+    }
+    rules_path = tmp_path / "no_single.json"
+    rules_path.write_text(json.dumps(rules_payload), encoding="utf-8")
+    permissive_adapter = TargetAdapter(rules_path)
+
+    fixture = {
+        "target_type": "apartment",
+        "floors": [floor, floor],
+        "program_request": {
+            "spaces": [
+                {"name": "living", "role": "public"},
+                {"name": "bedroom", "role": "private"},
+                {"name": "bathroom", "role": "wet"},
+            ]
+        },
+        "persistent_anchors": [],
+    }
+    f = tmp_path / "two_floor_apt.json"
+    f.write_text(json.dumps(fixture), encoding="utf-8")
+    b = from_json(BuildingInput, f)
+    inst = stage01_program.run(b, adapter=permissive_adapter)
+
+    with pytest.raises(DomainGateFailure) as exc_info:
+        stage02_gate.run(b, instance=inst, adapter=permissive_adapter)
+    fr = exc_info.value.failure
+    assert fr.failure_type == "stage02_multi_floor_unsupported"
+    assert fr.evidence["actual_floor_count"] == 2
+
+
 def test_stage02_rejects_multi_floor_for_apartment(tmp_path):
     """apartment.json sets requires_single_floor=true — multi-floor BuildingInput
     must trip the multi-floor gate."""
@@ -160,5 +221,9 @@ def test_stage02_rejects_multi_floor_for_apartment(tmp_path):
     with pytest.raises(DomainGateFailure) as exc_info:
         stage02_gate.run(b, instance=inst, adapter=_adapter())
     fr = exc_info.value.failure
-    assert fr.failure_type == "domain_multi_floor_not_supported"
+    # New unconditional Stage 02 guard (merge-prep #3) fails first with
+    # `stage02_multi_floor_unsupported`; check_multi_floor_feasibility's
+    # `domain_multi_floor_not_supported` is unreachable from Stage 02 for now
+    # (still tested directly in test_constraints_gates).
+    assert fr.failure_type == "stage02_multi_floor_unsupported"
     assert fr.evidence["actual_floor_count"] == 2

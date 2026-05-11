@@ -205,6 +205,33 @@ def test_stage01_optional_space_does_not_satisfy_required_cardinality():
     assert fr.evidence == {"role": "private", "required": 1, "actual": 0}
 
 
+def test_stage01_target_mismatch_raises(tmp_path):
+    """Defense in depth (merge-prep #2): direct stage01 call with mismatched
+    adapter/building target must fail loud (not silently use wrong rules)."""
+    b = BuildingInput(
+        target_type="hotel",  # adapter is apartment
+        program_request=ProgramRequest(spaces=[
+            SpaceUnitSpec(name="living", role="public"),
+            SpaceUnitSpec(name="bedroom", role="private"),
+            SpaceUnitSpec(name="bathroom", role="wet"),
+        ]),
+    )
+    with pytest.raises(ValueError, match="target_type"):
+        stage01_program.run(b, adapter=_adapter())
+
+
+def test_stage01_empty_name_raises():
+    """Single empty-name space — dup check would only catch two-empty case."""
+    b = _building(
+        SpaceUnitSpec(name="", role="public"),
+        SpaceUnitSpec(name="bedroom", role="private"),
+        SpaceUnitSpec(name="bathroom", role="wet"),
+    )
+    with pytest.raises(ProgramInstantiationFailure) as exc_info:
+        stage01_program.run(b, adapter=_adapter())
+    assert exc_info.value.failure.failure_type == "program_space_name_empty"
+
+
 def test_stage01_required_spaces_satisfy_cardinality_with_optionals_present():
     """Required bedroom satisfies cardinality; optional study is just along for the ride."""
     b = _building(

@@ -67,30 +67,55 @@ def find_reflex_vertices(polygon):
                 reflex.append(tuple(p_curr))
     
     process_ring(list(polygon.exterior.coords)[:-1], False)
-    
+
     for hole in polygon.interiors:
         h_coords = list(hole.coords)[:-1]
         if hole.is_ccw:
             h_coords = h_coords[::-1]
         process_ring(h_coords, True)
-    
+
     return reflex
+
+
+def extract_structural_coords(polygon, simplify_tol=0.15):
+    """Reflex vertex의 x, y 좌표 set — sub-recursion에 alignment hint로 전파.
+
+    Cross cut이나 single cut으로 polygon이 sub-pieces로 나뉘면, 원본 polygon의
+    다른 reflex 좌표들이 sub-piece의 boundary에서 사라져 후속 cut 후보에서 빠짐
+    (e.g., ㄷ자에서 cross at (4, 6.2) 후 y=3.8 vertex 정보 유실).
+    이 set을 recursion에 전달해서 vertex_aligned_lines가 sub-piece bbox 내부의
+    structural 좌표를 추가 후보로 emit하도록 함.
+    """
+    if simplify_tol > 0:
+        simp = polygon.simplify(simplify_tol, preserve_topology=True)
+        target = (simp if (isinstance(simp, sg.Polygon) and not simp.is_empty)
+                  else polygon)
+    else:
+        target = polygon
+    reflex = find_reflex_vertices(target)
+    xs = set(round(x, 6) for x, _ in reflex)
+    ys = set(round(y, 6) for _, y in reflex)
+    return {'xs': xs, 'ys': ys}
 
 
 # ============================================================
 # 2. Cut candidate generators
 # ============================================================
 def vertex_aligned_lines(polygon, margin=DEFAULT_BOUNDARY_MARGIN,
-                          simplify_tol=0.15):
+                          simplify_tol=0.15, structural_coords=None):
     """Type 1: vertex 좌표 통과 axis-aligned line.
-    
+
     각 vertex의 x 좌표 → vertical line, y 좌표 → horizontal line.
     Boundary와 너무 가까운 좌표는 제외 (margin).
-    
-    simplify_tol: cut 후보 생성 시 polygon 단순화. 
+
+    simplify_tol: cut 후보 생성 시 polygon 단순화.
     - saw-tooth (sub-grid noise) 제거
     - 곡면 vertex 폭증 방지
     - 실제 polygon은 변경 X (cut 후보의 좌표만 단순화된 vertex 사용)
+
+    structural_coords: optional {'xs': set, 'ys': set}. parent polygon의 reflex 좌표.
+    sub-piece의 bbox 내부에 들어오는 structural 좌표를 추가 cut 후보로 emit해
+    형제 piece와의 alignment를 보존 (cross cut 후 잊혀진 reflex 정보 회복용).
     """
     # Cut 후보용 단순화 (실제 split은 원본 polygon에)
     if simplify_tol > 0:
@@ -101,13 +126,22 @@ def vertex_aligned_lines(polygon, margin=DEFAULT_BOUNDARY_MARGIN,
             poly_for_vertices = polygon
     else:
         poly_for_vertices = polygon
-    
+
     minx, miny, maxx, maxy = polygon.bounds  # bbox는 원본 기준
-    
+
     all_coords = list(poly_for_vertices.exterior.coords)[:-1]
     for hole in poly_for_vertices.interiors:
         all_coords.extend(list(hole.coords)[:-1])
-    
+
+    # Structural coords from parent polygon (alignment hint).
+    # x 좌표는 (x, miny)로 추가 → V line 후보로만 작용 (y=miny는 boundary라
+    # margin filter에 걸려 H line은 안 생김). y 좌표도 동일 원리.
+    if structural_coords:
+        for x in structural_coords.get('xs', ()):
+            all_coords.append((x, miny))
+        for y in structural_coords.get('ys', ()):
+            all_coords.append((minx, y))
+
     cuts = []
     seen_x, seen_y = set(), set()
     for x, y in all_coords:
@@ -119,7 +153,7 @@ def vertex_aligned_lines(polygon, margin=DEFAULT_BOUNDARY_MARGIN,
         if (miny + margin < y < maxy - margin) and y_key not in seen_y:
             seen_y.add(y_key)
             cuts.append(sg.LineString([(minx - 1, y), (maxx + 1, y)]))
-    
+
     return cuts
 
 
@@ -353,19 +387,20 @@ def best_cut_above_threshold(candidates, polygon, min_zone_area,
 # ============================================================
 def select_cut(polygon, min_zone_area, margin, min_cut_length,
                 max_aspect=DEFAULT_MAX_PIECE_ASPECT,
-                balance_threshold=DEFAULT_BALANCE_THRESHOLD):
+                balance_threshold=DEFAULT_BALANCE_THRESHOLD,
+                structural_coords=None):
     """Hierarchical selection (T1은 sub-tier로 분할):
 
     Tier 1a: cross_cut — vertex의 V+H 동시 (3-4 piece)
         balance ≥ threshold 중 best
     Tier 1b: vertex_aligned — single axis-aligned (2 piece)
-        balance ≥ threshold 중 best
+        balance ≥ threshold 중 best, structural_coords로 parent 정보 회복
     Tier 2:  oblique reflex_pair (사선)
         balance ≥ threshold 중 best, 짧은 순 tie-break
     Tier 3:  axis_mid (fallback)
         threshold 무관 (마지막 안전망), balance best
 
-    T1a/T1b는 vertex 정보 활용 우선, 차이는 cross가 더 적극적.
+    structural_coords: parent polygon의 reflex 좌표 (T1b의 추가 후보로 흘림).
     """
     # Tier 1a: cross cut (vertex V+H 동시) — vertex 정보 가장 적극 활용
     pairs = cross_cut_pairs(polygon, margin)
@@ -374,8 +409,9 @@ def select_cut(polygon, min_zone_area, margin, min_cut_length,
     if result is not None:
         return ('cross_cut', *result)
 
-    # Tier 1b: vertex_aligned (axis-aligned single line)
-    cuts = vertex_aligned_lines(polygon, margin)
+    # Tier 1b: vertex_aligned (axis-aligned single line) + structural coords
+    cuts = vertex_aligned_lines(polygon, margin,
+                                  structural_coords=structural_coords)
     result = best_cut_above_threshold(cuts, polygon, min_zone_area,
                                           max_aspect, balance_threshold,
                                           prefer_shorter=False)
@@ -413,6 +449,7 @@ def recursive_partition(polygon, k, theta=0.0,
     """k zones로 분할. Frame transform by -theta, partition, rotate back.
 
     sub-recursion에서는 theta=0 (이미 axis-aligned frame).
+    family polygon의 reflex 좌표를 structural_coords로 추출해 sub-recursion에 전파.
     """
     if k <= 1 or polygon.area < min_zone_area * 2:
         return [{'polygon': polygon, 'cut_history': []}]
@@ -424,9 +461,13 @@ def recursive_partition(polygon, k, theta=0.0,
     else:
         P = polygon
 
+    # Family-local frame의 structural coord (reflex 좌표 set)
+    structural = extract_structural_coords(P)
+
     # Recurse in rotated frame
     zones_rot = _partition_in_frame(P, k, min_zone_area, margin,
-                                     min_cut_length, balance_threshold)
+                                     min_cut_length, balance_threshold,
+                                     structural_coords=structural)
 
     # Rotate back
     if abs(theta) > 1e-3:
@@ -438,13 +479,18 @@ def recursive_partition(polygon, k, theta=0.0,
 
 
 def _partition_in_frame(P, k, min_zone_area, margin, min_cut_length,
-                         balance_threshold):
-    """Axis-aligned frame에서만 작동. theta 회전은 호출자가 처리."""
+                         balance_threshold, structural_coords=None):
+    """Axis-aligned frame에서만 작동. theta 회전은 호출자가 처리.
+
+    structural_coords는 family polygon에서 한 번 추출되어 모든 sub-recursion에
+    동일하게 전파 (sub-piece bbox 안에 들어오면 vertex_aligned_lines가 자동 사용).
+    """
     if k <= 1 or P.area < min_zone_area * 2:
         return [{'polygon': P, 'cut_history': []}]
 
     selection = select_cut(P, min_zone_area, margin, min_cut_length,
-                            balance_threshold=balance_threshold)
+                            balance_threshold=balance_threshold,
+                            structural_coords=structural_coords)
     if selection is None:
         return [{'polygon': P, 'cut_history': []}]
 
@@ -465,7 +511,8 @@ def _partition_in_frame(P, k, min_zone_area, margin, min_cut_length,
     zones = []
     for p, kk in zip(pieces, k_alloc):
         sub = _partition_in_frame(p, kk, min_zone_area, margin,
-                                    min_cut_length, balance_threshold)
+                                    min_cut_length, balance_threshold,
+                                    structural_coords=structural_coords)
         for z in sub:
             z['cut_history'].insert(0, cut_type)
         zones.extend(sub)

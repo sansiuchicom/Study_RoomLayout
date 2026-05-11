@@ -1,1 +1,0 @@
-"""Zone partitioning algorithms."""

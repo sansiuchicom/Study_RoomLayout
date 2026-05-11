@@ -17,6 +17,7 @@ algorithm/
 │   │   ├── lir_progressive.py
 │   │   ├── per_family.py
 │   │   └── theta.py
+│   ├── graph.py             # Zone adjacency graph utilities
 │   ├── zoning.py            # ★ Pipeline 20 algorithm (essence ~360 lines)
 │   └── cases.py             # 33 showcase footprints
 ├── demo.py                  # Backward-compatible wrapper for demos/zoning_demo.py
@@ -37,7 +38,9 @@ python demo.py 4 14 29      # 특정 케이스만 (1-based index)
 python demos/zoning_demo.py # same behavior, canonical zoning demo path
 ```
 
-결과는 `outputs/zoning/g{1,2,3}.png`에 저장.
+결과는 `outputs/zoning/g{1,2,3}.png`에 저장. Zoning demo는 M1
+zone graph도 함께 계산해서 shared-boundary graph를 centroid-edge overlay로
+표시한다.
 
 `demos/layout_demo.py`는 다음 실험(`zone → room_group → hub/corridor`)을
 위한 자리만 잡아둔 상태다. 구현 계획은 repo root의

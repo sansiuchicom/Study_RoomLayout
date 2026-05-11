@@ -45,7 +45,7 @@ algorithm/
 │   ├── atom/                # Existing atom/cell decomposition.
 │   ├── cases.py             # 33 showcase footprints.
 │   ├── zoning.py            # Existing zone generator; keep stable.
-│   ├── graph.py             # Planned: zone/cell adjacency graph.
+│   ├── graph.py             # M1: zone adjacency graph.
 │   ├── grouping.py          # Planned: zones -> room groups.
 │   ├── access.py            # Planned: hub selection + corridor routing.
 │   ├── experiment.py        # Planned: layout_footprint() public API.
@@ -187,7 +187,7 @@ Diagnostics
 
 ## Milestones
 
-1. **M1 Zone Graph**
+1. **M1 Zone Graph** (implemented)
    - Build adjacency graph from `zone_footprint()` output.
    - Visualize shared-boundary graph.
 

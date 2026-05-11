@@ -1,1 +1,1 @@
-"""celllayout — vertex-first deterministic zoning + cell decomposition."""
+"""celllayout — vertex-first deterministic zoning + layout experiments."""

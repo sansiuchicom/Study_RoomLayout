@@ -17,6 +17,7 @@ if str(ALGORITHM_ROOT) not in sys.path:
     sys.path.insert(0, str(ALGORITHM_ROOT))
 
 from celllayout import cases as case_mod
+from celllayout import graph as graph_mod
 from celllayout import zoning
 
 
@@ -51,16 +52,62 @@ def quality(piece):
     return 0.5 * cmp + 0.5 * asp_s
 
 
-def stats(zones, fp):
+def stats(zones, fp, zone_graph=None):
     polys = [z['polygon'] for z in zones]
     areas = [p.area for p in polys]
     avg_q = float(np.mean([quality(p) for p in polys])) if polys else 0
     gap_pct = 100 * fp.difference(unary_union(polys)).area / fp.area
-    return {'n': len(zones), 'q': avg_q, 'gap': gap_pct,
-            'min': min(areas), 'max': max(areas), 'mean': float(np.mean(areas))}
+    out = {'n': len(zones), 'q': avg_q, 'gap': gap_pct,
+           'min': min(areas), 'max': max(areas), 'mean': float(np.mean(areas))}
+    if zone_graph is not None:
+        out.update({f"graph_{k}": v for k, v in graph_mod.graph_stats(zone_graph).items()})
+    return out
 
 
-def plot_zones(ax, fp, zones, families, title):
+def plot_zone_graph(ax, zones, zone_graph):
+    """Overlay actual shared-boundary graph contacts and centroid nodes."""
+    by_id = {z['zone_id']: z for z in zones}
+    for edge in zone_graph['edges']:
+        za = by_id[edge['zone_a']]['polygon']
+        zb = by_id[edge['zone_b']]['polygon']
+        _plot_centroid_connector(ax, za, zb, edge['door_capable'])
+        contact = graph_mod.shared_boundary_geometry(za, zb)
+        _plot_contact(ax, contact, edge['door_capable'])
+    for node in zone_graph['nodes']:
+        x, y = node['centroid']
+        ax.plot(x, y, marker='o', markersize=2.7, color='#12395d', zorder=13)
+
+
+def _plot_centroid_connector(ax, poly_a, poly_b, door_capable):
+    color = '#0d3b66' if door_capable else '#5d7f9f'
+    ax.plot(
+        [poly_a.centroid.x, poly_b.centroid.x],
+        [poly_a.centroid.y, poly_b.centroid.y],
+        color=color,
+        linewidth=0.65 if door_capable else 0.45,
+        linestyle='--',
+        alpha=0.55,
+        zorder=11.5,
+    )
+
+
+def _plot_contact(ax, geom, door_capable):
+    color = '#1f4e79' if door_capable else '#6f8fb3'
+    linewidth = 2.4 if door_capable else 1.2
+    if geom.is_empty:
+        return
+    if geom.geom_type in ('LineString', 'LinearRing'):
+        xs, ys = geom.xy
+        ax.plot(xs, ys, color=color, linewidth=linewidth, alpha=0.9, zorder=12)
+    elif geom.geom_type == 'MultiLineString':
+        for part in geom.geoms:
+            _plot_contact(ax, part, door_capable)
+    elif geom.geom_type == 'GeometryCollection':
+        for part in geom.geoms:
+            _plot_contact(ax, part, door_capable)
+
+
+def plot_zones(ax, fp, zones, families, title, zone_graph=None):
     for z in zones:
         p = z['polygon']
         if p.is_empty:
@@ -83,6 +130,8 @@ def plot_zones(ax, fp, zones, families, title):
             xs, ys = f['polygon'].exterior.xy
             ax.plot(xs, ys, '--', color='red', linewidth=1.0,
                     alpha=0.55, zorder=11)
+    if zone_graph is not None:
+        plot_zone_graph(ax, zones, zone_graph)
     ax.set_aspect('equal')
     ax.grid(True, alpha=0.3)
     ax.set_title(title, fontsize=8, fontweight='bold')
@@ -102,7 +151,10 @@ def visualize(results, n_per_fig=12):
             plot_zones(ax, r['fp'], r['zones'], r['fams'],
                        f"{r['name']}  #z={s['n']} q={s['q']:.2f} "
                        f"gap={s['gap']:.1f}%  "
-                       f"avg={s['mean']:.1f} [min={s['min']:.1f}/max={s['max']:.1f}]")
+                       f"avg={s['mean']:.1f} [min={s['min']:.1f}/max={s['max']:.1f}]  "
+                       f"edges={s['graph_edges']} comps={s['graph_component_count']} "
+                       f"iso={len(s['graph_isolated_nodes'])}",
+                       r.get('graph'))
         plt.suptitle(f"celllayout zoning — Group {g + 1}",
                      fontsize=12, fontweight='bold', y=1.001)
         plt.tight_layout()
@@ -123,12 +175,15 @@ def main(argv):
     for i, (name, fp) in enumerate(cases):
         try:
             zones, fams = zoning.zone_footprint(fp)
-            s = stats(zones, fp)
+            zone_graph = graph_mod.build_zone_graph(zones)
+            s = stats(zones, fp, zone_graph)
             print(f"{i + 1:>3} {name:<26} | "
                   f"#{s['n']:<2} q{s['q']:.2f} g{s['gap']:.1f}% "
-                  f"a{s['mean']:.1f} [{s['min']:.1f}/{s['max']:.1f}]")
+                  f"a{s['mean']:.1f} [{s['min']:.1f}/{s['max']:.1f}] "
+                  f"E{s['graph_edges']} D{s['graph_door_edges']} "
+                  f"C{s['graph_component_count']} iso{len(s['graph_isolated_nodes'])}")
             results.append({'name': name, 'fp': fp, 'zones': zones,
-                            'fams': fams, 's': s})
+                            'fams': fams, 'graph': zone_graph, 's': s})
         except Exception as e:
             print(f"{i + 1:>3} {name:<26} | ERROR: {e}")
     visualize(results)

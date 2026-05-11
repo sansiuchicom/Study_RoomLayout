@@ -295,6 +295,46 @@ def piece_aspect(piece):
         return 99
 
 
+def allocate_k(pieces, k_total):
+    """Area-proportional k allocation, 마지막 piece가 잔여를 흡수.
+
+    `_partition_in_frame`이 실제 사용하는 분배와 동일. validity 단계에서 미리
+    k_alloc을 시뮬레이션해서 piece가 final이 될지 (k_p≤1) 판정하기 위함.
+    """
+    total = sum(p.area for p in pieces)
+    k_alloc = []
+    acc = 0
+    for i, p in enumerate(pieces):
+        if i == len(pieces) - 1:
+            kk = max(1, k_total - acc)
+        else:
+            kk = max(1, round(k_total * p.area / total))
+            acc += kk
+        k_alloc.append(kk)
+    return k_alloc
+
+
+def _aspect_ok_with_alloc(pieces, k_total, min_zone_area, max_aspect):
+    """Stage-aware aspect 검사.
+
+    k_total이 None이면 모든 piece에 aspect 검사 (기존 myopic 동작).
+    k_total 주어지면 'final' piece에만 aspect 검사:
+      - k_p ≤ 1 (sub-recursion이 더 자르지 않음), 또는
+      - p.area < min_zone_area * 2 (sub-recursion 종료 조건)
+
+    Intermediate piece는 aspect 4.67이어도 sub-split으로 final aspect는 작아짐.
+    structural-aligned cut처럼 의미있지만 임시로 elongated한 cut을 살림.
+    """
+    if k_total is None:
+        return all(piece_aspect(p) <= max_aspect for p in pieces)
+    k_alloc = allocate_k(pieces, k_total)
+    for p, k_p in zip(pieces, k_alloc):
+        is_final = (k_p <= 1) or (p.area < min_zone_area * 2)
+        if is_final and piece_aspect(p) > max_aspect:
+            return False
+    return True
+
+
 def is_axis_aligned(line):
     """Line이 axis-aligned (horizontal or vertical)인지."""
     coords = list(line.coords)
@@ -306,13 +346,14 @@ def is_axis_aligned(line):
 
 def best_cross_cut_above_threshold(pairs, polygon, min_zone_area,
                                      max_aspect=DEFAULT_MAX_PIECE_ASPECT,
-                                     balance_threshold=0.0):
+                                     balance_threshold=0.0,
+                                     k_total=None):
     """Cross cut candidate(pair list) 중 best.
 
     각 pair = (v_line, h_line). 두 line으로 polygon split → 보통 3 또는 4 piece.
 
-    Validity: 모든 piece area ≥ min_zone_area, aspect ≤ max_aspect,
-              balance = min/max ≥ balance_threshold.
+    Validity: 모든 piece area ≥ min_zone_area, balance ≥ balance_threshold,
+              그리고 stage-aware aspect 검사 (k_total 있으면 final piece만).
     Tie-break: balance ↓, max_piece_aspect ↑ (best_cut과 동일).
 
     Returns: ((v_line, h_line), pieces, balance) or None
@@ -324,7 +365,7 @@ def best_cross_cut_above_threshold(pairs, polygon, min_zone_area,
             continue
         if min(p.area for p in pieces) < min_zone_area:
             continue
-        if any(piece_aspect(p) > max_aspect for p in pieces):
+        if not _aspect_ok_with_alloc(pieces, k_total, min_zone_area, max_aspect):
             continue
         b = balance(pieces)
         if b < balance_threshold:
@@ -342,15 +383,17 @@ def best_cross_cut_above_threshold(pairs, polygon, min_zone_area,
 def best_cut_above_threshold(candidates, polygon, min_zone_area,
                                 max_aspect=DEFAULT_MAX_PIECE_ASPECT,
                                 balance_threshold=0.0,
-                                prefer_shorter=False):
+                                prefer_shorter=False,
+                                k_total=None):
     """Validity 통과 + balance ≥ threshold 중 best.
-    
+
     Validity:
     - 모든 piece area ≥ min_zone_area
-    - 모든 piece aspect ≤ max_aspect
-    
+    - Stage-aware aspect: k_total 주어지면 final piece만 검사 (Option B);
+      없으면 모든 piece에 검사 (기존 myopic 동작)
+
     Selection: balance desc; prefer_shorter면 line 길이 짧은 순 tie-break.
-    
+
     Returns: (line, pieces, balance) or None
     """
     valid = []
@@ -360,7 +403,7 @@ def best_cut_above_threshold(candidates, polygon, min_zone_area,
             continue
         if min(p.area for p in pieces) < min_zone_area:
             continue
-        if any(piece_aspect(p) > max_aspect for p in pieces):
+        if not _aspect_ok_with_alloc(pieces, k_total, min_zone_area, max_aspect):
             continue
         b = balance(pieces)
         if b < balance_threshold:
@@ -388,7 +431,8 @@ def best_cut_above_threshold(candidates, polygon, min_zone_area,
 def select_cut(polygon, min_zone_area, margin, min_cut_length,
                 max_aspect=DEFAULT_MAX_PIECE_ASPECT,
                 balance_threshold=DEFAULT_BALANCE_THRESHOLD,
-                structural_coords=None):
+                structural_coords=None,
+                k_total=None):
     """Hierarchical selection (T1은 sub-tier로 분할):
 
     Tier 1a: cross_cut — vertex의 V+H 동시 (3-4 piece)
@@ -401,11 +445,13 @@ def select_cut(polygon, min_zone_area, margin, min_cut_length,
         threshold 무관 (마지막 안전망), balance best
 
     structural_coords: parent polygon의 reflex 좌표 (T1b의 추가 후보로 흘림).
+    k_total: stage-aware aspect 검사용 (best_cut_above_threshold로 forward).
     """
     # Tier 1a: cross cut (vertex V+H 동시) — vertex 정보 가장 적극 활용
     pairs = cross_cut_pairs(polygon, margin)
     result = best_cross_cut_above_threshold(pairs, polygon, min_zone_area,
-                                              max_aspect, balance_threshold)
+                                              max_aspect, balance_threshold,
+                                              k_total=k_total)
     if result is not None:
         return ('cross_cut', *result)
 
@@ -414,27 +460,30 @@ def select_cut(polygon, min_zone_area, margin, min_cut_length,
                                   structural_coords=structural_coords)
     result = best_cut_above_threshold(cuts, polygon, min_zone_area,
                                           max_aspect, balance_threshold,
-                                          prefer_shorter=False)
+                                          prefer_shorter=False,
+                                          k_total=k_total)
     if result is not None:
         return ('vertex_aligned', *result)
-    
+
     # Tier 2: reflex_pair, 사선만 (axis-aligned reflex_pair는 Tier 1에 포함됨)
     all_pairs = reflex_pair_lines(polygon, min_cut_length)
     oblique = [c for c in all_pairs if not is_axis_aligned(c)]
     result = best_cut_above_threshold(oblique, polygon, min_zone_area,
                                           max_aspect, balance_threshold,
-                                          prefer_shorter=True)
+                                          prefer_shorter=True,
+                                          k_total=k_total)
     if result is not None:
         return ('reflex_pair', *result)
-    
+
     # Tier 3: axis_mid fallback (no balance threshold)
     cuts = axis_mid_lines(polygon)
     result = best_cut_above_threshold(cuts, polygon, min_zone_area,
                                           max_aspect, balance_threshold=0.0,
-                                          prefer_shorter=False)
+                                          prefer_shorter=False,
+                                          k_total=k_total)
     if result is not None:
         return ('axis_mid', *result)
-    
+
     return None
 
 
@@ -490,7 +539,8 @@ def _partition_in_frame(P, k, min_zone_area, margin, min_cut_length,
 
     selection = select_cut(P, min_zone_area, margin, min_cut_length,
                             balance_threshold=balance_threshold,
-                            structural_coords=structural_coords)
+                            structural_coords=structural_coords,
+                            k_total=k)
     if selection is None:
         return [{'polygon': P, 'cut_history': []}]
 

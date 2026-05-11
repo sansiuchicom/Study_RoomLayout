@@ -1,6 +1,15 @@
 """
 Pipeline 2M — Per-family proportional 0.3m + 50% rule
 
+**Reference-only file — NOT directly executable from this repo.** Preserved
+as the canonical pre-port snapshot of the v3.2 algorithm developed externally
+in `/home/claude/work` (this file imports `02e_improved` / `02h_progressive`
+/ `02i_lir_progressive` / `02L_final` from that path; none of them ship in
+proto3). The self-contained proto3 port lives at
+`src/proto3/geometry/{lir,grid,recursive,decompose}.py`. See
+`references/cell_v3_2.md` for the human-readable spec and
+`references/README.md` for the relationship between origin and port.
+
 핵심:
 - "Family" = 같은 theta + phase chain으로 묶이는 piece들
 - 각 family는 자기 main rect의 dimension에 맞춰 proportional cell 크기 결정

@@ -33,7 +33,16 @@ def auto_partition(footprint, target_cell_size=0.3, seed=42,
     """Decompose a footprint polygon into per-family proportional atom cells.
 
     Args:
-        footprint: shapely.Polygon (any orientation, holes OK).
+        footprint: shapely.Polygon in **meter coordinates** (any orientation).
+            Defaults `target_cell_size=0.3` and `min_recurse_area=8.0` assume
+            m units; callers in mm should use `run()` which wraps this with
+            unit conversion. **Interior holes are currently ignored** — the
+            LIR search rasterizes only `polygon.exterior` (see
+            `lir.lir_at_angle`), so `root_main_rect` / `main_rect.area` reflect
+            the exterior alone. Cell-level intersection still respects holes,
+            so the per-cell area total comes out correct, but algorithm-level
+            invariants (LIR ratio, recursion thresholds) do not. Hole-aware
+            support is Step 07 / Plan Def-11.
         target_cell_size: nominal cell side (default 0.3 m). Actual sizing is
             family-proportional.
         seed: RNG seed (controls phase-origin randomization at the root).

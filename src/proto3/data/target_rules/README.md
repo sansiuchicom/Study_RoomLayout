@@ -100,6 +100,20 @@ typo failure at JSON load is the failure mode we want to prevent
 typologies that fit the established grid; typologies that don't need
 both a 1-line schema diff and JSON.
 
+**Additional caveat — multi-floor typologies until Step 14.** A typology
+with `requires_single_floor=false` (e.g., a future `house` or `hotel`
+adapter) is **not yet** data-only in practice. Stage 02 has an
+unconditional `len(floors) != 1` guard
+([stage02_gate.py](../../stages/stage02_gate.py)) that fires before
+`check_multi_floor_feasibility` even runs, so registering a multi-floor
+JSON in `proto3.stages.stage00_load._DEFAULT_ADAPTERS` without first
+lifting that guard will produce
+`DomainGateFailure("stage02_multi_floor_unsupported")` regardless of the
+JSON's `requires_single_floor` setting. The guard is deliberate — per-floor
+area / dim allocation is Step 14 territory (Plan §5 Def-8). The
+"data-only" promise above therefore holds for **single-floor typologies
+only** until Step 14 lifts the guard.
+
 ---
 
 ## Adding a new typology — workflow

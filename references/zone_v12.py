@@ -1,6 +1,15 @@
 """
 Pipeline 12 — Clean Deterministic Zoning (논문용).
 
+**Reference-only file — NOT directly executable from this repo.** Preserved
+as the canonical pre-port snapshot of the v12 zoning algorithm developed
+externally in `/home/claude/work` (this file imports `02M_per_family` from
+that path; not shipped in proto3). The proto3 port lands at Step 07
+(Region/Atom Decomposition, Plan Def-13 — broad-except / post-hoc gap merge
+to be tightened during port). See `references/zone_v12.md` for the
+human-readable spec and `references/README.md` for the relationship between
+origin and port.
+
 설계 원칙:
 1. Vertex first-class: cut 후보 = vertex와의 관계로 정의
 2. 점수 함수 X: 결정론적 우선순위 + balance criterion만

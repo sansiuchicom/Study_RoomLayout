@@ -25,4 +25,7 @@ dist/
 # IDE / tool work dirs
 .claude/
 
+# Notebook scratch
+.ipynb_checkpoints/
+
 .DS_Store

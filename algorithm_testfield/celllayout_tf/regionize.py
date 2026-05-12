@@ -56,7 +56,7 @@ class Region:
     part_id: int
     piece_id: int
     theta: float
-    cut_history: tuple[str, ...]
+    cut_history: tuple[tuple[str, float], ...]
 
 
 @dataclass(frozen=True)
@@ -135,32 +135,24 @@ def regionize(
     for a in atoms:
         atoms_by_pp[(a.part_id, a.piece_id)].append(a)
 
+    group_grid = _collect_group_grid(atoms)
+
     regions: list[Region] = []
-    next_id = [0]
+    next_id = 0
 
     for terr in territories:
         eff_theta = 0.0 if terr.kind == KIND_CURVED else terr.theta
-        for piece_idx, piece in enumerate(terr.pieces):
-            piece_poly = _to_shapely(piece)
+        theta_key = round(eff_theta, 9)
+        xs_pool, ys_pool = group_grid.get(theta_key, ((), ()))
+        for piece_idx, _piece in enumerate(terr.pieces):
             piece_atoms = atoms_by_pp.get((terr.part_id, piece_idx), [])
-            if piece_poly.area < 1e-9 or not piece_atoms:
+            if not piece_atoms:
                 continue
 
-            local_poly = _rotate_geom(piece_poly, -eff_theta)
-            atoms_with_local = [
-                (a, _rotate_point(a.centroid, -eff_theta)) for a in piece_atoms
-            ]
-            local_atom_polys = [
-                _rotate_geom(_to_shapely(a.shape), -eff_theta) for a in piece_atoms
-            ]
-            ctx = _PartitionContext(
-                structural=_structural_coords(local_poly),
-                atom_xs=_collect_atom_edge_positions(local_atom_polys, axis="x"),
-                atom_ys=_collect_atom_edge_positions(local_atom_polys, axis="y"),
-            )
-
-            k = max(1, round(piece_poly.area / target_area))
-            groups = _recurse_partition(local_poly, atoms_with_local, k, ctx)
+            atoms_with_local = _build_atoms_with_local(piece_atoms, eff_theta)
+            piece_area = sum(aw[3] for aw in atoms_with_local)
+            k = max(1, round(piece_area / target_area))
+            groups = _recurse_partition(atoms_with_local, k, xs_pool, ys_pool)
 
             for atom_list, cut_history in groups:
                 actual_atoms = [aw[0] for aw in atom_list]
@@ -171,7 +163,7 @@ def regionize(
                     continue
                 regions.append(
                     Region(
-                        region_id=next_id[0],
+                        region_id=next_id,
                         shape=shape_part,
                         atom_ids=tuple(a.atom_id for a in actual_atoms),
                         part_id=terr.part_id,
@@ -180,68 +172,130 @@ def regionize(
                         cut_history=tuple(cut_history),
                     )
                 )
-                next_id[0] += 1
+                next_id += 1
 
     return tuple(regions)
+
+
+# Atom local-frame cache ------------------------------------------------------
+
+
+def _build_atoms_with_local(piece_atoms, eff_theta):
+    """Pre-compute per-atom local-frame ``(bbox_center, bbox, area)`` once.
+
+    Cut selection runs many sums and bbox-aspect checks per candidate; doing
+    this work per call would create thousands of throwaway shapely Polygons.
+    Cached structure is ``(atom, (cx, cy), (minx, miny, maxx, maxy), area)``.
+    """
+    out = []
+    for a in piece_atoms:
+        poly = _to_shapely(a.shape)
+        if abs(eff_theta) > 1e-12:
+            poly = _rotate_geom(poly, -eff_theta)
+        minx, miny, maxx, maxy = poly.bounds
+        cx = 0.5 * (minx + maxx)
+        cy = 0.5 * (miny + maxy)
+        out.append((a, (cx, cy), (minx, miny, maxx, maxy), float(poly.area)))
+    return out
 
 
 # Recursive partition ---------------------------------------------------------
 
 
-def _recurse_partition(local_poly, atoms_with_local, k, ctx):
-    if k <= 1 or local_poly.area < MIN_AREA * 2:
+def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool):
+    if k <= 1 or not atoms_with_local:
+        return [(atoms_with_local, [])]
+    total_area = sum(aw[3] for aw in atoms_with_local)
+    if total_area < MIN_AREA * 2:
         return [(atoms_with_local, [])]
 
-    sel = _select_cut(local_poly, k, ctx)
+    sel = _select_lattice_cut(atoms_with_local, k, xs_pool, ys_pool)
     if sel is None:
         return [(atoms_with_local, [])]
 
-    label, _lines, pieces, _b = sel
-    sub_atoms_lists: list[list] = [[] for _ in pieces]
-    for aw in atoms_with_local:
-        pt = sg.Point(aw[1])
-        assigned = False
-        for i, sub_poly in enumerate(pieces):
-            if sub_poly.contains(pt):
-                sub_atoms_lists[i].append(aw)
-                assigned = True
-                break
-        if not assigned:
-            best_i = min(
-                range(len(pieces)),
-                key=lambda i: pieces[i].distance(pt),
-            )
-            sub_atoms_lists[best_i].append(aw)
+    label, coord, left, right = sel
+    la = sum(aw[3] for aw in left)
+    ra = sum(aw[3] for aw in right)
+    k_alloc = _allocate_k_areas([la, ra], k)
 
     result = []
-    for sub_poly, sub_atoms, sub_k in zip(
-        pieces, sub_atoms_lists, _allocate_k(pieces, k),
-    ):
+    for sub_atoms, sub_k in zip((left, right), k_alloc):
         for group_atoms, group_history in _recurse_partition(
-            sub_poly, sub_atoms, sub_k, ctx,
+            sub_atoms, sub_k, xs_pool, ys_pool,
         ):
-            result.append((group_atoms, [label] + group_history))
+            result.append((group_atoms, [(label, coord)] + group_history))
     return result
 
 
-# Cut selection (mirrors reference) ------------------------------------------
+# Cut selection (lattice / slab over shared atom grid) -----------------------
 
 
-def _select_cut(local_poly, k_total, ctx):
-    for label, gen, prefer_short, bmin in (
-        ("cross_cut", lambda: _cross_cut_pairs(local_poly), False, BAL_MIN),
-        ("vertex_aligned", lambda: ([ln] for ln in
-                                     _vertex_aligned_lines(local_poly, ctx.structural)),
-                                                                 False, BAL_MIN),
-        ("reflex_pair", lambda: _reflex_pair_lines(local_poly), True, BAL_MIN),
-        ("axis_mid", lambda: _axis_mid_lines_atom_aligned(local_poly, ctx),
-                                                                 False, 0.0),
-    ):
-        cands = ((label, lines) for lines in gen())
-        r = _best_cut(cands, local_poly, bmin, k_total, prefer_short)
-        if r is not None:
-            return r
-    return None
+def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool):
+    """Pick the best slab cut from the shared-grid pool.
+
+    Balance and aspect are computed from cached per-atom area and local bbox
+    — no shapely operations in the hot path.
+    """
+    cuts = _lattice_cuts(atoms_with_local, xs_pool, ys_pool)
+    valid = []
+    for label, coord, left, right in cuts:
+        la = sum(aw[3] for aw in left)
+        ra = sum(aw[3] for aw in right)
+        if la < MIN_AREA or ra < MIN_AREA:
+            continue
+        b = min(la, ra) / max(la, ra)
+        if b < BAL_MIN:
+            continue
+        left_asp = _local_bbox_aspect(left)
+        right_asp = _local_bbox_aspect(right)
+        if not _aspect_ok_areas([la, ra], [left_asp, right_asp], k_total):
+            continue
+        valid.append((label, coord, left, right, b, max(left_asp, right_asp)))
+    if not valid:
+        return None
+    valid.sort(key=lambda v: (-round(v[4], TIE_DECIMALS), v[5]))
+    label, coord, left, right, _b, _asp = valid[0]
+    return label, coord, left, right
+
+
+def _local_bbox_aspect(atoms_with_local):
+    """Aspect of the union bbox in the theta-group local frame.
+
+    Exact for rectangular slabs (which cuts at atom-grid lines produce in
+    rectangular pieces). For non-rectangular slabs it overestimates aspect,
+    which is conservative — a slab that passes this gate has true aspect at
+    most this value.
+    """
+    minx = min(aw[2][0] for aw in atoms_with_local)
+    miny = min(aw[2][1] for aw in atoms_with_local)
+    maxx = max(aw[2][2] for aw in atoms_with_local)
+    maxy = max(aw[2][3] for aw in atoms_with_local)
+    w, h = maxx - minx, maxy - miny
+    if w <= 1e-9 or h <= 1e-9:
+        return 99.0
+    return max(w, h) / min(w, h)
+
+
+def _aspect_ok_areas(areas, aspects, k_total):
+    """Aspect gate, only enforced on pieces that won't be subdivided further."""
+    k_alloc = _allocate_k_areas(areas, k_total)
+    for ar, asp, kp in zip(areas, aspects, k_alloc):
+        if (kp <= 1 or ar < MIN_AREA * 2) and asp > MAX_ASPECT:
+            return False
+    return True
+
+
+def _allocate_k_areas(areas, k_total):
+    total = sum(areas)
+    out, acc = [], 0
+    for i, ar in enumerate(areas):
+        if i == len(areas) - 1:
+            kk = max(1, k_total - acc)
+        else:
+            kk = max(1, round(k_total * ar / total))
+            acc += kk
+        out.append(kk)
+    return out
 
 
 def _vertex_coords_raw(poly):

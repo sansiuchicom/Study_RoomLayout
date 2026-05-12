@@ -23,9 +23,12 @@ from shapely.ops import unary_union
 
 from matplotlib.collections import LineCollection
 
+from matplotlib import cm
+
 from .atom_graph import AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
+from .regionize import Region, regionize
 from .schema import ShapeInput, ShapePart, part_theta
 from .territory import Territory, resolve_territories
 
@@ -274,6 +277,77 @@ def save_atom_figure(
     n_slivers = sum(1 for a in atoms if a.is_feature_sliver)
     ax.set_title(
         title or f"{shape.name}: {n_atoms} atoms ({n_slivers} slivers)",
+        fontsize=10,
+    )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_region_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+    target_area: float = 6.0,
+    show_atoms: bool = True,
+) -> Path:
+    """Render regions as colored areas atop a faint atom grid."""
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy, target_area=target_area)
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # faint atom backdrop
+    if show_atoms:
+        for atom in atoms:
+            xs, ys = zip(*atom.shape.exterior)
+            ax.fill(
+                list(xs) + [xs[0]], list(ys) + [ys[0]],
+                facecolor="#eeeeee", edgecolor="#bbbbbb",
+                alpha=0.6, linewidth=0.25, zorder=1,
+            )
+
+    cmap = cm.get_cmap("tab20")
+    for r in regions:
+        color = cmap(r.region_id % 20)
+        poly = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
+        xs, ys = poly.exterior.xy
+        ax.fill(xs, ys, facecolor=color, edgecolor="#222222",
+                alpha=0.55, linewidth=1.1, zorder=4)
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.fill(hx, hy, facecolor="#444444", edgecolor="#111111",
+                    alpha=1.0, linewidth=0.7, zorder=5)
+        rp = poly.representative_point()
+        ax.text(
+            rp.x, rp.y,
+            f"R{r.region_id}\n{poly.area:.1f}m²",
+            ha="center", va="center", fontsize=7,
+            bbox={
+                "boxstyle": "round,pad=0.18",
+                "facecolor": "white",
+                "edgecolor": "#777777",
+                "linewidth": 0.4,
+                "alpha": 0.9,
+            },
+            zorder=10,
+        )
+
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+    n_regions = len(regions)
+    avg_area = sum(
+        sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes]).area
+        for r in regions
+    ) / max(n_regions, 1)
+    ax.set_title(
+        title or f"{shape.name}: {n_regions} regions (avg {avg_area:.1f}m²)",
         fontsize=10,
     )
     fig.savefig(path, dpi=130, bbox_inches="tight")

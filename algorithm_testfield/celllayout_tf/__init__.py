@@ -3,6 +3,7 @@
 from .atom_graph import AtomEdge, AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .cases import case_slug, make_cases, selected_cases
+from .regionize import Region, regionize
 from .dimensions import (
     DimensionPolicy,
     interval_positions,
@@ -17,6 +18,7 @@ from .viz import (
     save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
+    save_region_figure,
     save_territory_figure,
 )
 
@@ -45,4 +47,7 @@ __all__ = [
     "AtomGraph",
     "build_atom_graph",
     "save_atom_graph_figure",
+    "Region",
+    "regionize",
+    "save_region_figure",
 ]

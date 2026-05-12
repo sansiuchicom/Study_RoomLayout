@@ -4,7 +4,7 @@ This directory is the safe rewrite area for a topology-first zoning engine.
 The existing `celllayout/` package is a copied reference of the current
 algorithm. New atomic-subdivision work should happen in `celllayout_tf/`.
 
-## Phase 0 Scaffold
+## Phase 1 Scaffold + Strict Validation
 
 ```text
 algorithm_testfield/
@@ -29,16 +29,28 @@ Run the new scaffold:
 ```bash
 cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
 PYTHONPATH=. python demos/zoning_demo_tf.py --strict
+PYTHONPATH=. python demos/zoning_demo_tf.py --strict --tolerance 1e-6 --precision 0.001
 PYTHONPATH=. pytest -q tests
+```
+
+Strict validation reports the exact areas and counts that matter for downstream
+layout work:
+
+```text
+gap_area / gap_part_count
+overlap_area / pairwise overlap count
+outside_area
+invalid zone parts
+empty zones
+multipart zones
 ```
 
 Next phases:
 
-1. Expand validation and strict reporting.
-2. Implement real linework polygonization in `subdivision.py`.
-3. Replace the single-zone planner with deterministic cut planning.
-4. Assign atomic faces to candidate zones and rebuild exact zones.
-5. Add native graph/demo outputs and CI-friendly strict mode.
+1. Implement real linework polygonization in `subdivision.py`.
+2. Replace the single-zone planner with deterministic cut planning.
+3. Assign atomic faces to candidate zones and rebuild exact zones.
+4. Add native graph/demo outputs and CI-friendly strict mode.
 
 ---
 

@@ -313,11 +313,27 @@ graph_connectivity
 
 ## Current Status
 
-No implementation should be assumed in this fresh testfield yet.
-
-Start with Phase 1:
+Phase 1 is implemented:
 
 ```text
 celllayout_tf/dimensions.py
 tests/test_dimensions.py
 ```
+
+Run:
+
+```text
+cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
+PYTHONPATH=. pytest -q tests
+```
+
+Sample interval splits:
+
+```text
+1.00m -> 0.35 + 0.30 + 0.35
+2.05m -> 0.25 + 0.30 x 6
+4.10m -> 0.25 + 0.30 x 12 + 0.25
+1.03m -> 0.35 + 0.33 + 0.35
+```
+
+Next phase: orientation patches.

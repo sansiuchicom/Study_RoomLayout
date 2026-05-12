@@ -59,6 +59,8 @@ zone_footprint(footprint, k=None):
         rotate back
     5. coverage fix: gap → nearest zone
     6. clip to footprint
+    7. tail cleanup (multi-axis transition wedge → orientation-compatible
+       recipient zones, family long-axis slicing + bridge merge)
     return zones, families
 
 select_cut(polygon):
@@ -72,6 +74,8 @@ select_cut(polygon):
 - Stage-aware aspect — final piece에만 max_aspect 강제
 - Float-tolerant balance tie-break — round(balance, 6) (rotated polygon drift 방지)
 - Structural coords inheritance — parent reflex 좌표를 sub-recursion에 전파
+- Tail cleanup — family-theta LIR 밖의 thin foreign 영역을 orientation-호환
+  recipient에 long-axis slicing으로 분배 (자세한 내용: [notes/tail_cleanup.md](notes/tail_cleanup.md))
 ```
 
 ## 주요 parameter
@@ -85,6 +89,12 @@ select_cut(polygon):
 | `BAL_MIN` | 0.15 | T1/T2에서 한 zone ≥ 다른 zone의 ~14% |
 | `SIMPLIFY_TOL` | 0.15 m | vertex 좌표 추출 시 polygon 단순화 |
 | `area_per_zone` (auto k) | 10.0 m² | `k=None`일 때 자동 산정 (1 zone당 평균 면적) |
+| `TAIL_MIN_AREA` | 0.3 m² | tail cleanup 대상 최소 면적 |
+| `TAIL_MIN_ASPECT` | 6.0 | tail로 인정할 MRR 종횡비 (얇은 영역만) |
+| `TAIL_MIN_CORE` | 0.4 | family-theta LIR이 zone 면적의 이 비율 이상이어야 동작 |
+| `TAIL_THETA_TOL` | 10° | recipient family theta 매칭 허용 오차 |
+| `TAIL_BRIDGE_TOL` | 0.02 m | sub-tolerance gap을 buffer로 메꾸는 한도 |
+| `TAIL_SLICE_MIN` | 0.01 m² | numerical noise slice drop threshold |
 
 ## Reference
 

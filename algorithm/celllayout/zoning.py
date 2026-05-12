@@ -11,11 +11,13 @@ Multi-axis: per-family decomposition via cell layer (atom/per_family).
 from collections import defaultdict
 
 import numpy as np
+import shapely
 import shapely.affinity as sa
 import shapely.geometry as sg
 from shapely.ops import split, unary_union
 
 from celllayout.atom import per_family as p2M
+from celllayout.atom.lir_progressive import lir_at_angle
 
 
 # Parameters (external, not magic) ---------------------------------------------
@@ -26,6 +28,15 @@ MAX_ASPECT = 4.0        # final zone MRR aspect cap (architectural)
 BAL_MIN = 0.15          # T1/T2 balance ≥ this (1:7 imbalance OK)
 SIMPLIFY_TOL = 0.15     # m — vertex/structural extraction simplification
 TIE_DECIMALS = 6        # tie-break: balance rounded here (avoid float-drift bias)
+
+# Tail cleanup (post-process): detach orientation-foreign protrusions and
+# reassign to neighbour zone with longest shared boundary.
+TAIL_MIN_AREA = 0.3     # m² — tail piece must reach this to be reassigned
+TAIL_MIN_ASPECT = 6.0   # MRR aspect — only thin elongated pieces qualify
+TAIL_MIN_CORE = 0.4     # family-theta LIR must be ≥ this fraction of zone area
+TAIL_THETA_TOL = np.radians(10)  # tail orientation vs recipient family_theta
+TAIL_BRIDGE_TOL = 0.02  # m — morphological-opening tolerance bridging slice↔target
+TAIL_SLICE_MIN = 0.01   # m² — slice below this is dropped (numerical noise)
 
 
 # 1. Reflex + structural coords -------------------------------------------------
@@ -294,7 +305,196 @@ def get_families(footprint, cell_size=0.3):
     return sorted(out, key=lambda x: -x['area'])
 
 
-# 7. Main interface -------------------------------------------------------------
+# 7. Tail cleanup (post-process) ------------------------------------------------
+def _detect_foreign_tails(zone_poly, family_theta,
+                           min_area=TAIL_MIN_AREA,
+                           min_aspect=TAIL_MIN_ASPECT,
+                           min_core=TAIL_MIN_CORE,
+                           lir_resolution=0.05):
+    """Return foreign-tail Polygons in `zone_poly`.
+
+    A 'foreign tail' is a connected piece outside the family-theta-aligned LIR
+    that is thin+elongated (aspect ≥ min_aspect, area ≥ min_area). Chunky
+    non-LIR pieces are NOT tails — they are normal local bulges.
+    """
+    if not isinstance(zone_poly, sg.Polygon) or zone_poly.is_empty:
+        return []
+    lir = lir_at_angle(zone_poly, family_theta, resolution=lir_resolution)
+    if lir is None or lir.area < zone_poly.area * min_core:
+        return []
+    diff = zone_poly.difference(lir.buffer(1e-4))
+    parts = list(diff.geoms) if hasattr(diff, 'geoms') else [diff]
+    out = []
+    for p in parts:
+        if not (isinstance(p, sg.Polygon) and p.area >= min_area
+                and piece_aspect(p) >= min_aspect):
+            continue
+        # Foreign means orientation distinct from family — same-orientation
+        # residues are native LIR leftovers, not multi-axis transition wedges.
+        if _theta_match(_tail_orientation(p), family_theta):
+            continue
+        out.append(p)
+    return out
+
+
+def _strip_tails(zone_poly, tails):
+    """Remove `tails` from `zone_poly` and clean the zero-width slit that
+    `difference` leaves along colinear cut paths."""
+    raw = zone_poly.difference(unary_union(tails))
+    core = (raw.buffer(-1e-3, cap_style=2, join_style=2)
+               .buffer(1e-3, cap_style=2, join_style=2))
+    if isinstance(core, sg.MultiPolygon):
+        core = max(core.geoms, key=lambda p: p.area)
+    return core
+
+
+def _tail_orientation(tail_poly):
+    """Principal angle of `tail_poly` (longest MRR edge, mod 90°).
+
+    Returned in radians on [0, π/2). None if MRR is degenerate.
+    """
+    try:
+        coords = list(tail_poly.minimum_rotated_rectangle.exterior.coords)
+    except Exception:
+        return None
+    if len(coords) < 4:
+        return None
+    edges = [(coords[i + 1][0] - coords[i][0],
+              coords[i + 1][1] - coords[i][1]) for i in range(4)]
+    lengths = [np.hypot(dx, dy) for dx, dy in edges]
+    if max(lengths) < 1e-9:
+        return None
+    dx, dy = edges[int(np.argmax(lengths))]
+    return float(np.arctan2(dy, dx)) % (np.pi / 2)
+
+
+def _theta_match(theta_a, theta_b, tol=TAIL_THETA_TOL):
+    """True if two thetas are within `tol`, modulo 90°."""
+    if theta_a is None or theta_b is None:
+        return False
+    d = abs((theta_a - theta_b) % (np.pi / 2))
+    return min(d, np.pi / 2 - d) < tol
+
+
+def _slice_tail_among_recipients(tail, family_theta, recipients):
+    """Slice `tail` along the family rotated-frame long axis using each
+    recipient's bbox range. Returns list of (slice_polygon, recipient_zone).
+    Slices outside any recipient's range are dropped (caller restores them).
+    """
+    if not recipients:
+        return []
+    rad = np.radians
+    deg = np.degrees
+    cx, cy = 0.0, 0.0  # constant origin keeps slabs consistent across shapes
+    tail_rot = sa.rotate(tail, -deg(family_theta), origin=(cx, cy))
+    tx0, ty0, tx1, ty1 = tail_rot.bounds
+    use_y = (ty1 - ty0) >= (tx1 - tx0)
+
+    ranges = []
+    for r in recipients:
+        rr = sa.rotate(r['polygon'], -deg(family_theta), origin=(cx, cy))
+        bx0, by0, bx1, by1 = rr.bounds
+        lo, hi = (by0, by1) if use_y else (bx0, bx1)
+        ranges.append((r, lo, hi))
+    ranges.sort(key=lambda x: x[1])
+
+    out = []
+    for r, lo, hi in ranges:
+        slab = (sg.box(tx0 - 1, lo, tx1 + 1, hi) if use_y
+                else sg.box(lo, ty0 - 1, hi, ty1 + 1))
+        s = tail_rot.intersection(slab)
+        if s.is_empty:
+            continue
+        s_orig = sa.rotate(s, deg(family_theta), origin=(cx, cy))
+        parts = ([s_orig] if isinstance(s_orig, sg.Polygon)
+                 else list(s_orig.geoms) if hasattr(s_orig, 'geoms') else [])
+        for p in parts:
+            if isinstance(p, sg.Polygon) and p.area >= TAIL_SLICE_MIN:
+                out.append((p, r))
+    return out
+
+
+def _bridge_merge(target, piece, tol=TAIL_BRIDGE_TOL):
+    """Merge `piece` into `target`. If they are within `tol` but not actually
+    touching along a 1D boundary, bridge the sub-tolerance gap with a
+    morphological opening so the result is a single Polygon."""
+    direct = unary_union([target, piece])
+    if isinstance(direct, sg.Polygon):
+        return direct
+    bridged = (direct.buffer(tol, cap_style=2, join_style=2)
+                     .buffer(-tol, cap_style=2, join_style=2))
+    if isinstance(bridged, sg.Polygon):
+        return bridged
+    if isinstance(bridged, sg.MultiPolygon):
+        return max(bridged.geoms, key=lambda p: p.area)
+    return None  # bridging failed
+
+
+def _cleanup_zone_tails(zones, footprint):
+    """Extract foreign-orientation tails and distribute across all
+    orientation-compatible recipient zones via family-long-axis slicing.
+    Slices that fall outside every recipient's range are returned to source.
+    Sub-tolerance gaps (parallel-offset edges) are bridged morphologically.
+    Source zones are only modified if at least one slice successfully merges.
+    """
+    pending = []  # (source_zone, [(slice, target), ...], leftovers)
+    for z in zones:
+        tails = _detect_foreign_tails(z['polygon'], z['family_theta'])
+        if not tails:
+            continue
+        all_slices = []
+        leftovers = []
+        for t in tails:
+            tail_theta = _tail_orientation(t)
+            compatibles = [o for o in zones
+                           if o['zone_id'] != z['zone_id']
+                           and _theta_match(tail_theta, o['family_theta'])]
+            if not compatibles:
+                continue
+            family_theta = compatibles[0]['family_theta']
+            slices = _slice_tail_among_recipients(t, family_theta, compatibles)
+            covered = (unary_union([s for s, _ in slices])
+                       if slices else sg.Polygon())
+            leftover = t.difference(covered) if not covered.is_empty else t
+            if not leftover.is_empty and leftover.area >= TAIL_SLICE_MIN:
+                leftovers.append(leftover)
+            all_slices.extend(slices)
+        if not all_slices:
+            continue
+        pending.append((z, all_slices, leftovers))
+
+    for src, slices_with_targets, leftovers in pending:
+        all_pieces = [s for s, _ in slices_with_targets] + leftovers
+        src['polygon'] = _strip_tails(src['polygon'], all_pieces)
+        for piece, target in slices_with_targets:
+            merged = _bridge_merge(target['polygon'], piece)
+            if merged is not None:
+                target['polygon'] = merged
+            else:
+                src['polygon'] = unary_union([src['polygon'], piece])
+        for piece in leftovers:
+            src['polygon'] = unary_union([src['polygon'], piece])
+
+    for z in zones:
+        g = z['polygon'].intersection(footprint)
+        if isinstance(g, sg.Polygon):
+            z['polygon'] = g
+        elif hasattr(g, 'geoms'):
+            polys = [x for x in g.geoms if isinstance(x, sg.Polygon)]
+            if polys:
+                z['polygon'] = max(polys, key=lambda p: p.area)
+
+    # Normalise coordinates to a mm grid. Slicing + bridge_merge produce
+    # vertices that differ at ULP level along shared boundaries, which makes
+    # `boundary.intersection` collapse a real 3 m contact to ~1.8 cm and the
+    # graph splits into disconnected components. `set_precision` snaps both
+    # polygons to the same grid so their segments coincide exactly.
+    for z in zones:
+        z['polygon'] = shapely.set_precision(z['polygon'], 0.001)
+    return zones
+
+
+# 8. Main interface -------------------------------------------------------------
 def zone_footprint(footprint, k=None, area_per_zone=10.0):
     """Footprint → k zones. Multi-axis aware via per-family decomposition.
 
@@ -358,5 +558,9 @@ def zone_footprint(footprint, k=None, area_per_zone=10.0):
             polys = [x for x in g.geoms if isinstance(x, sg.Polygon)]
             z['polygon'] = (max(polys, key=lambda p: p.area)
                             if polys else z['polygon'])
+
+    # Tail cleanup: detach orientation-foreign protrusions (e.g. diagonal
+    # wedges absorbed by an axis-aligned family) and reassign to neighbour.
+    all_zones = _cleanup_zone_tails(all_zones, footprint)
 
     return all_zones, big

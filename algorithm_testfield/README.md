@@ -4,7 +4,7 @@ This directory is the safe rewrite area for a topology-first zoning engine.
 The existing `celllayout/` package is a copied reference of the current
 algorithm. New atomic-subdivision work should happen in `celllayout_tf/`.
 
-## Phase 1 Scaffold + Strict Validation
+## Phase 2 Atomic Subdivision
 
 ```text
 algorithm_testfield/
@@ -33,6 +33,21 @@ PYTHONPATH=. python demos/zoning_demo_tf.py --strict --tolerance 1e-6 --precisio
 PYTHONPATH=. pytest -q tests
 ```
 
+Phase 2 implements the core linework polygonization in `subdivision.py`:
+
+```text
+snapped footprint boundary + holes
++ clipped planned cut lines
+-> unary_union noding
+-> polygonize
+-> clip/keep faces inside footprint
+-> shared atomic faces
+```
+
+The public `zone_footprint()` still returns one zone until the Phase 3 planner
+starts emitting cut lines. The subdivision engine itself is covered by tests for
+rectangle cuts, cross cuts, holes, rotated footprints, and concave L-shapes.
+
 Strict validation reports the exact areas and counts that matter for downstream
 layout work:
 
@@ -47,10 +62,9 @@ multipart zones
 
 Next phases:
 
-1. Implement real linework polygonization in `subdivision.py`.
-2. Replace the single-zone planner with deterministic cut planning.
-3. Assign atomic faces to candidate zones and rebuild exact zones.
-4. Add native graph/demo outputs and CI-friendly strict mode.
+1. Replace the single-zone planner with deterministic cut planning.
+2. Assign atomic faces to candidate zones and rebuild exact zones.
+3. Add native graph/demo outputs and CI-friendly strict mode.
 
 ---
 

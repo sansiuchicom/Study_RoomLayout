@@ -21,6 +21,7 @@ import shapely.geometry as sg
 from matplotlib import font_manager
 from shapely.ops import unary_union
 
+from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .schema import ShapeInput, ShapePart, part_theta
 from .territory import Territory, resolve_territories
@@ -214,6 +215,64 @@ def save_territory_figure(
     _draw_footprint_outline(ax, shape)
     _finish_axis(ax, shape)
     ax.set_title(title or f"{shape.name} (resolved territories)", fontsize=10)
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_atom_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+) -> Path:
+    """Render atoms with faint territory background and the footprint outline.
+
+    Atoms are filled with their owning part's color. Sliver atoms are marked
+    with a small red dot at their centroid.
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    atoms = atomize(shape, policy)
+    territories = resolve_territories(shape)
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # territory background (faint)
+    for t in territories:
+        color = PART_COLORS[t.part_id % len(PART_COLORS)]
+        for piece in t.pieces:
+            xs, ys = zip(*piece.exterior)
+            ax.fill(
+                list(xs) + [xs[0]], list(ys) + [ys[0]],
+                facecolor=color, edgecolor=color,
+                alpha=0.18, linewidth=0,
+            )
+
+    # atoms
+    for atom in atoms:
+        color = PART_COLORS[atom.part_id % len(PART_COLORS)]
+        xs, ys = zip(*atom.shape.exterior)
+        ax.fill(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            facecolor=color, edgecolor="#555555",
+            alpha=0.55, linewidth=0.35, zorder=5,
+        )
+        if atom.is_feature_sliver:
+            cx, cy = atom.centroid
+            ax.plot(cx, cy, ".", color="#aa0000", markersize=2.5, zorder=10)
+
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+    n_atoms = len(atoms)
+    n_slivers = sum(1 for a in atoms if a.is_feature_sliver)
+    ax.set_title(
+        title or f"{shape.name}: {n_atoms} atoms ({n_slivers} slivers)",
+        fontsize=10,
+    )
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
     return path

@@ -1,0 +1,73 @@
+"""Common phase visualization CLI for the 33 showcase cases.
+
+Only the ``input`` phase is implemented in Phase 1. Future phases (atomizer,
+regionizer, layout) add new renderers here so every phase uses the same case
+indexing and output layout.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from celllayout_tf.cases import case_slug, selected_cases
+from celllayout_tf.viz import save_dimension_examples_figure, save_input_figure
+
+
+PER_CASE_PHASES = ("input",)
+SINGLETON_PHASES = ("dimensions",)
+IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("case_indices", nargs="*", type=int)
+    parser.add_argument("--phase", choices=IMPLEMENTED_PHASES, default="input")
+    parser.add_argument("--out-root", default=str(ROOT / "outputs"))
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv or [])
+    if args.phase in SINGLETON_PHASES:
+        out = _render_singleton(args.phase, args)
+        print(f"saved: {out}")
+        return 0
+
+    failures = []
+    for idx, name, shape in selected_cases(args.case_indices):
+        try:
+            out = _render_case(args.phase, idx, name, shape, args)
+            print(f"saved: {out}")
+        except Exception as exc:
+            failures.append((idx, name, str(exc)))
+            print(f"ERROR {idx}. {name}: {exc}")
+    return 1 if failures else 0
+
+
+def _render_case(phase, idx, name, shape, args):
+    out_dir = Path(args.out_root) / phase
+    out = out_dir / f"{case_slug(idx, name)}.png"
+    if phase == "input":
+        return save_input_figure(
+            shape,
+            out,
+            title=f"{idx}. {name}: input parts",
+        )
+    raise ValueError(f"unsupported phase: {phase}")
+
+
+def _render_singleton(phase, args):
+    out_dir = Path(args.out_root) / phase
+    if phase == "dimensions":
+        return save_dimension_examples_figure(out_dir / "split_interval_examples.png")
+    raise ValueError(f"unsupported singleton phase: {phase}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

@@ -2,16 +2,8 @@
 
 Fresh testfield for the scan-to-BIM room-layout data generator.
 
-The previous topology-first zoning experiment has been archived at:
-
 ```text
-legacy/algorithm_testfield_20260512/
-```
-
-This directory starts over with the original research goal restored:
-
-```text
-footprint
+labeled footprint parts (ShapeInput)
 -> fine atoms
 -> small regions
 -> rooms + corridor/access
@@ -26,8 +18,12 @@ substrate that can generate plausible room layouts for training data.
 The hierarchy is:
 
 ```text
+ShapeInput parts
+  Design-time primitives with raw vertex coordinates.
+  Each part already carries its own orientation by construction.
+
 Atom
-  Fine geometry/control unit.
+  Fine geometry/control unit, generated per part.
   Used for corridor width, access routing, and precise footprint coverage.
 
 Region
@@ -43,6 +39,20 @@ Corridor / Access
 
 `zone` is no longer the central concept. If used, it should only mean a debug or
 intermediate grouping, not a final design target.
+
+## Key Shift from the Previous Iteration
+
+The previous testfield recovered orientation from a unioned polygon via
+recursive LIR + boundary-angle clustering. That produced angle drift (25° read
+as 22°), sliver explosion, and uncovered-region bugs around joints.
+
+The fresh testfield drops detection entirely. Synthetic data is constructed as
+labeled `ShapePart` lists; each part's orientation is trivially the angle of
+any of its edges (mod π/2). No LIR, no theta estimation, no clustering.
+
+This is sound because the testfield only consumes synthetic data — the
+construction step always knows what shapes it just built. The information was
+present and was being thrown away.
 
 ## Dimension Policy
 
@@ -84,44 +94,95 @@ Example:
 2. Prefer assignment over repair.
    Avoid gap/tail cleanup by polygon surgery. Assign atoms/regions instead.
 
-3. LIR is metadata, not boundary.
-   LIR can detect orientation and main direction, but LIR rectangles should not
-   directly decide final atom or room boundaries.
+3. Construction info is ground truth.
+   Parts carry their own orientation by virtue of their vertex coordinates.
+   Downstream code reads theta from a part's edges; it never estimates,
+   clusters, or fits.
 
 4. Vertex alignment matters.
-   Footprint vertices, reflex vertices, hole vertices, and important boundary
-   changes should become atom-line anchors.
+   Part vertices, reflex vertices, and hole vertices should become atom-line
+   anchors.
 
-5. Atom and region have different jobs.
+5. Atoms and regions have different jobs.
    Atoms are fine enough for corridor/access. Regions are coarse enough to make
    room grouping plausible.
 
 6. Visualization is mandatory.
-   Every stage should have a diagnostic drawing before the next stage depends on
-   it.
+   Every phase should have a diagnostic drawing before the next phase depends
+   on it.
 
 ## Planned Modules
 
 ```text
 algorithm_testfield/
 ├── celllayout_tf/
+│   ├── schema.py          # ShapePart, ShapeInput
+│   ├── cases.py           # 33 showcase ShapeInput builders
 │   ├── dimensions.py      # DimensionPolicy and interval splitting
-│   ├── orientation.py     # Recursive LIR/boundary orientation patches
-│   ├── atomize.py         # Vertex-aware modular atom generation
+│   ├── atomize.py         # Per-part vertex-aware atomizer
 │   ├── atom_graph.py      # Atom adjacency graph
 │   ├── regionize.py       # Atom grouping into small regions
 │   ├── layout.py          # Room/corridor layout pipeline
 │   ├── metrics.py         # Dataset and geometry quality metrics
 │   └── viz.py             # Stage-by-stage diagnostics
 ├── demos/
-│   └── layout_demo.py
+│   └── visualize_phase.py
+├── outputs/
 ├── tests/
 └── README.md
 ```
 
+Note: no `orientation.py`. Per-part theta is a one-liner (atan2 of any edge);
+it lives as a small helper in `schema.py` or `atomize.py`, not as its own
+phase or module.
+
 ## Phase Plan
 
-### Phase 1: Dimension Policy
+### Phase 1: Input Schema + Cases
+
+Define the input model and reproduce the 33 showcase footprints as labeled
+part lists.
+
+Schema:
+
+```python
+@dataclass(frozen=True)
+class ShapePart:
+    exterior: tuple[tuple[float, float], ...]
+    holes: tuple[tuple[tuple[float, float], ...], ...] = ()
+
+@dataclass(frozen=True)
+class ShapeInput:
+    name: str
+    parts: tuple[ShapePart, ...]
+```
+
+Hard constraint: parts are NEVER unioned at the schema layer. Each part stores
+the design-time primitive verbatim. The footprint (union of parts) is
+computed on demand by viz/metrics, not stored.
+
+Part patterns across the 33 cases:
+
+```text
+single rect / L / T / + / E / ㄹ          axis-aligned, 1-many rect parts
+ㅁ with hole                                rect part + interior hole
+rotated rect / rotated L / rotated 7      rotated parts only
+main + wing (22, 23, 24)                  axis-aligned + rotated parts
+circle / half circle / ellipse            single high-vertex part
+curved-ㄱ                                  2 rects + 1 disk part
+```
+
+Tests:
+
+```text
+all 33 cases representable
+ShapePart rejects <3 vertices
+ShapeInput rejects empty parts
+case_slug stable
+selected_cases([k]) returns correct entry
+```
+
+### Phase 2: Dimension Policy
 
 Implement clean, dataset-friendly modular dimensions.
 
@@ -143,49 +204,43 @@ Tests:
 
 ```text
 interval sums are exact after snap
-widths are quantum-aligned
+widths are quantum-aligned where possible
 no avoidable tiny slivers
 average width stays near 0.30m
 ```
 
-### Phase 2: Orientation Patches
+### Phase 3: Per-Part Atomizer
 
-Use recursive LIR and boundary-angle logic only to detect local orientation.
+Generate fine atoms inside each part's own local orientation frame, then
+combine across parts with an overlap-ownership rule.
 
-Output:
-
-```python
-OrientationPatch(
-    patch_id,
-    polygon,
-    theta,
-    confidence,
-    depth,
-)
-```
-
-Tests:
+Per-part inputs:
 
 ```text
-rectangle -> one patch
-rotated rectangle -> one rotated patch
-main + wing -> multiple patches
-L-shape -> main patch + leftover patch
+part vertices              (already in correct frame)
+part theta                 (atan2 of first non-degenerate edge, mod π/2)
+DimensionPolicy            (target atom size, module quantum)
 ```
 
-### Phase 3: Vertex-Aware Atomizer
-
-Generate fine atoms from linework, not from LIR rectangles.
-
-Linework sources:
+Linework sources within a part:
 
 ```text
-footprint exterior
-hole boundaries
+part exterior
+part holes
 reflex vertex guide lines
-important vertex local x/y guide lines
-orientation-frame modular grid lines
+modular grid lines in the part's local frame
 ```
+
+Overlap ownership rule (initial):
+
+```text
+Atomize each part independently in its own frame.
+For parts that overlap, earlier parts in the list win.
+Later parts only atomize their non-overlapping remainder.
+```
+
+This makes case 22 (main + rotated wing) deterministic: main owns its full
+rect; the wing's atoms cover only the rotated protrusion.
 
 Output:
 
@@ -195,7 +250,7 @@ Atom(
     polygon,
     area,
     centroid,
-    patch_id,
+    part_id,
     theta,
     is_feature_sliver,
 )
@@ -204,10 +259,10 @@ Atom(
 Tests:
 
 ```text
-atom union == footprint
-no overlaps
-holes are preserved
-rotated footprint atoms follow local theta
+union(atoms) == union(parts) (no gap, no overlap)
+holes preserved
+rotated part atoms follow part theta exactly (no drift, no off-by-degree)
+overlap ownership: later-part atoms never invade earlier-part territory
 vertex anchors appear as atom boundaries
 ```
 
@@ -220,7 +275,7 @@ Edge metadata:
 ```text
 shared_boundary_length
 centroid_distance
-same_patch
+same_part
 theta_diff
 exterior_contact
 hole_contact
@@ -268,9 +323,9 @@ Build the first room-layout result from regions and atom routing.
 Public API:
 
 ```python
-layout_footprint(
-    footprint,
-    target_room_count,
+layout_input(
+    shape: ShapeInput,
+    target_room_count: int,
     entry_point=None,
     corridor_width=1.20,
 )
@@ -283,15 +338,15 @@ room_count matches target when feasible
 rooms are connected region groups
 corridor/access path is atom-based
 all output polygons are valid
-no gap/overlap/outside area
+no gap / overlap / outside area
 ```
 
 ### Phase 7: Visualization + Metrics
 
-Every stage should save debug figures:
+Every phase should save debug figures:
 
 ```text
-orientation patches
+input parts
 atoms
 atom graph
 regions
@@ -313,11 +368,16 @@ graph_connectivity
 
 ## Current Status
 
-Phase 1 is implemented:
+No implementation yet. Start with Phase 1:
 
 ```text
-celllayout_tf/dimensions.py
-tests/test_dimensions.py
+celllayout_tf/schema.py
+celllayout_tf/cases.py
+celllayout_tf/viz.py        (input phase only)
+tests/test_schema.py
+tests/test_cases.py
+tests/test_viz.py
+demos/visualize_phase.py    (--phase input)
 ```
 
 Run:
@@ -325,15 +385,6 @@ Run:
 ```text
 cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
 PYTHONPATH=. pytest -q tests
+PYTHONPATH=. python demos/visualize_phase.py --phase input
+PYTHONPATH=. python demos/visualize_phase.py --phase input 22 24
 ```
-
-Sample interval splits:
-
-```text
-1.00m -> 0.35 + 0.30 + 0.35
-2.05m -> 0.25 + 0.30 x 6
-4.10m -> 0.25 + 0.30 x 12 + 0.25
-1.03m -> 0.35 + 0.33 + 0.35
-```
-
-Next phase: orientation patches.

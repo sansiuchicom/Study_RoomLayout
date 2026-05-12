@@ -15,8 +15,6 @@ from math import ceil, floor
 
 @dataclass(frozen=True)
 class DimensionPolicy:
-    """Dimension rules for scan-to-BIM layout substrate generation."""
-
     geometry_snap: float = 0.01
     module_quantum: float = 0.05
     target_atom_size: float = 0.30
@@ -62,12 +60,10 @@ class DimensionPolicy:
 
 
 def snap_length(value: float, snap: float = 0.01) -> float:
-    """Snap a scalar length to the geometry grid."""
     return round(round(value / snap) * snap, _decimal_places(snap))
 
 
 def is_quantum_aligned(value: float, policy: DimensionPolicy | None = None) -> bool:
-    """Return whether ``value`` lies on the module quantum grid."""
     policy = policy or DimensionPolicy()
     units = _units(value, policy.geometry_snap)
     return units % policy.quantum_units == 0
@@ -76,11 +72,10 @@ def is_quantum_aligned(value: float, policy: DimensionPolicy | None = None) -> b
 def split_interval(length: float, policy: DimensionPolicy | None = None) -> list[float]:
     """Split ``length`` into atom widths following ``policy``.
 
-    The returned widths always sum to ``length`` snapped to
-    ``policy.geometry_snap``. When the interval length is compatible with the
-    module quantum, all widths are quantum-aligned. Otherwise the optimizer
-    keeps the number of non-quantum widths as small as possible while preserving
-    exact snapped length.
+    Widths always sum to ``length`` snapped to ``policy.geometry_snap``. When
+    the interval length is compatible with the module quantum, all widths are
+    quantum-aligned. Otherwise the optimizer keeps the number of non-quantum
+    widths as small as possible while preserving exact snapped length.
     """
     policy = policy or DimensionPolicy()
     total_units = _units(length, policy.geometry_snap)
@@ -99,7 +94,6 @@ def interval_positions(
     widths: list[float],
     policy: DimensionPolicy | None = None,
 ) -> list[float]:
-    """Return snapped cumulative positions for a sequence of widths."""
     policy = policy or DimensionPolicy()
     places = _decimal_places(policy.geometry_snap)
     out = [snap_length(start, policy.geometry_snap)]
@@ -151,13 +145,7 @@ def _best_widths_for_count(
     non_quantum_penalty: float,
 ):
     result = _best_widths_cached(
-        total,
-        count,
-        min_width,
-        max_width,
-        target,
-        quantum,
-        non_quantum_penalty,
+        total, count, min_width, max_width, target, quantum, non_quantum_penalty,
     )
     if result is None:
         return None
@@ -186,13 +174,8 @@ def _best_widths_cached(
     hi = min(max_width, total - remaining_count * min_width)
     for width in range(lo, hi + 1):
         rest = _best_widths_cached(
-            total - width,
-            remaining_count,
-            min_width,
-            max_width,
-            target,
-            quantum,
-            non_quantum_penalty,
+            total - width, remaining_count,
+            min_width, max_width, target, quantum, non_quantum_penalty,
         )
         if rest is None:
             continue
@@ -205,10 +188,7 @@ def _best_widths_cached(
 
 
 def _width_score(
-    width: int,
-    target: int,
-    quantum: int,
-    non_quantum_penalty: float,
+    width: int, target: int, quantum: int, non_quantum_penalty: float,
 ) -> float:
     score = float((width - target) ** 2)
     if width % quantum != 0:

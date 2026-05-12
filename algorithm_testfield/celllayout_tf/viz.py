@@ -23,6 +23,7 @@ from shapely.ops import unary_union
 
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .schema import ShapeInput, ShapePart, part_theta
+from .territory import Territory, resolve_territories
 
 
 PART_COLORS = [
@@ -141,6 +142,81 @@ def _finish_axis(ax, shape: ShapeInput):
     ax.set_aspect("equal")
     ax.grid(True, color="#dddddd", linewidth=0.5, alpha=0.8)
     ax.tick_params(labelsize=7)
+
+
+def save_territory_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    title: str | None = None,
+) -> Path:
+    """Render the input parts (faint, dashed) and their resolved territories on top.
+
+    The faint dashed outlines show the original design parts including overlap;
+    the filled regions show each part's final territory after overlap resolution.
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    territories = resolve_territories(shape)
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint original parts (design outline, before resolution)
+    for idx, part in enumerate(shape.parts):
+        color = PART_COLORS[idx % len(PART_COLORS)]
+        xs, ys = zip(*part.exterior)
+        ax.fill(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            facecolor=color, edgecolor=color, alpha=0.15, linewidth=0,
+        )
+        ax.plot(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            color="#888888", linewidth=0.7, linestyle="--", zorder=2,
+        )
+
+    # 2. resolved territories on top — one label per piece
+    for t in territories:
+        color = PART_COLORS[t.part_id % len(PART_COLORS)]
+        multi_piece = len(t.pieces) > 1
+        for piece_idx, piece in enumerate(t.pieces):
+            xs, ys = zip(*piece.exterior)
+            ax.fill(
+                list(xs) + [xs[0]], list(ys) + [ys[0]],
+                facecolor=color, edgecolor="#333333",
+                alpha=0.75, linewidth=1.1, zorder=5,
+            )
+            for hole in piece.holes:
+                hx, hy = zip(*hole)
+                ax.fill(
+                    list(hx) + [hx[0]], list(hy) + [hy[0]],
+                    facecolor="#444444", edgecolor="#111111",
+                    alpha=1.0, linewidth=0.8, zorder=6,
+                )
+
+            poly = sg.Polygon(piece.exterior, [list(h) for h in piece.holes])
+            if poly.is_empty:
+                continue
+            rp = poly.representative_point()
+            label_id = f"P{t.part_id}.{piece_idx}" if multi_piece else f"P{t.part_id}"
+            ax.text(
+                rp.x, rp.y,
+                f"{label_id}\n{degrees(t.theta):.1f}°\n[{t.kind}]",
+                ha="center", va="center", fontsize=7,
+                bbox={
+                    "boxstyle": "round,pad=0.2", "facecolor": "white",
+                    "edgecolor": "#777777", "linewidth": 0.4, "alpha": 0.88,
+                },
+                zorder=10,
+            )
+
+    # 3. footprint outline for reference
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+    ax.set_title(title or f"{shape.name} (resolved territories)", fontsize=10)
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
 
 
 def save_dimension_examples_figure(

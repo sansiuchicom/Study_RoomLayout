@@ -9,7 +9,12 @@ from .dimensions import (
     split_interval,
 )
 from .schema import ShapeInput, ShapePart, part_theta
-from .viz import save_dimension_examples_figure, save_input_figure
+from .territory import Territory, part_kind, resolve_territories
+from .viz import (
+    save_dimension_examples_figure,
+    save_input_figure,
+    save_territory_figure,
+)
 
 __all__ = [
     "ShapeInput",
@@ -25,4 +30,8 @@ __all__ = [
     "is_quantum_aligned",
     "snap_length",
     "save_dimension_examples_figure",
+    "Territory",
+    "part_kind",
+    "resolve_territories",
+    "save_territory_figure",
 ]

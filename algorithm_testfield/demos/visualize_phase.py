@@ -16,10 +16,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from celllayout_tf.cases import case_slug, selected_cases
-from celllayout_tf.viz import save_dimension_examples_figure, save_input_figure
+from celllayout_tf.viz import (
+    save_dimension_examples_figure,
+    save_input_figure,
+    save_territory_figure,
+)
 
 
-PER_CASE_PHASES = ("input",)
+PER_CASE_PHASES = ("input", "territory")
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -58,6 +62,12 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: input parts",
+        )
+    if phase == "territory":
+        return save_territory_figure(
+            shape,
+            out,
+            title=f"{idx}. {name}: resolved territories",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

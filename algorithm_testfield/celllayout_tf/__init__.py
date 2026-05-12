@@ -1,5 +1,6 @@
 """RoomLayoutCell fresh algorithm testfield."""
 
+from .atom_graph import AtomEdge, AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .cases import case_slug, make_cases, selected_cases
 from .dimensions import (
@@ -13,6 +14,7 @@ from .schema import ShapeInput, ShapePart, part_theta
 from .territory import Territory, part_kind, resolve_territories
 from .viz import (
     save_atom_figure,
+    save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
     save_territory_figure,
@@ -39,4 +41,8 @@ __all__ = [
     "Atom",
     "atomize",
     "save_atom_figure",
+    "AtomEdge",
+    "AtomGraph",
+    "build_atom_graph",
+    "save_atom_graph_figure",
 ]

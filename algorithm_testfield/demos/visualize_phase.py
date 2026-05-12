@@ -18,13 +18,14 @@ if str(ROOT) not in sys.path:
 from celllayout_tf.cases import case_slug, selected_cases
 from celllayout_tf.viz import (
     save_atom_figure,
+    save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
     save_territory_figure,
 )
 
 
-PER_CASE_PHASES = ("input", "territory", "atom")
+PER_CASE_PHASES = ("input", "territory", "atom", "graph")
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -75,6 +76,12 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: atoms",
+        )
+    if phase == "graph":
+        return save_atom_graph_figure(
+            shape,
+            out,
+            title=f"{idx}. {name}: atom graph",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

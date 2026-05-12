@@ -21,6 +21,9 @@ import shapely.geometry as sg
 from matplotlib import font_manager
 from shapely.ops import unary_union
 
+from matplotlib.collections import LineCollection
+
+from .atom_graph import AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .schema import ShapeInput, ShapePart, part_theta
@@ -271,6 +274,97 @@ def save_atom_figure(
     n_slivers = sum(1 for a in atoms if a.is_feature_sliver)
     ax.set_title(
         title or f"{shape.name}: {n_atoms} atoms ({n_slivers} slivers)",
+        fontsize=10,
+    )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_atom_graph_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+) -> Path:
+    """Render the atom adjacency graph.
+
+    Each edge is drawn as a line segment from atom A's centroid to atom B's
+    centroid, so the graph is visible as a network on top of the (faint) atoms.
+
+    Edge colors:
+        gray   : same-part interior edge
+        blue   : same-part edge whose shared boundary touches the footprint
+                 exterior (outer-wall adjacency)
+        orange : same-part edge whose shared boundary touches a hole
+        red    : cross-part edge (drawn last so it sits on top)
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    graph = build_atom_graph(shape, policy=policy)
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # atoms as faint background
+    for atom in graph.atoms:
+        color = PART_COLORS[atom.part_id % len(PART_COLORS)]
+        xs, ys = zip(*atom.shape.exterior)
+        ax.fill(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            facecolor=color, edgecolor=color,
+            alpha=0.22, linewidth=0.3, zorder=1,
+        )
+
+    # centroid-to-centroid edge segments grouped by category
+    same_segments: list[tuple] = []
+    cross_segments: list[tuple] = []
+    exterior_segments: list[tuple] = []
+    hole_segments: list[tuple] = []
+    for e in graph.edges:
+        ca = graph.atoms[e.atom_a].centroid
+        cb = graph.atoms[e.atom_b].centroid
+        seg = (ca, cb)
+        if not e.same_part:
+            cross_segments.append(seg)
+        elif e.hole_contact:
+            hole_segments.append(seg)
+        elif e.exterior_contact:
+            exterior_segments.append(seg)
+        else:
+            same_segments.append(seg)
+
+    if same_segments:
+        ax.add_collection(LineCollection(
+            same_segments, colors="#555555", linewidths=0.45, alpha=0.6, zorder=4,
+        ))
+    if exterior_segments:
+        ax.add_collection(LineCollection(
+            exterior_segments, colors="#2266cc", linewidths=0.65, alpha=0.75, zorder=5,
+        ))
+    if hole_segments:
+        ax.add_collection(LineCollection(
+            hole_segments, colors="#dd8822", linewidths=0.65, alpha=0.85, zorder=5,
+        ))
+    if cross_segments:
+        ax.add_collection(LineCollection(
+            cross_segments, colors="#cc2222", linewidths=1.0, alpha=0.9, zorder=6,
+        ))
+
+    # centroid dots
+    cx_all = [a.centroid[0] for a in graph.atoms]
+    cy_all = [a.centroid[1] for a in graph.atoms]
+    ax.plot(cx_all, cy_all, ".", color="#222222", markersize=0.9, zorder=10)
+
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+    n = len(graph.atoms)
+    m = len(graph.edges)
+    cross = sum(1 for e in graph.edges if not e.same_part)
+    ax.set_title(
+        title or f"{shape.name}: {n} atoms, {m} edges ({cross} cross-part)",
         fontsize=10,
     )
     fig.savefig(path, dpi=130, bbox_inches="tight")

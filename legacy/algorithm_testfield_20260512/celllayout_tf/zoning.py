@@ -25,11 +25,12 @@ def zone_footprint(
     footprint,
     *,
     k: int | None = None,
+    area_per_zone: float = 10.0,
     precision: float = 0.001,
     tolerance: float = 1e-6,
 ) -> ZoningResult:
-    """Run the Phase 0 atomic-zoning scaffold."""
-    planning = plan_initial_zones(footprint, k=k)
+    """Run the atomic zoning testfield pipeline."""
+    planning = plan_initial_zones(footprint, k=k, area_per_zone=area_per_zone)
     subdivision = build_atomic_faces(
         footprint,
         [cut.line for cut in planning.cuts],

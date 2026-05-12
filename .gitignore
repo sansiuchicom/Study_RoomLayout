@@ -9,3 +9,6 @@ __pycache__/
 # Environments
 .venv/
 venv/
+
+# Generated testfield figures
+algorithm_testfield/outputs/testfield_zoning/*.png

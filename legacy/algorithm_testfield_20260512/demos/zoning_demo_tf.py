@@ -11,16 +11,21 @@ if str(ALGORITHM_ROOT) not in sys.path:
     sys.path.insert(0, str(ALGORITHM_ROOT))
 
 from celllayout_tf import cases
+from celllayout_tf.viz import save_zoning_figure
 from celllayout_tf.zoning import zone_footprint
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("case_indices", nargs="*", type=int)
+    parser.add_argument("--k", type=int)
+    parser.add_argument("--area-per-zone", type=float, default=10.0)
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--precision", type=float, default=0.001)
     parser.add_argument("--tolerance", type=float, default=1e-6)
     parser.add_argument("--max-failure-details", type=int, default=3)
+    parser.add_argument("--save-figures", action="store_true")
+    parser.add_argument("--out-dir", default=str(ALGORITHM_ROOT / "outputs" / "testfield_zoning"))
     return parser.parse_args(argv)
 
 
@@ -67,20 +72,23 @@ def main(argv=None):
     failures = []
     print(
         f"{'#':>3} {'Case':<26} | "
-        "zones parts faces gap_area gap_n overlap pair_n outside invalid empty multi status"
+        "req zones cuts faces gap_area gap_n overlap pair_n outside invalid empty multi status"
     )
     print("=" * 116)
     for idx, (name, footprint) in selected:
         try:
             result = zone_footprint(
                 footprint,
+                k=args.k,
+                area_per_zone=args.area_per_zone,
                 precision=args.precision,
                 tolerance=args.tolerance,
             )
             report = result.validation
             print(
                 f"{idx:>3} {name:<26} | "
-                f"{report.zone_count:>5} {report.part_count:>5} "
+                f"{result.planning.requested_k:>3} {report.zone_count:>5} "
+                f"{len(result.planning.cuts):>4} "
                 f"{len(result.subdivision.faces):>5} "
                 f"{report.gap_area:.9f} {report.gap_part_count:>5} "
                 f"{report.overlap_area:.9f} {len(report.overlap_details):>6} "
@@ -88,6 +96,10 @@ def main(argv=None):
                 f"{report.empty_count:>5} {report.multipart_count:>5} "
                 f"{report.short_status()}"
             )
+            if args.save_figures:
+                out_path = Path(args.out_dir) / f"case_{idx:02d}.png"
+                save_zoning_figure(result, footprint, out_path, title=f"{idx}. {name}")
+                print(f"      figure: {out_path}")
             if not report.ok:
                 failures.append(
                     (

@@ -4,13 +4,14 @@ from celllayout_tf.validation import validate_partition
 from celllayout_tf.zoning import zone_footprint
 
 
-def test_phase0_zone_footprint_returns_valid_single_face_partition():
+def test_zone_footprint_auto_k_returns_valid_partition():
     footprint = box(0, 0, 10, 8)
 
     result = zone_footprint(footprint)
 
-    assert len(result.zones) == 1
-    assert len(result.subdivision.faces) == 1
+    assert result.planning.requested_k == 8
+    assert len(result.zones) == 8
+    assert len(result.subdivision.faces) == 8
     assert result.validation.ok
 
 

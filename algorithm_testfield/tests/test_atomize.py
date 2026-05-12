@@ -114,6 +114,29 @@ def test_each_atom_has_unique_id():
     assert len(ids) == len(set(ids))
 
 
+def test_sliver_absorption_reduces_small_atom_count():
+    case = selected_cases([22])[0][2]
+    threshold = DimensionPolicy().min_atom_size ** 2 * 0.5
+
+    raw = atomize(case, absorb_slivers=False)
+    absorbed = atomize(case, absorb_slivers=True)
+
+    raw_slivers = sum(1 for a in raw if _atom_area(a) < threshold)
+    absorbed_slivers = sum(1 for a in absorbed if _atom_area(a) < threshold)
+    assert raw_slivers > 0
+    assert absorbed_slivers < raw_slivers
+    assert len(absorbed) < len(raw)
+
+
+def test_sliver_absorption_preserves_total_area():
+    case = selected_cases([22])[0][2]
+    raw = atomize(case, absorb_slivers=False)
+    absorbed = atomize(case, absorb_slivers=True)
+    area_raw = sum(_atom_area(a) for a in raw)
+    area_absorbed = sum(_atom_area(a) for a in absorbed)
+    assert math.isclose(area_raw, area_absorbed, rel_tol=1e-6)
+
+
 def test_finer_policy_produces_more_atoms():
     case = selected_cases([1])[0][2]
     coarse = atomize(case, DimensionPolicy(target_atom_size=0.40))

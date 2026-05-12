@@ -20,6 +20,8 @@ from math import degrees
 import shapely.affinity as sa
 import shapely.geometry as sg
 from shapely.geometry.polygon import orient as _orient
+from shapely.ops import unary_union
+from shapely.strtree import STRtree
 
 from .dimensions import DimensionPolicy, snap_length, split_interval
 from .schema import ShapeInput, ShapePart
@@ -48,6 +50,8 @@ class Atom:
 def atomize(
     shape: ShapeInput,
     policy: DimensionPolicy | None = None,
+    *,
+    absorb_slivers: bool = True,
 ) -> tuple[Atom, ...]:
     """Atomize all territories with anchor-sharing within theta groups.
 
@@ -117,7 +121,101 @@ def atomize(
                 )
             )
 
+    if absorb_slivers:
+        atoms = _absorb_slivers(atoms, policy)
     return tuple(atoms)
+
+
+def _absorb_slivers(atoms: list[Atom], policy: DimensionPolicy) -> list[Atom]:
+    """Merge sliver atoms into their largest-shared-boundary neighbor.
+
+    Smaller slivers first. Each sliver is unioned with the neighbor it shares
+    the longest boundary with; the neighbor keeps its metadata (atom_id,
+    part_id, piece_id, theta). Orphan slivers with no neighbor are left as-is.
+    """
+    threshold = policy.min_atom_size * policy.min_atom_size * 0.5
+    atom_map: dict[int, Atom] = {a.atom_id: a for a in atoms}
+    poly_map: dict[int, sg.Polygon] = {
+        a.atom_id: _to_shapely(a.shape) for a in atoms
+    }
+
+    max_passes = 8
+    for _ in range(max_passes):
+        slivers = sorted(
+            (aid for aid in atom_map if poly_map[aid].area < threshold),
+            key=lambda aid: poly_map[aid].area,
+        )
+        if not slivers:
+            break
+
+        ids_list = list(atom_map.keys())
+        polys_list = [poly_map[aid] for aid in ids_list]
+        tree = STRtree(polys_list)
+
+        absorbed: set[int] = set()
+        merged_any = False
+
+        for sliver_id in slivers:
+            if sliver_id in absorbed:
+                continue
+            sliver_poly = poly_map[sliver_id]
+
+            best_target = None
+            best_length = 0.0
+            for j in tree.query(sliver_poly):
+                j = int(j)
+                other_id = ids_list[j]
+                if other_id == sliver_id or other_id in absorbed:
+                    continue
+                if other_id not in atom_map:
+                    continue
+                shared = sliver_poly.intersection(poly_map[other_id])
+                length = _line_length(shared)
+                if length > best_length:
+                    best_length = length
+                    best_target = other_id
+
+            if best_target is None:
+                continue
+
+            merged = unary_union([sliver_poly, poly_map[best_target]])
+            if not isinstance(merged, sg.Polygon) or merged.is_empty:
+                continue
+
+            poly_map[best_target] = merged
+            target = atom_map[best_target]
+            atom_map[best_target] = Atom(
+                atom_id=target.atom_id,
+                shape=_from_shapely(merged),
+                part_id=target.part_id,
+                piece_id=target.piece_id,
+                theta=target.theta,
+                is_feature_sliver=merged.area < threshold,
+            )
+            del atom_map[sliver_id]
+            del poly_map[sliver_id]
+            absorbed.add(sliver_id)
+            merged_any = True
+
+        if not merged_any:
+            break
+
+    return list(atom_map.values())
+
+
+def _line_length(geom) -> float:
+    if geom.is_empty:
+        return 0.0
+    if geom.geom_type == "LineString":
+        return float(geom.length)
+    if geom.geom_type == "MultiLineString":
+        return sum(float(g.length) for g in geom.geoms)
+    if geom.geom_type == "GeometryCollection":
+        total = 0.0
+        for g in geom.geoms:
+            total += _line_length(g)
+        return total
+    return 0.0
 
 
 def _atomize_with_shared_grid(

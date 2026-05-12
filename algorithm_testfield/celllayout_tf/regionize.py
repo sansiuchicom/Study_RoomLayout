@@ -66,6 +66,31 @@ class _PartitionContext:
     atom_ys: tuple[float, ...]
 
 
+def _collect_group_grid(
+    atoms,
+) -> dict[float, tuple[tuple[float, ...], tuple[float, ...]]]:
+    """Return ``{theta_key: (xs, ys)}`` of atom-edge coords per theta group.
+
+    Coords are in each group's local frame (atom polygons rotated by
+    ``-theta``). The pool is the union of every atom polygon's exterior
+    vertex coord, so it captures both piece-vertex anchors (structural) and
+    the ``split_interval``-generated subdivisions baked into atom edges.
+    Slab cut candidates are drawn from this pool.
+    """
+    xs_by_theta: dict[float, set[float]] = defaultdict(set)
+    ys_by_theta: dict[float, set[float]] = defaultdict(set)
+    for a in atoms:
+        key = round(a.theta, 9)
+        poly = _rotate_geom(_to_shapely(a.shape), -a.theta)
+        for x, y in list(poly.exterior.coords)[:-1]:
+            xs_by_theta[key].add(round(x, 9))
+            ys_by_theta[key].add(round(y, 9))
+    return {
+        key: (tuple(sorted(xs_by_theta[key])), tuple(sorted(ys_by_theta[key])))
+        for key in xs_by_theta
+    }
+
+
 def regionize(
     shape: ShapeInput,
     atoms: tuple[Atom, ...] | None = None,

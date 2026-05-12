@@ -25,13 +25,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from math import cos, degrees, sin
+from math import degrees
 
-import numpy as np
 import shapely.affinity as sa
 import shapely.geometry as sg
 from shapely.geometry.polygon import orient as _orient
-from shapely.ops import split, unary_union
+from shapely.ops import unary_union
 
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy
@@ -41,10 +40,8 @@ from .territory import KIND_CURVED, resolve_territories
 
 # Reference parameters --------------------------------------------------------
 MIN_AREA = 3.0          # m² minimum final region area
-MARGIN = 0.5            # m vertex too close to bbox edge is skipped
-MIN_CUT_LEN = 1.0       # m oblique reflex-pair line minimum internal length
-MAX_ASPECT = 4.0        # final region MRR aspect cap
-BAL_MIN = 0.15          # T1/T2 balance threshold (small piece ≥ 14% of large)
+MAX_ASPECT = 4.0        # final region local-bbox aspect cap
+BAL_MIN = 0.15          # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6        # balance tie-break precision (float drift tolerance)
 
 
@@ -57,13 +54,6 @@ class Region:
     piece_id: int
     theta: float
     cut_history: tuple[tuple[str, float], ...]
-
-
-@dataclass(frozen=True)
-class _PartitionContext:
-    structural: dict
-    atom_xs: tuple[float, ...]
-    atom_ys: tuple[float, ...]
 
 
 def _collect_group_grid(
@@ -298,209 +288,6 @@ def _allocate_k_areas(areas, k_total):
     return out
 
 
-def _vertex_coords_raw(poly):
-    coords = list(poly.exterior.coords)[:-1]
-    for h in poly.interiors:
-        coords.extend(list(h.coords)[:-1])
-    return coords
-
-
-def _reflex_vertices(poly):
-    if not poly.exterior.is_ccw:
-        poly = sg.Polygon(
-            list(poly.exterior.coords)[::-1],
-            [list(h.coords)[::-1] for h in poly.interiors],
-        )
-    out = []
-
-    def scan(coords):
-        n = len(coords)
-        for i in range(n):
-            a, b, c = (np.asarray(coords[(i + j - 1) % n]) for j in range(3))
-            v1, v2 = b - a, c - b
-            if v1[0] * v2[1] - v1[1] * v2[0] < -1e-6:
-                out.append(tuple(b))
-
-    scan(list(poly.exterior.coords)[:-1])
-    for h in poly.interiors:
-        c = list(h.coords)[:-1]
-        scan(c[::-1] if h.is_ccw else c)
-    return out
-
-
-def _structural_coords(poly):
-    rfx = _reflex_vertices(poly)
-    return {
-        "xs": {round(x, 6) for x, _ in rfx},
-        "ys": {round(y, 6) for _, y in rfx},
-    }
-
-
-def _vertex_aligned_lines(poly, structural=None):
-    minx, miny, maxx, maxy = poly.bounds
-    coords = _vertex_coords_raw(poly)
-    if structural:
-        coords += [(x, miny) for x in structural["xs"]]
-        coords += [(minx, y) for y in structural["ys"]]
-    cuts, sx, sy = [], set(), set()
-    for x, y in coords:
-        kx, ky = round(x, 2), round(y, 2)
-        if minx + MARGIN < x < maxx - MARGIN and kx not in sx:
-            sx.add(kx)
-            cuts.append(sg.LineString([(x, miny - 1), (x, maxy + 1)]))
-        if miny + MARGIN < y < maxy - MARGIN and ky not in sy:
-            sy.add(ky)
-            cuts.append(sg.LineString([(minx - 1, y), (maxx + 1, y)]))
-    return cuts
-
-
-def _cross_cut_pairs(poly):
-    minx, miny, maxx, maxy = poly.bounds
-    pairs, seen = [], set()
-    for x, y in _vertex_coords_raw(poly):
-        k = (round(x, 2), round(y, 2))
-        if (
-            k in seen
-            or not (minx + MARGIN < x < maxx - MARGIN)
-            or not (miny + MARGIN < y < maxy - MARGIN)
-        ):
-            continue
-        seen.add(k)
-        pairs.append(
-            [
-                sg.LineString([(x, miny - 1), (x, maxy + 1)]),
-                sg.LineString([(minx - 1, y), (maxx + 1, y)]),
-            ]
-        )
-    return pairs
-
-
-def _reflex_pair_lines(poly):
-    rfx = _reflex_vertices(poly)
-    out = []
-    for i in range(len(rfx)):
-        for j in range(i + 1, len(rfx)):
-            line = sg.LineString([rfx[i], rfx[j]])
-            inter = line.intersection(poly)
-            if not (hasattr(inter, "length") and inter.length >= MIN_CUT_LEN):
-                continue
-            (x1, y1), (x2, y2) = list(line.coords)[0], list(line.coords)[-1]
-            if abs(x1 - x2) < 1e-3 or abs(y1 - y2) < 1e-3:
-                continue
-            out.append([line])
-    return out
-
-
-def _axis_mid_lines_atom_aligned(poly, ctx):
-    """T3 fallback at atom-aligned positions inside [0.3, 0.7] bbox fraction."""
-    minx, miny, maxx, maxy = poly.bounds
-    W = maxx - minx
-    H = maxy - miny
-    if W <= 0 or H <= 0:
-        return []
-    x_lo, x_hi = minx + 0.3 * W, minx + 0.7 * W
-    y_lo, y_hi = miny + 0.3 * H, miny + 0.7 * H
-
-    cuts = []
-    for x in ctx.atom_xs:
-        if x_lo <= x <= x_hi:
-            cuts.append([sg.LineString([(x, miny - 1), (x, maxy + 1)])])
-    for y in ctx.atom_ys:
-        if y_lo <= y <= y_hi:
-            cuts.append([sg.LineString([(minx - 1, y), (maxx + 1, y)])])
-    return cuts
-
-
-# Split / validity ------------------------------------------------------------
-
-
-def _split_pieces(poly, lines):
-    pieces = [poly]
-    for line in lines:
-        nxt = []
-        for p in pieces:
-            try:
-                r = split(p, line)
-                parts = list(r.geoms) if hasattr(r, "geoms") else [r]
-                nxt.extend(
-                    q for q in parts if isinstance(q, sg.Polygon) and q.area > 0.01
-                )
-            except Exception:
-                nxt.append(p)
-        pieces = nxt or pieces
-    if len(pieces) < 2:
-        return None
-    return sorted(pieces, key=lambda p: -p.area)
-
-
-def _piece_aspect(p):
-    if p.is_empty or p.area < 1e-6:
-        return 99.0
-    try:
-        c = list(p.minimum_rotated_rectangle.exterior.coords)
-        e1 = float(np.hypot(c[1][0] - c[0][0], c[1][1] - c[0][1]))
-        e2 = float(np.hypot(c[2][0] - c[1][0], c[2][1] - c[1][1]))
-        return max(e1, e2) / max(min(e1, e2), 1e-6)
-    except Exception:
-        return 99.0
-
-
-def _balance(pieces):
-    a = [p.area for p in pieces]
-    return min(a) / max(a)
-
-
-def _allocate_k(pieces, k_total):
-    total = sum(p.area for p in pieces)
-    out, acc = [], 0
-    for i, p in enumerate(pieces):
-        if i == len(pieces) - 1:
-            kk = max(1, k_total - acc)
-        else:
-            kk = max(1, round(k_total * p.area / total))
-            acc += kk
-        out.append(kk)
-    return out
-
-
-def _aspect_ok(pieces, k_total):
-    if k_total is None:
-        return all(_piece_aspect(p) <= MAX_ASPECT for p in pieces)
-    for p, kp in zip(pieces, _allocate_k(pieces, k_total)):
-        if (kp <= 1 or p.area < MIN_AREA * 2) and _piece_aspect(p) > MAX_ASPECT:
-            return False
-    return True
-
-
-def _best_cut(candidates, poly, bal_min, k_total, prefer_short=False):
-    valid = []
-    for label, lines in candidates:
-        pieces = _split_pieces(poly, lines)
-        if pieces is None or min(p.area for p in pieces) < MIN_AREA:
-            continue
-        b = _balance(pieces)
-        if b < bal_min or not _aspect_ok(pieces, k_total):
-            continue
-        valid.append((label, lines, pieces, b))
-    if not valid:
-        return None
-    if prefer_short:
-        valid.sort(
-            key=lambda v: (
-                -round(v[3], TIE_DECIMALS),
-                sum(line.length for line in v[1]),
-            )
-        )
-    else:
-        valid.sort(
-            key=lambda v: (
-                -round(v[3], TIE_DECIMALS),
-                max(_piece_aspect(p) for p in v[2]),
-            )
-        )
-    return valid[0]
-
-
 # Geometry helpers ------------------------------------------------------------
 
 
@@ -512,24 +299,6 @@ def _rotate_geom(geom, theta_rad):
     if abs(theta_rad) < 1e-12:
         return geom
     return sa.rotate(geom, degrees(theta_rad), origin=(0, 0))
-
-
-def _rotate_point(pt, theta_rad):
-    if abs(theta_rad) < 1e-12:
-        return pt
-    c, s = cos(theta_rad), sin(theta_rad)
-    x, y = pt
-    return (x * c - y * s, x * s + y * c)
-
-
-def _collect_atom_edge_positions(local_polys, axis="x"):
-    positions: set[float] = set()
-    for poly in local_polys:
-        if poly.is_empty:
-            continue
-        for x, y in list(poly.exterior.coords)[:-1]:
-            positions.add(round(x if axis == "x" else y, 6))
-    return tuple(sorted(positions))
 
 
 def _union_atoms_to_shape_part(atoms) -> ShapePart | None:

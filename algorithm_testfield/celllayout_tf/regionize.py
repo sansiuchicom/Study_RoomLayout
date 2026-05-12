@@ -91,6 +91,33 @@ def _collect_group_grid(
     }
 
 
+def _lattice_cuts(
+    atoms_with_local,
+    xs_pool: tuple[float, ...],
+    ys_pool: tuple[float, ...],
+):
+    """Yield slab cut candidates over the theta-group grid pool.
+
+    Each ``aw`` is ``(atom, local_centroid)``. For every coord in the pool
+    that splits the centroids into two non-empty groups, a candidate
+    ``("axis_x"|"axis_y", coord, left_atoms, right_atoms)`` is emitted.
+    Centroid-based assignment is unambiguous because atom polygons align
+    to grid edges, so a pool coord cannot fall through any atom's centroid.
+    """
+    cuts = []
+    for x in xs_pool:
+        left = [aw for aw in atoms_with_local if aw[1][0] < x]
+        right = [aw for aw in atoms_with_local if aw[1][0] > x]
+        if left and right:
+            cuts.append(("axis_x", float(x), left, right))
+    for y in ys_pool:
+        below = [aw for aw in atoms_with_local if aw[1][1] < y]
+        above = [aw for aw in atoms_with_local if aw[1][1] > y]
+        if below and above:
+            cuts.append(("axis_y", float(y), below, above))
+    return cuts
+
+
 def regionize(
     shape: ShapeInput,
     atoms: tuple[Atom, ...] | None = None,

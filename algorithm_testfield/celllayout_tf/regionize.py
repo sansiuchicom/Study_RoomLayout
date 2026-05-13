@@ -226,30 +226,44 @@ def regionize(
     for a in atoms:
         atoms_by_pp[(a.part_id, a.piece_id)].append(a)
 
-    group_grid = _collect_group_grid(atoms)
-    theta_states: dict[float, _PropagationState] = {}
+    atom_grid = _collect_group_grid(atoms)
+    structural_grid = _collect_structural_coords(territories)
 
-    regions: list[Region] = []
-    next_id = 0
-
+    # Pass A: collect structural cells per theta group.
+    theta_cells: dict[float, list] = defaultdict(list)
     for terr in territories:
         eff_theta = 0.0 if terr.kind == KIND_CURVED else terr.theta
         theta_key = round(eff_theta, 9)
-        xs_pool, ys_pool = group_grid.get(theta_key, ((), ()))
-        state = theta_states.setdefault(
-            theta_key, _PropagationState(seen_xs=set(), seen_ys=set()),
-        )
+        struct_xs, struct_ys = structural_grid.get(theta_key, ((), ()))
         for piece_idx, _piece in enumerate(terr.pieces):
             piece_atoms = atoms_by_pp.get((terr.part_id, piece_idx), [])
             if not piece_atoms:
                 continue
-
             atoms_with_local = _build_atoms_with_local(piece_atoms, eff_theta)
-            piece_area = sum(aw[3] for aw in atoms_with_local)
-            k = max(1, round(piece_area / target_area))
-            groups = _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state)
+            pb = _piece_local_bbox(atoms_with_local)
+            interior_xs = _interior_coords(struct_xs, pb[0], pb[2])
+            interior_ys = _interior_coords(struct_ys, pb[1], pb[3])
+            cells = _structural_partition(atoms_with_local, interior_xs, interior_ys)
+            for cell_atoms, cell_history in cells:
+                cell_area = sum(aw[3] for aw in cell_atoms)
+                theta_cells[theta_key].append(
+                    (cell_area, cell_atoms, cell_history,
+                     terr.part_id, piece_idx, eff_theta),
+                )
 
-            for atom_list, cut_history in groups:
+    # Pass B: subdivide each cell, area-desc within theta group so the
+    # largest cells anchor the seen-coord state that smaller cells reuse.
+    regions: list[Region] = []
+    next_id = 0
+    for theta_key, cells in theta_cells.items():
+        xs_pool, ys_pool = atom_grid.get(theta_key, ((), ()))
+        state = _PropagationState(seen_xs=set(), seen_ys=set())
+        cells.sort(key=lambda c: -c[0])
+        for _area, cell_atoms, cell_history, part_id, piece_idx, eff_theta in cells:
+            k = max(1, round(_area / target_area))
+            groups = _recurse_partition(cell_atoms, k, xs_pool, ys_pool, state)
+
+            for atom_list, sub_history in groups:
                 actual_atoms = [aw[0] for aw in atom_list]
                 if not actual_atoms:
                     continue
@@ -261,15 +275,28 @@ def regionize(
                         region_id=next_id,
                         shape=shape_part,
                         atom_ids=tuple(a.atom_id for a in actual_atoms),
-                        part_id=terr.part_id,
+                        part_id=part_id,
                         piece_id=piece_idx,
                         theta=eff_theta,
-                        cut_history=tuple(cut_history),
+                        cut_history=tuple(cell_history) + tuple(sub_history),
                     )
                 )
                 next_id += 1
 
     return tuple(regions)
+
+
+def _piece_local_bbox(atoms_with_local):
+    return (
+        min(aw[2][0] for aw in atoms_with_local),
+        min(aw[2][1] for aw in atoms_with_local),
+        max(aw[2][2] for aw in atoms_with_local),
+        max(aw[2][3] for aw in atoms_with_local),
+    )
+
+
+def _interior_coords(coords, lo: float, hi: float, eps: float = 1e-6):
+    return tuple(c for c in coords if lo + eps < c < hi - eps)
 
 
 # Atom local-frame cache ------------------------------------------------------

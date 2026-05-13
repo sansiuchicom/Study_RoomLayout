@@ -81,6 +81,38 @@ def _collect_group_grid(
     }
 
 
+def _collect_structural_coords(
+    territories,
+) -> dict[float, tuple[tuple[float, ...], tuple[float, ...]]]:
+    """Return ``{theta_key: (xs, ys)}`` of territory-piece vertex coords.
+
+    Coords are in each non-curved theta group's local frame. Drives Pass A's
+    structural pre-cut: cutting at these coords coincides with reflex
+    vertices, hole reflexes, and cross-part edges that fall inside another
+    piece. Curved territories (many circumference vertices, no meaningful
+    structural axis) are skipped.
+    """
+    xs_by_theta: dict[float, set[float]] = defaultdict(set)
+    ys_by_theta: dict[float, set[float]] = defaultdict(set)
+    for terr in territories:
+        if terr.kind == KIND_CURVED:
+            continue
+        eff_theta = terr.theta
+        key = round(eff_theta, 9)
+        for piece in terr.pieces:
+            poly = _rotate_geom(_to_shapely(piece), -eff_theta)
+            if poly.is_empty:
+                continue
+            for ring in [poly.exterior, *poly.interiors]:
+                for x, y in list(ring.coords)[:-1]:
+                    xs_by_theta[key].add(round(x, 9))
+                    ys_by_theta[key].add(round(y, 9))
+    return {
+        key: (tuple(sorted(xs_by_theta[key])), tuple(sorted(ys_by_theta[key])))
+        for key in xs_by_theta
+    }
+
+
 def _lattice_cuts(
     atoms_with_local,
     xs_pool: tuple[float, ...],

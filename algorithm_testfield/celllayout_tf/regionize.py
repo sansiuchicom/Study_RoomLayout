@@ -26,7 +26,7 @@ from __future__ import annotations
 import bisect
 from collections import defaultdict
 from dataclasses import dataclass
-from math import degrees
+from math import ceil, degrees
 
 import shapely.affinity as sa
 import shapely.geometry as sg
@@ -340,7 +340,18 @@ def regionize(
         state = _PropagationState(seen_xs=set(), seen_ys=set())
         cells.sort(key=lambda c: -c[0])
         for _area, cell_atoms, cell_history, part_id, piece_idx, eff_theta in cells:
-            k = max(1, round(_area / target_area))
+            # k is the max of area-based count and aspect-based count.
+            # A narrow slab (aspect > MAX_ASPECT) needs more cuts so each
+            # terminal piece can satisfy the aspect cap. Without this bump,
+            # k=2 on a 0.9×8 slab leaves the seen-coord cuts of wider
+            # neighbors aspect-rejected — and the slab picks differently-
+            # placed cuts, breaking row alignment with its sibling cells.
+            cb = _piece_local_bbox(cell_atoms)
+            w, h = cb[2] - cb[0], cb[3] - cb[1]
+            cell_aspect = max(w, h) / max(min(w, h), 1e-9)
+            k_area = max(1, round(_area / target_area))
+            k_aspect = max(1, ceil(cell_aspect / MAX_ASPECT))
+            k = max(k_area, k_aspect)
             groups = _recurse_partition(cell_atoms, k, xs_pool, ys_pool, state)
 
             for atom_list, sub_history in groups:

@@ -447,9 +447,15 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
 def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
     """Pick the best slab cut from the shared-grid pool.
 
-    Ranking: balance DESC, then seen-coord-first tiebreaker, then aspect ASC.
-    Balance, aspect, and area come from cached per-atom values — no shapely
-    in the hot path.
+    Two-pool selection:
+      1. If any valid candidate's coord is in ``state.seen_*`` (= already
+         used by an earlier cell in this theta group), pick the best among
+         those by ``(balance DESC, aspect ASC)``. Aggressive propagation —
+         even an asymmetric seen cut wins over a perfectly balanced unseen
+         one, so sibling cells line up.
+      2. Otherwise pick the overall best by the same key.
+
+    Balance, aspect, and area come from cached per-atom values.
     """
     cuts = _lattice_cuts(atoms_with_local, xs_pool, ys_pool)
     valid = []
@@ -468,12 +474,12 @@ def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
         valid.append((label, coord, left, right, b, max(left_asp, right_asp)))
     if not valid:
         return None
-    valid.sort(key=lambda v: (
-        -round(v[4], TIE_DECIMALS),
-        0 if state.has(v[0], v[1]) else 1,
-        v[5],
-    ))
-    label, coord, left, right, _b, _asp = valid[0]
+
+    sort_key = lambda v: (-round(v[4], TIE_DECIMALS), v[5])
+    seen = [v for v in valid if state.has(v[0], v[1])]
+    pool = seen if seen else valid
+    pool.sort(key=sort_key)
+    label, coord, left, right, _b, _asp = pool[0]
     return label, coord, left, right
 
 

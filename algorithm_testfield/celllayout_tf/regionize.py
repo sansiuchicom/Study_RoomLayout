@@ -23,6 +23,7 @@ where a T2 (oblique reflex_pair) cut runs through atom interiors.
 
 from __future__ import annotations
 
+import bisect
 from collections import defaultdict
 from dataclasses import dataclass
 from math import degrees
@@ -111,6 +112,55 @@ def _collect_structural_coords(
         key: (tuple(sorted(xs_by_theta[key])), tuple(sorted(ys_by_theta[key])))
         for key in xs_by_theta
     }
+
+
+def _structural_partition(
+    atoms_with_local,
+    interior_xs: tuple[float, ...],
+    interior_ys: tuple[float, ...],
+):
+    """Pass A pre-cut: bin atoms into structural cells.
+
+    Atoms are binned by local centroid x then y against the (sorted) interior
+    structural coords. Each non-empty ``(x_idx, y_idx)`` becomes a cell. The
+    cell's ``cut_history`` records the structural coords bounding it on each
+    side (0-4 entries; corner cells have 2, edge cells 3, interior cells 4).
+
+    ``bisect_right`` so an atom whose centroid sits exactly on a coord goes
+    to the higher bin — robust to the rare absorbed-sliver atom whose
+    centroid lands on a grid line.
+    """
+    if not interior_xs and not interior_ys:
+        return [(atoms_with_local, [])] if atoms_with_local else []
+
+    n_x = len(interior_xs)
+    n_y = len(interior_ys)
+
+    x_bins: list[list] = [[] for _ in range(n_x + 1)]
+    for aw in atoms_with_local:
+        x_bins[bisect.bisect_right(interior_xs, aw[1][0])].append(aw)
+
+    cells = []
+    for x_idx, x_bin in enumerate(x_bins):
+        if not x_bin:
+            continue
+        y_bins: list[list] = [[] for _ in range(n_y + 1)]
+        for aw in x_bin:
+            y_bins[bisect.bisect_right(interior_ys, aw[1][1])].append(aw)
+        for y_idx, cell_atoms in enumerate(y_bins):
+            if not cell_atoms:
+                continue
+            history: list[tuple[str, float]] = []
+            if x_idx > 0:
+                history.append(("axis_x", float(interior_xs[x_idx - 1])))
+            if x_idx < n_x:
+                history.append(("axis_x", float(interior_xs[x_idx])))
+            if y_idx > 0:
+                history.append(("axis_y", float(interior_ys[y_idx - 1])))
+            if y_idx < n_y:
+                history.append(("axis_y", float(interior_ys[y_idx])))
+            cells.append((cell_atoms, history))
+    return cells
 
 
 def _lattice_cuts(

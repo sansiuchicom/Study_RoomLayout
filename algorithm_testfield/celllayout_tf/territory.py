@@ -105,24 +105,26 @@ def collect_cross_theta_contact_coords(
     shape: ShapeInput,
     territories,
 ) -> tuple[dict[float, set[float]], dict[float, set[float]]]:
-    """Cross-theta-group contact-boundary endpoints, per theta group.
+    """Boundary-crossing points between every pair of parts, per theta group.
 
-    For every pair of parts in DIFFERENT theta groups, find where their
-    ORIGINAL polygon boundaries cross, and project each crossing point
-    into both parts' local frames. Original boundaries are used (rather
-    than post-clip territory pieces) so floating-point drift from
-    ``polygon.difference`` does not break collinear shared edges into a
-    near-but-not-touching pair — shapely then reports the boundary
-    intersection as empty.
+    For every pair of parts (regardless of theta), find where their ORIGINAL
+    polygon boundaries cross or touch, and project each crossing point into
+    both parts' local frames. These points are treated as "structural
+    vertices" alongside each piece's own polygon vertices.
 
-    The resulting coords feed:
+    Why original (not post-clip territory pieces): shapely's
+    ``polygon.difference`` introduces ~1e-6 FP drift, which can drop
+    collinear shared edges from boundary intersection. Originals stay clean.
 
-      atomize.py    extends the per-theta-group atom grid so atom edges
-                    land exactly on contact-induced cuts (no snap drift).
-      regionize.py  feeds Pass A's structural pre-cut pool.
+    Same-theta pairs are NOT skipped — they catch crossings that aren't
+    polygon vertices of either piece. Example: case 28 disk crosses
+    vert_rect's right edge at (4, 8), which is on vert_rect's edge but not
+    a vert_rect corner. Without this, vert_rect would never get y=8 as a
+    structural cut.
 
-    Curved territories receive no projection coords of their own (no
-    axial meaning) but still contribute endpoints to non-curved partners.
+    Curved territories receive no projection coords (their many circumference
+    samples carry no axial meaning) but still contribute endpoints to
+    non-curved partners.
 
     Returns ``(xs_by_theta, ys_by_theta)`` as sets keyed by
     ``round(eff_theta, 9)``.
@@ -143,8 +145,6 @@ def collect_cross_theta_contact_coords(
         ka, eta_a, curved_a, pa = parts_meta[i]
         for j in range(i + 1, len(parts_meta)):
             kb, eta_b, curved_b, pb = parts_meta[j]
-            if ka == kb:
-                continue
             shared = pa.boundary.intersection(pb.boundary)
             if shared.is_empty:
                 continue

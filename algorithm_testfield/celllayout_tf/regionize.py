@@ -436,10 +436,9 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
 def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
     """Pick the best slab cut from the shared-grid pool.
 
-    Ranking: balance descending, then seen-coord-first (Pass B neighbor
-    propagation), then local-bbox aspect ascending. Balance and aspect come
-    from cached per-atom area and local bbox — no shapely calls in the hot
-    path.
+    Ranking: balance DESC, then seen-coord-first tiebreaker, then aspect ASC.
+    Balance, aspect, and area come from cached per-atom values — no shapely
+    in the hot path.
     """
     cuts = _lattice_cuts(atoms_with_local, xs_pool, ys_pool)
     valid = []

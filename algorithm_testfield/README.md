@@ -119,11 +119,13 @@ algorithm_testfield/
 │   ├── schema.py          # ShapePart, ShapeInput
 │   ├── cases.py           # 33 showcase ShapeInput builders
 │   ├── dimensions.py      # DimensionPolicy and interval splitting
+│   ├── territory.py       # Overlap resolution + shape-contact helpers
 │   ├── atomize.py         # Per-part vertex-aware atomizer
 │   ├── atom_graph.py      # Atom adjacency graph
 │   ├── regionize.py       # Atom grouping into small regions
-│   ├── layout.py          # Room/corridor layout pipeline
-│   ├── metrics.py         # Dataset and geometry quality metrics
+│   ├── region_graph.py    # Region adjacency graph (planned, Phase 6)
+│   ├── layout.py          # Room/corridor layout pipeline (planned, Phase 7)
+│   ├── metrics.py         # Dataset and geometry quality metrics (planned)
 │   └── viz.py             # Stage-by-stage diagnostics
 ├── demos/
 │   └── visualize_phase.py
@@ -292,62 +294,73 @@ shared boundary lengths are stable
 ### Phase 5: Regionizer
 
 Group atoms into room-building regions of roughly `target_area` each. The
-algorithm runs per piece, in the theta-group's local frame, in two passes.
+algorithm runs per piece, in the theta-group's local frame, in two passes
+over a shared "structural pool" of coordinates.
 
-Spec:
+Defaults:
 
 ```text
-target_region_area     = ~3m² (≈1평, Korean residential unit)
-min_region_area        = 1m²
-regions are connected atom sets
-sliver atoms are already absorbed at atomize
-every atom assigned to exactly one region
-no region spans two parts or two pieces
-cut coords come from the theta-group's atom-edge pool
-sibling cells reuse cut coords where balance allows
+target_area    = 3.0 m²   (≈ 1평, Korean residential unit)
+MIN_AREA       = 0.7 m²
+MAX_ASPECT     = 3.0      (1m × 3m terminal cap)
+BAL_MIN        = 0.15
+```
+
+Structural pool (per theta group, in local frame):
+
+```text
+1. Every non-curved territory piece's polygon vertex coords
+2. Every boundary-crossing point between any pair of parts (in any
+   theta group) — projected into each piece's local frame, computed
+   from ORIGINAL part polygons to skip polygon.difference FP drift.
+
+Conceptually a unified "vertex set" where shape-crossings count as
+vertices alongside polygon corners.
 ```
 
 Algorithm:
 
 ```text
 Pass A — Structural pre-cut
-  Structural coords = vertex coords of every territory piece in the
-  theta group, in local frame. For each piece, take only the structural
-  coords that fall strictly inside its bbox. Bin atoms by those x then
-  by those y; each non-empty (x_idx, y_idx) is a "cell".
+  Per piece, take pool coords strictly inside its bbox. Bin atoms by
+  (x_idx, y_idx) → cells. Each cell's cut_history is the bounding
+  structural coords (0-4 entries: corner cells 2, edge 3, interior 4).
+  Cells with area < MIN_AREA are absorbed into their largest live
+  lattice-adjacent neighbor (successor-chain).
 
-  This forces region boundaries onto hole reflex coords, neighbor-part
-  edge coords, and any part vertex that lands inside another part.
+  This forces region boundaries onto reflex/hole/neighbor-edge coords.
   Atom interiors are never split.
 
 Pass B — Balance subdivision with neighbor propagation
-  Each cell needs k = round(cell_area / target_area) regions. If
-  k <= 1 the cell is kept; otherwise it is recursively subdivided.
+  Per theta group, cells are processed area-descending sharing a
+  _PropagationState (seen_xs / seen_ys). For each cell:
 
-  Cut candidates per recursion level:
-    - drawn from the theta-group's atom-edge pool (every atom polygon
-      vertex coord in local frame).
-    - atoms split by local centroid sign vs the candidate coord.
-    - filtered by MIN_AREA, BAL_MIN balance, MAX_ASPECT local-bbox
-      aspect on each side.
+    k = max(round(area / target_area),
+            ceil(cell_aspect / MAX_ASPECT))
+        (k_aspect bump so narrow slabs subdivide enough that each
+         terminal piece can satisfy aspect with seen-coord cuts.)
 
-  Ranking key:
-    (1) balance descending                            — primary
-    (2) coord-already-seen-in-this-theta-group first  — tiebreaker
-    (3) local-bbox aspect ascending                   — final tiebreak
+  At each recursion level, _select_lattice_cut:
+    - Candidates drawn from the theta-group's atom-edge pool.
+    - Atoms split by local centroid sign vs the candidate coord.
+    - Filtered by MIN_AREA on each side, BAL_MIN balance, and the
+      MAX_ASPECT gate. Inside a cell with aspect > MAX_ASPECT, the
+      gate uses max(MAX_ASPECT, cell_aspect) so thin cells can still
+      subdivide along their wider neighbors' seen cuts.
 
-  After a cut is picked, its (axis, coord) joins the theta-group's
-  seen-coord state. Cells of the same theta group share this state.
-  Cells are processed area-descending so the largest cells anchor
-  the cut lines that smaller cells then reuse.
+  Ranking (lexicographic):
+    (1) Any seen-coord candidate wins over any unseen.
+    (2) Within the chosen pool: balance descending, aspect ascending.
+
+  Picked cut joins state.seen_*. Cells of the same theta group share
+  this state, so sibling cells line up at the same coords.
 ```
 
 Cut history:
 
 ```text
 Each region records the cut coords that bound it:
-  - Pass A: the interior structural coords adjacent to its cell on
-    each side (0-4 entries per cell, depending on edge/corner position).
+  - Pass A: the bounding structural coords of its cell (0-4 entries).
   - Pass B: each (axis, coord) selected on the path to this leaf.
 Format: tuple[tuple[axis_label, local_coord], ...]
         where axis_label in {"axis_x", "axis_y"}.
@@ -367,6 +380,12 @@ Region(
 )
 ```
 
+atomize.py is extended to support Pass A:
+- Per-theta-group atom anchors include cross-pair boundary projections,
+  so atom edges land exactly on Pass A's structural cuts (no snap drift).
+- Sliver absorption ranks neighbors (same_part DESC, length DESC) so a
+  sliver atom prefers a host in its own (part_id, piece_id).
+
 Tests pinning the spec:
 
 ```text
@@ -379,9 +398,70 @@ target_area smaller -> more regions
 cut_history coords are a subset of the theta-group atom-edge pool
 ```
 
-### Phase 6: Layout v1
+### Phase 6: Region Graph
 
-Build the first room-layout result from regions and atom routing.
+Build region adjacency from `atom_graph`. Same role as Phase 4 but at the
+region level: drives Phase 7's room grouping and corridor routing.
+
+Construction (per pair of regions sharing at least one atom-graph edge):
+
+```text
+Walk atom_graph edges. For each edge whose two atoms belong to
+DIFFERENT regions, accumulate the metadata under that (region_a,
+region_b) pair.
+```
+
+Edge metadata:
+
+```text
+shared_boundary_length    sum of atom-edge shared_boundary_length
+door_capable_length       longest contiguous straight portion of the
+                          shared boundary, used for the ≥0.9m door
+                          gate downstream
+centroid_distance         distance between region centroids
+same_theta_group          both regions share the same eff_theta
+exterior_contact          any underlying atom-edge endpoint lies on
+                          the footprint exterior
+hole_contact              any underlying atom-edge endpoint lies on
+                          a hole boundary
+```
+
+Output:
+
+```python
+RegionEdge(
+    region_a: int,
+    region_b: int,
+    shared_boundary_length: float,
+    door_capable_length: float,
+    centroid_distance: float,
+    same_theta_group: bool,
+    exterior_contact: bool,
+    hole_contact: bool,
+)
+
+RegionGraph(
+    regions: tuple[Region, ...],
+    edges: tuple[RegionEdge, ...],
+)
+```
+
+Tests:
+
+```text
+build_region_graph(shape) is connected on simply-connected footprints
+hole-separated regions are NOT adjacent
+case 13 cross: each arm's regions are mutually adjacent only within arm
+case 17 ㅁ자 hole: regions wrap around the hole, all connected
+door_capable_length(R_a, R_b) ≤ shared_boundary_length(R_a, R_b)
+shared_boundary_length is symmetric (a,b) == (b,a)
+```
+
+### Phase 7: Layout v1
+
+Build the first room-layout result from regions, region_graph, and atom
+routing. Hub-first design — hub anchors the layout, rooms group around it,
+corridors connect.
 
 Public API:
 
@@ -389,22 +469,65 @@ Public API:
 layout_input(
     shape: ShapeInput,
     target_room_count: int,
-    entry_point=None,
-    corridor_width=1.20,
+    entry_point: tuple[float, float] | None = None,
+    corridor_width: float = 0.6,
+) -> LayoutResult
+```
+
+Sub-steps:
+
+```text
+7a. Hub selection
+    If entry_point given: the region containing that point. Else:
+    the region with highest atom-graph centrality.
+
+7b. Room grouping (hub-aware)
+    Greedy merge of regions until count == target_room_count, using
+    region_graph adjacency + (area balance, aspect, hub-distance)
+    as merge criteria.
+
+7c. Corridor routing
+    For each non-hub room, find atom-graph shortest path from a
+    hub atom to a room-boundary atom. Each path's atoms become
+    corridor atoms (subtracted from their original room). v1 width
+    = 1 atom (~0.3m); v2 may expand by adding perpendicular adjacents
+    to reach corridor_width.
+
+7d. Validation
+    - All atoms assigned to exactly one of {room_i, corridor}
+    - Each room has door_capable_length ≥ 0.9m onto corridor or hub
+    - room count == target_room_count (when feasible)
+    - rooms and corridor are connected sets
+```
+
+Output:
+
+```python
+Room(
+    room_id: int,
+    region_ids: tuple[int, ...],
+    atom_ids: tuple[int, ...],
+    polygon: ShapePart,
+    area: float,
+    is_hub: bool,
+)
+
+Corridor(
+    atom_ids: tuple[int, ...],
+    polygon: ShapePart,
+    connected_room_ids: tuple[int, ...],
+    area: float,
+)
+
+LayoutResult(
+    rooms: tuple[Room, ...],
+    corridor: Corridor,
+    hub_room_id: int,
+    diagnostics: dict,  # gap_area_ratio, unreachable_rooms, etc.
 )
 ```
 
-Initial requirements:
-
-```text
-room_count matches target when feasible
-rooms are connected region groups
-corridor/access path is atom-based
-all output polygons are valid
-no gap / overlap / outside area
-```
-
-### Phase 7: Visualization + Metrics
+### Phase 8: Visualization + Metrics
 
 Every phase should save debug figures:
 
@@ -413,6 +536,7 @@ input parts
 atoms
 atom graph
 regions
+region graph
 room groups
 corridor/access
 ```
@@ -429,13 +553,23 @@ gap_area / overlap_area / outside_area
 graph_connectivity
 ```
 
+Dataset metrics:
+
+```text
+coordinate_grid_compliance
+atom_width_distribution
+region_area_distribution
+room_area_distribution
+corridor_width_error
+gap_area / overlap_area / outside_area
+graph_connectivity
+```
+
 ## Current Status
 
-Phases 1–4 implemented and stable on `master`. Phase 5 is in active
-development on branch `phase-5-slab`: the initial T1a/T1b/T2/T3
-polygon-cut hierarchy has been replaced with the slab + shared
-atom-grid pool (committed). Structural pre-cut and neighbor-coord
-propagation (the design above) are the next change on the branch.
+Phases 1–5 implemented and stable on `master` (Phase 5 slab-grid rewrite
+merged from `phase-5-slab`, 21 commits). Phase 6 (Region Graph) is the
+next planned work.
 
 Implemented modules:
 

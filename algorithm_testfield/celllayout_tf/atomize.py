@@ -25,7 +25,11 @@ from shapely.strtree import STRtree
 
 from .dimensions import DimensionPolicy, snap_length, split_interval
 from .schema import ShapeInput, ShapePart
-from .territory import KIND_CURVED, resolve_territories
+from .territory import (
+    KIND_CURVED,
+    collect_cross_theta_contact_coords,
+    resolve_territories,
+)
 
 
 @dataclass(frozen=True)
@@ -63,6 +67,10 @@ def atomize(
     policy = policy or DimensionPolicy()
     territories = resolve_territories(shape)
 
+    # Cross-theta-group contact projections — atom edges should land
+    # exactly on these so regionize's Pass A cuts have no snap drift.
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(territories)
+
     # Group pieces by their effective theta (curved is treated as 0).
     groups: dict[float, list[tuple]] = defaultdict(list)
     for terr in territories:
@@ -74,7 +82,7 @@ def atomize(
 
     atoms: list[Atom] = []
     next_id = [0]
-    for members in groups.values():
+    for theta_key, members in groups.items():
         if not members:
             continue
         eff_theta = members[0][0]
@@ -94,13 +102,16 @@ def atomize(
         if not local_pieces:
             continue
 
-        # Gather shared anchors from every piece in the group.
+        # Gather shared anchors from every piece in the group, plus the
+        # cross-theta contact projections for this group.
         all_xs: set[float] = set()
         all_ys: set[float] = set()
         for local_poly, is_curved, _, _ in local_pieces:
             xs, ys = _piece_anchors(local_poly, is_curved)
             all_xs.update(xs)
             all_ys.update(ys)
+        all_xs.update(contact_xs.get(theta_key, ()))
+        all_ys.update(contact_ys.get(theta_key, ()))
         if not all_xs or not all_ys:
             continue
 

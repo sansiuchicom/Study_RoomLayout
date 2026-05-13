@@ -36,7 +36,11 @@ from shapely.ops import unary_union
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy
 from .schema import ShapeInput, ShapePart
-from .territory import KIND_CURVED, resolve_territories
+from .territory import (
+    KIND_CURVED,
+    collect_cross_theta_contact_coords,
+    resolve_territories,
+)
 
 
 # Reference parameters --------------------------------------------------------
@@ -104,16 +108,24 @@ def _collect_group_grid(
 def _collect_structural_coords(
     territories,
 ) -> dict[float, tuple[tuple[float, ...], tuple[float, ...]]]:
-    """Return ``{theta_key: (xs, ys)}`` of territory-piece vertex coords.
+    """Return ``{theta_key: (xs, ys)}`` of structural coords per theta group.
 
-    Coords are in each non-curved theta group's local frame. Drives Pass A's
-    structural pre-cut: cutting at these coords coincides with reflex
-    vertices, hole reflexes, and cross-part edges that fall inside another
-    piece. Curved territories (many circumference vertices, no meaningful
-    structural axis) are skipped.
+    Two sources contribute, in each non-curved piece's local frame:
+
+      Intra-group vertex coords
+        Every vertex of every non-curved territory piece (exterior +
+        interior rings). Captures reflex vertices, hole reflexes, and
+        cross-part edges of pieces sharing a theta group.
+
+      Cross-group contact endpoints (via ``territory``)
+        Endpoints of every shared boundary between pieces in DIFFERENT
+        theta groups, projected into each piece's local frame.
+        ``atomize`` uses the same source to seed atom anchors, so Pass A's
+        cuts land exactly on these coords with no atom-snap drift.
     """
     xs_by_theta: dict[float, set[float]] = defaultdict(set)
     ys_by_theta: dict[float, set[float]] = defaultdict(set)
+
     for terr in territories:
         if terr.kind == KIND_CURVED:
             continue
@@ -127,6 +139,13 @@ def _collect_structural_coords(
                 for x, y in list(ring.coords)[:-1]:
                     xs_by_theta[key].add(round(x, 9))
                     ys_by_theta[key].add(round(y, 9))
+
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(territories)
+    for key, vals in contact_xs.items():
+        xs_by_theta[key].update(vals)
+    for key, vals in contact_ys.items():
+        ys_by_theta[key].update(vals)
+
     return {
         key: (tuple(sorted(xs_by_theta[key])), tuple(sorted(ys_by_theta[key])))
         for key in xs_by_theta

@@ -141,16 +141,18 @@ def _structural_partition(
     """Pass A pre-cut: bin atoms into structural cells.
 
     Atoms are binned by local centroid x then y against the (sorted) interior
-    structural coords. Each non-empty ``(x_idx, y_idx)`` becomes a cell. The
-    cell's ``cut_history`` records the structural coords bounding it on each
-    side (0-4 entries; corner cells have 2, edge cells 3, interior cells 4).
+    structural coords. Each non-empty ``(x_idx, y_idx)`` becomes a cell tuple
+    ``(atoms, history, x_idx, y_idx)``. ``history`` records the structural
+    coords bounding the cell (0-4 entries: corner cells 2, edge cells 3,
+    interior cells 4). ``x_idx``/``y_idx`` are retained so a follow-up
+    absorption pass can find lattice-adjacent neighbors.
 
     ``bisect_right`` so an atom whose centroid sits exactly on a coord goes
     to the higher bin — robust to the rare absorbed-sliver atom whose
     centroid lands on a grid line.
     """
     if not interior_xs and not interior_ys:
-        return [(atoms_with_local, [])] if atoms_with_local else []
+        return [(atoms_with_local, [], 0, 0)] if atoms_with_local else []
 
     n_x = len(interior_xs)
     n_y = len(interior_ys)
@@ -178,8 +180,65 @@ def _structural_partition(
                 history.append(("axis_y", float(interior_ys[y_idx - 1])))
             if y_idx < n_y:
                 history.append(("axis_y", float(interior_ys[y_idx])))
-            cells.append((cell_atoms, history))
+            cells.append((cell_atoms, history, x_idx, y_idx))
     return cells
+
+
+def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
+    """Merge cells with area < threshold into their largest adjacent cell.
+
+    Adjacency follows the ``(x_idx, y_idx)`` lattice (differs by 1 on one
+    axis). When a neighbor has already been absorbed, the adjacency follows
+    the merge chain to its current host — so a sliver sandwiched between
+    another sliver and the main cell can still reach the main cell after
+    the in-between sliver is merged first.
+
+    Slivers without any live neighbor are returned as-is. Output is
+    ``(atoms, history)`` pairs ready for Pass B; absorbed slivers' histories
+    are dropped (the host's history still describes the merged region's
+    actual exterior cuts).
+    """
+    if not cells:
+        return []
+
+    cells = list(cells)
+    areas = [sum(aw[3] for aw in c[0]) for c in cells]
+    idx_to_pos = {(c[2], c[3]): i for i, c in enumerate(cells)}
+    successor: dict[int, int] = {}
+    exhausted: set[int] = set()
+
+    def root(i: int) -> int:
+        while i in successor:
+            i = successor[i]
+        return i
+
+    while True:
+        live = [
+            (i, areas[i]) for i in range(len(cells))
+            if i not in successor and i not in exhausted and areas[i] < threshold
+        ]
+        if not live:
+            break
+        sliver_i, _ = min(live, key=lambda p: p[1])
+        _atoms, _hist, x_idx, y_idx = cells[sliver_i]
+        adj_roots: set[int] = set()
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            j = idx_to_pos.get((x_idx + dx, y_idx + dy))
+            if j is None:
+                continue
+            r = root(j)
+            if r != sliver_i:
+                adj_roots.add(r)
+        if not adj_roots:
+            exhausted.add(sliver_i)
+            continue
+        host_i = max(adj_roots, key=lambda r: areas[r])
+        ha, hh, hx, hy = cells[host_i]
+        cells[host_i] = (ha + cells[sliver_i][0], hh, hx, hy)
+        areas[host_i] += areas[sliver_i]
+        successor[sliver_i] = host_i
+
+    return [(c[0], c[1]) for i, c in enumerate(cells) if i not in successor]
 
 
 def _lattice_cuts(
@@ -244,6 +303,7 @@ def regionize(
             interior_xs = _interior_coords(struct_xs, pb[0], pb[2])
             interior_ys = _interior_coords(struct_ys, pb[1], pb[3])
             cells = _structural_partition(atoms_with_local, interior_xs, interior_ys)
+            cells = _absorb_sliver_cells(cells)
             for cell_atoms, cell_history in cells:
                 cell_area = sum(aw[3] for aw in cell_atoms)
                 theta_cells[theta_key].append(

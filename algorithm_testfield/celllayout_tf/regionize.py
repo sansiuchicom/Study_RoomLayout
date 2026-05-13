@@ -45,7 +45,7 @@ from .territory import (
 
 # Reference parameters --------------------------------------------------------
 MIN_AREA = 1.0          # m² minimum final region area
-MAX_ASPECT = 4.0        # final region local-bbox aspect cap
+MAX_ASPECT = 3.0        # final region local-bbox aspect cap (~ 1m × 3m fits target)
 BAL_MIN = 0.15          # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6        # balance tie-break precision (float drift tolerance)
 

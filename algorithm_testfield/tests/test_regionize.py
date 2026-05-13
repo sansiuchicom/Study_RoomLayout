@@ -1,5 +1,7 @@
 import math
+from collections import defaultdict
 
+import shapely.affinity as sa
 import shapely.geometry as sg
 from shapely.ops import unary_union
 
@@ -96,14 +98,88 @@ def test_region_atom_ids_match_actual_atom_union_area():
 
 
 def test_cut_history_is_recorded():
+    """Each entry is (axis_label, local-frame coord); labels are axis-only."""
     case = selected_cases([1])[0][2]
     regions = regionize(case)
-    # at least some regions should have non-empty cut_history
     assert any(len(r.cut_history) > 0 for r in regions)
-    valid_labels = {"cross_cut", "vertex_aligned", "reflex_pair", "axis_mid"}
+    valid_labels = {"axis_x", "axis_y"}
     for r in regions:
-        for label in r.cut_history:
+        for entry in r.cut_history:
+            assert isinstance(entry, tuple) and len(entry) == 2, (r.region_id, entry)
+            label, coord = entry
             assert label in valid_labels, (r.region_id, label)
+            assert isinstance(coord, float), (r.region_id, entry)
+
+
+def _local_atom_coords_by_theta(atoms):
+    """Map round(theta, 9) -> (set of local-frame xs, set of local-frame ys)."""
+    xs: dict[float, set[float]] = defaultdict(set)
+    ys: dict[float, set[float]] = defaultdict(set)
+    for a in atoms:
+        key = round(a.theta, 9)
+        poly = _shape_to_polygon(a.shape)
+        if abs(a.theta) > 1e-12:
+            poly = sa.rotate(poly, -math.degrees(a.theta), origin=(0, 0))
+        for x, y in list(poly.exterior.coords)[:-1]:
+            xs[key].add(round(x, 4))
+            ys[key].add(round(y, 4))
+    return xs, ys
+
+
+def test_cut_coords_come_from_shared_grid():
+    """Every cut coord must be a vertex on the theta-group's atom grid.
+
+    Case 13 has two axis-aligned parts (same theta group). If part 0 and the
+    two pieces of part 1 don't share the cut-coord pool, parts cut at
+    coordinates that don't appear anywhere else in the group.
+    """
+    case = selected_cases([13])[0][2]
+    atoms = atomize(case)
+    regions = regionize(case, atoms=atoms)
+
+    xs_by_theta, ys_by_theta = _local_atom_coords_by_theta(atoms)
+    for r in regions:
+        key = round(r.theta, 9)
+        for label, coord in r.cut_history:
+            c = round(coord, 4)
+            if label == "axis_x":
+                assert c in xs_by_theta[key], (r.region_id, label, coord)
+            elif label == "axis_y":
+                assert c in ys_by_theta[key], (r.region_id, label, coord)
+
+
+def test_case_13_regions_dont_span_cross_part_structural_cuts():
+    """十자: no region in the horizontal arm crosses the vertical arm's edges
+    (x=5, x=9). Pass A's cross-part structural cut must hold these as hard
+    boundaries — every region's atom centroids stay on one side.
+    """
+    case = selected_cases([13])[0][2]
+    atoms = atomize(case)
+    regions = regionize(case, atoms=atoms)
+    atom_by_id = {a.atom_id: a for a in atoms}
+    for r in regions:
+        xs = [atom_by_id[aid].centroid[0] for aid in r.atom_ids]
+        for cut in (5.0, 9.0):
+            below = all(x < cut for x in xs)
+            above = all(x > cut for x in xs)
+            assert below or above, (r.region_id, cut, xs)
+
+
+def test_case_17_regions_dont_span_hole_reflex_cuts():
+    """ㅁ자 big hole (3,3)-(11,7): no region crosses the hole's reflex coord
+    lines. Pass A must hold x=3, x=11, y=3, y=7 as hard region boundaries.
+    """
+    case = selected_cases([17])[0][2]
+    atoms = atomize(case)
+    regions = regionize(case, atoms=atoms)
+    atom_by_id = {a.atom_id: a for a in atoms}
+    for r in regions:
+        cs = [atom_by_id[aid].centroid for aid in r.atom_ids]
+        for axis, cut in ((0, 3.0), (0, 11.0), (1, 3.0), (1, 7.0)):
+            vals = [c[axis] for c in cs]
+            below = all(v < cut for v in vals)
+            above = all(v > cut for v in vals)
+            assert below or above, (r.region_id, axis, cut, vals)
 
 
 def test_target_area_smaller_produces_more_regions():

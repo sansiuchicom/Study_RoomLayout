@@ -291,29 +291,92 @@ shared boundary lengths are stable
 
 ### Phase 5: Regionizer
 
-Group atoms into room-building regions.
+Group atoms into room-building regions of roughly `target_area` each. The
+algorithm runs per piece, in the theta-group's local frame, in two passes.
 
-Initial targets:
+Spec:
 
 ```text
-target_region_area = 3-8m²
+target_region_area     = ~3m² (≈1평, Korean residential unit)
+min_region_area        = 1m²
 regions are connected atom sets
-sliver atoms are absorbed by adjacent regions
-all atoms assigned exactly once
+sliver atoms are already absorbed at atomize
+every atom assigned to exactly one region
+no region spans two parts or two pieces
+cut coords come from the theta-group's atom-edge pool
+sibling cells reuse cut coords where balance allows
+```
+
+Algorithm:
+
+```text
+Pass A — Structural pre-cut
+  Structural coords = vertex coords of every territory piece in the
+  theta group, in local frame. For each piece, take only the structural
+  coords that fall strictly inside its bbox. Bin atoms by those x then
+  by those y; each non-empty (x_idx, y_idx) is a "cell".
+
+  This forces region boundaries onto hole reflex coords, neighbor-part
+  edge coords, and any part vertex that lands inside another part.
+  Atom interiors are never split.
+
+Pass B — Balance subdivision with neighbor propagation
+  Each cell needs k = round(cell_area / target_area) regions. If
+  k <= 1 the cell is kept; otherwise it is recursively subdivided.
+
+  Cut candidates per recursion level:
+    - drawn from the theta-group's atom-edge pool (every atom polygon
+      vertex coord in local frame).
+    - atoms split by local centroid sign vs the candidate coord.
+    - filtered by MIN_AREA, BAL_MIN balance, MAX_ASPECT local-bbox
+      aspect on each side.
+
+  Ranking key:
+    (1) balance descending                            — primary
+    (2) coord-already-seen-in-this-theta-group first  — tiebreaker
+    (3) local-bbox aspect ascending                   — final tiebreak
+
+  After a cut is picked, its (axis, coord) joins the theta-group's
+  seen-coord state. Cells of the same theta group share this state.
+  Cells are processed area-descending so the largest cells anchor
+  the cut lines that smaller cells then reuse.
+```
+
+Cut history:
+
+```text
+Each region records the cut coords that bound it:
+  - Pass A: the interior structural coords adjacent to its cell on
+    each side (0-4 entries per cell, depending on edge/corner position).
+  - Pass B: each (axis, coord) selected on the path to this leaf.
+Format: tuple[tuple[axis_label, local_coord], ...]
+        where axis_label in {"axis_x", "axis_y"}.
 ```
 
 Region output:
 
 ```python
 Region(
-    region_id,
-    atom_ids,
-    polygon,
-    area,
-    dominant_theta,
-    compactness,
-    exterior_contact,
+    region_id: int,
+    shape: ShapePart,
+    atom_ids: tuple[int, ...],
+    part_id: int,
+    piece_id: int,
+    theta: float,
+    cut_history: tuple[tuple[str, float], ...],
 )
+```
+
+Tests pinning the spec:
+
+```text
+every atom assigned to exactly one region
+region area sum == atom area sum (per case)
+no region spans two parts or pieces
+case 13 (cross): cuts include the cross-part structural x=5 and x=9
+case 17 (hole):  cells around the hole are bounded by hole reflex coords
+target_area smaller -> more regions
+cut_history coords are a subset of the theta-group atom-edge pool
 ```
 
 ### Phase 6: Layout v1
@@ -368,23 +431,33 @@ graph_connectivity
 
 ## Current Status
 
-No implementation yet. Start with Phase 1:
+Phases 1–4 implemented and stable on `master`. Phase 5 is in active
+development on branch `phase-5-slab`: the initial T1a/T1b/T2/T3
+polygon-cut hierarchy has been replaced with the slab + shared
+atom-grid pool (committed). Structural pre-cut and neighbor-coord
+propagation (the design above) are the next change on the branch.
+
+Implemented modules:
 
 ```text
 celllayout_tf/schema.py
 celllayout_tf/cases.py
-celllayout_tf/viz.py        (input phase only)
-tests/test_schema.py
-tests/test_cases.py
-tests/test_viz.py
-demos/visualize_phase.py    (--phase input)
+celllayout_tf/dimensions.py
+celllayout_tf/atomize.py
+celllayout_tf/atom_graph.py
+celllayout_tf/regionize.py
+celllayout_tf/territory.py
+celllayout_tf/viz.py
 ```
+
+Implemented phases of `demos/visualize_phase.py`:
+`input`, `territory`, `atom`, `graph`, `region`, `dimensions`.
 
 Run:
 
 ```text
 cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
 PYTHONPATH=. pytest -q tests
-PYTHONPATH=. python demos/visualize_phase.py --phase input
-PYTHONPATH=. python demos/visualize_phase.py --phase input 22 24
+PYTHONPATH=. python demos/visualize_phase.py --phase region
+PYTHONPATH=. python demos/visualize_phase.py --phase region 13 17 24
 ```

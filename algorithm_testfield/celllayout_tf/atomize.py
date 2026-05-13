@@ -25,7 +25,11 @@ from shapely.strtree import STRtree
 
 from .dimensions import DimensionPolicy, snap_length, split_interval
 from .schema import ShapeInput, ShapePart
-from .territory import KIND_CURVED, resolve_territories
+from .territory import (
+    KIND_CURVED,
+    collect_cross_theta_contact_coords,
+    resolve_territories,
+)
 
 
 @dataclass(frozen=True)
@@ -63,6 +67,10 @@ def atomize(
     policy = policy or DimensionPolicy()
     territories = resolve_territories(shape)
 
+    # Cross-theta-group contact projections — atom edges should land
+    # exactly on these so regionize's Pass A cuts have no snap drift.
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(shape, territories)
+
     # Group pieces by their effective theta (curved is treated as 0).
     groups: dict[float, list[tuple]] = defaultdict(list)
     for terr in territories:
@@ -74,7 +82,7 @@ def atomize(
 
     atoms: list[Atom] = []
     next_id = [0]
-    for members in groups.values():
+    for theta_key, members in groups.items():
         if not members:
             continue
         eff_theta = members[0][0]
@@ -94,13 +102,16 @@ def atomize(
         if not local_pieces:
             continue
 
-        # Gather shared anchors from every piece in the group.
+        # Gather shared anchors from every piece in the group, plus the
+        # cross-theta contact projections for this group.
         all_xs: set[float] = set()
         all_ys: set[float] = set()
         for local_poly, is_curved, _, _ in local_pieces:
             xs, ys = _piece_anchors(local_poly, is_curved)
             all_xs.update(xs)
             all_ys.update(ys)
+        all_xs.update(contact_xs.get(theta_key, ()))
+        all_ys.update(contact_ys.get(theta_key, ()))
         if not all_xs or not all_ys:
             continue
 
@@ -129,9 +140,11 @@ def atomize(
 def _absorb_slivers(atoms: list[Atom], policy: DimensionPolicy) -> list[Atom]:
     """Merge sliver atoms into their largest-shared-boundary neighbor.
 
-    Smaller slivers first. Each sliver is unioned with the neighbor it shares
-    the longest boundary with; the neighbor keeps its metadata (atom_id,
-    part_id, piece_id, theta). Orphan slivers with no neighbor are left as-is.
+    Smaller slivers first. Candidates rank by ``(same_part DESC, length DESC)``
+    so a sliver prefers a neighbor in its own ``(part_id, piece_id)``; only
+    when no same-part neighbor exists does it fall back to a cross-part host.
+    The host keeps its metadata (atom_id, part_id, piece_id, theta). Orphan
+    slivers with no neighbor are left as-is.
     """
     threshold = policy.min_atom_size * policy.min_atom_size * 0.5
     atom_map: dict[int, Atom] = {a.atom_id: a for a in atoms}
@@ -159,9 +172,9 @@ def _absorb_slivers(atoms: list[Atom], policy: DimensionPolicy) -> list[Atom]:
             if sliver_id in absorbed:
                 continue
             sliver_poly = poly_map[sliver_id]
+            sliver = atom_map[sliver_id]
 
-            best_target = None
-            best_length = 0.0
+            candidates: list[tuple[bool, float, int]] = []
             for j in tree.query(sliver_poly):
                 j = int(j)
                 other_id = ids_list[j]
@@ -171,12 +184,20 @@ def _absorb_slivers(atoms: list[Atom], policy: DimensionPolicy) -> list[Atom]:
                     continue
                 shared = sliver_poly.intersection(poly_map[other_id])
                 length = _line_length(shared)
-                if length > best_length:
-                    best_length = length
-                    best_target = other_id
+                if length <= 0:
+                    continue
+                other = atom_map[other_id]
+                same_part = (
+                    sliver.part_id == other.part_id
+                    and sliver.piece_id == other.piece_id
+                )
+                candidates.append((same_part, length, other_id))
 
-            if best_target is None:
+            if not candidates:
                 continue
+            # same-part neighbors first, then longest shared boundary
+            candidates.sort(key=lambda c: (not c[0], -c[1]))
+            best_target = candidates[0][2]
 
             merged = unary_union([sliver_poly, poly_map[best_target]])
             if not isinstance(merged, sg.Polygon) or merged.is_empty:

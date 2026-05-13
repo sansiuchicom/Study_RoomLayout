@@ -12,9 +12,11 @@ Tiebreakers (in order):
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
-from math import atan2, cos, hypot, pi, sin
+from math import atan2, cos, degrees, hypot, pi, sin
 
+import shapely.affinity as sa
 import shapely.geometry as sg
 from shapely.geometry.polygon import orient as _orient
 from shapely.ops import unary_union
@@ -97,6 +99,99 @@ def resolve_territories(shape: ShapeInput) -> tuple[Territory, ...]:
             )
         )
     return tuple(out)
+
+
+def collect_cross_theta_contact_coords(
+    shape: ShapeInput,
+    territories,
+) -> tuple[dict[float, set[float]], dict[float, set[float]]]:
+    """Boundary-crossing points between every pair of parts, per theta group.
+
+    For every pair of parts (regardless of theta), find where their ORIGINAL
+    polygon boundaries cross or touch, and project each crossing point into
+    both parts' local frames. These points are treated as "structural
+    vertices" alongside each piece's own polygon vertices.
+
+    Why original (not post-clip territory pieces): shapely's
+    ``polygon.difference`` introduces ~1e-6 FP drift, which can drop
+    collinear shared edges from boundary intersection. Originals stay clean.
+
+    Same-theta pairs are NOT skipped — they catch crossings that aren't
+    polygon vertices of either piece. Example: case 28 disk crosses
+    vert_rect's right edge at (4, 8), which is on vert_rect's edge but not
+    a vert_rect corner. Without this, vert_rect would never get y=8 as a
+    structural cut.
+
+    Curved territories receive no projection coords (their many circumference
+    samples carry no axial meaning) but still contribute endpoints to
+    non-curved partners.
+
+    Returns ``(xs_by_theta, ys_by_theta)`` as sets keyed by
+    ``round(eff_theta, 9)``.
+    """
+    parts_meta = []
+    for terr in territories:
+        eff_theta = 0.0 if terr.kind == KIND_CURVED else terr.theta
+        key = round(eff_theta, 9)
+        is_curved = terr.kind == KIND_CURVED
+        part = shape.parts[terr.part_id]
+        gp = sg.Polygon(part.exterior, [list(h) for h in part.holes])
+        if not gp.is_empty:
+            parts_meta.append((key, eff_theta, is_curved, gp))
+
+    xs: dict[float, set[float]] = defaultdict(set)
+    ys: dict[float, set[float]] = defaultdict(set)
+    for i in range(len(parts_meta)):
+        ka, eta_a, curved_a, pa = parts_meta[i]
+        for j in range(i + 1, len(parts_meta)):
+            kb, eta_b, curved_b, pb = parts_meta[j]
+            shared = pa.boundary.intersection(pb.boundary)
+            if shared.is_empty:
+                continue
+            for px, py in _shared_boundary_endpoints(shared):
+                if not curved_a:
+                    ax, ay = _global_to_local(px, py, eta_a)
+                    xs[ka].add(round(ax, 9))
+                    ys[ka].add(round(ay, 9))
+                if not curved_b:
+                    bx, by_ = _global_to_local(px, py, eta_b)
+                    xs[kb].add(round(bx, 9))
+                    ys[kb].add(round(by_, 9))
+    return xs, ys
+
+
+def _shared_boundary_endpoints(geom) -> list[tuple[float, float]]:
+    if geom.is_empty:
+        return []
+    t = geom.geom_type
+    if t == "Point":
+        return [(float(geom.x), float(geom.y))]
+    if t == "MultiPoint":
+        return [(float(p.x), float(p.y)) for p in geom.geoms]
+    if t == "LineString":
+        cs = list(geom.coords)
+        return [tuple(map(float, cs[0])), tuple(map(float, cs[-1]))]
+    if t == "MultiLineString":
+        out: list[tuple[float, float]] = []
+        for ls in geom.geoms:
+            cs = list(ls.coords)
+            out.append(tuple(map(float, cs[0])))
+            out.append(tuple(map(float, cs[-1])))
+        return out
+    if t == "GeometryCollection":
+        out = []
+        for g in geom.geoms:
+            out.extend(_shared_boundary_endpoints(g))
+        return out
+    return []
+
+
+def _global_to_local(x: float, y: float, eff_theta: float) -> tuple[float, float]:
+    """Rotate ``(x, y)`` clockwise by ``eff_theta`` around the origin."""
+    if abs(eff_theta) < 1e-12:
+        return (float(x), float(y))
+    p = sa.rotate(sg.Point(x, y), -degrees(eff_theta), origin=(0, 0))
+    return (float(p.x), float(p.y))
 
 
 def _pair_winner(

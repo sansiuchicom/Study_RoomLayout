@@ -290,7 +290,7 @@ def save_region_figure(
     *,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
-    target_area: float = 6.0,
+    target_area: float = 3.0,
     show_atoms: bool = True,
 ) -> Path:
     """Render regions as colored areas atop a faint atom grid."""

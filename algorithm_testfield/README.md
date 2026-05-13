@@ -123,7 +123,7 @@ algorithm_testfield/
 │   ├── atomize.py         # Per-part vertex-aware atomizer
 │   ├── atom_graph.py      # Atom adjacency graph
 │   ├── regionize.py       # Atom grouping into small regions
-│   ├── region_graph.py    # Region adjacency graph (planned, Phase 6)
+│   ├── region_graph.py    # Region adjacency graph
 │   ├── layout.py          # Room/corridor layout pipeline (planned, Phase 7)
 │   ├── metrics.py         # Dataset and geometry quality metrics (planned)
 │   └── viz.py             # Stage-by-stage diagnostics
@@ -411,6 +411,16 @@ DIFFERENT regions, accumulate the metadata under that (region_a,
 region_b) pair.
 ```
 
+`door_capable_length` v1:
+
+```text
+Recompute each cross-region atom contact as shared LineString segments.
+Group segments by direction (1° tolerance) and supporting line (1e-6m
+tolerance), then merge endpoint-contiguous intervals (1e-6m tolerance).
+The stored value is the longest merged straight run, clamped to
+shared_boundary_length.
+```
+
 Edge metadata:
 
 ```text
@@ -489,9 +499,9 @@ Sub-steps:
 7c. Corridor routing
     For each non-hub room, find atom-graph shortest path from a
     hub atom to a room-boundary atom. Each path's atoms become
-    corridor atoms (subtracted from their original room). v1 width
-    = 1 atom (~0.3m); v2 may expand by adding perpendicular adjacents
-    to reach corridor_width.
+    corridor atoms (subtracted from their original room). v1 target
+    width is 0.6m (about two atoms), expanded by adding adjacent atoms
+    around the path where possible.
 
 7d. Validation
     - All atoms assigned to exactly one of {room_i, corridor}
@@ -567,9 +577,9 @@ graph_connectivity
 
 ## Current Status
 
-Phases 1–5 implemented and stable on `master` (Phase 5 slab-grid rewrite
-merged from `phase-5-slab`, 21 commits). Phase 6 (Region Graph) is the
-next planned work.
+Phases 1–6 implemented and stable in the testfield. Phase 6 adds the
+region adjacency graph from atom-graph contacts and exposes a region-graph
+diagnostic renderer.
 
 Implemented modules:
 
@@ -580,12 +590,13 @@ celllayout_tf/dimensions.py
 celllayout_tf/atomize.py
 celllayout_tf/atom_graph.py
 celllayout_tf/regionize.py
+celllayout_tf/region_graph.py
 celllayout_tf/territory.py
 celllayout_tf/viz.py
 ```
 
 Implemented phases of `demos/visualize_phase.py`:
-`input`, `territory`, `atom`, `graph`, `region`, `dimensions`.
+`input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `dimensions`.
 
 Run:
 
@@ -593,5 +604,5 @@ Run:
 cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
 PYTHONPATH=. pytest -q tests
 PYTHONPATH=. python demos/visualize_phase.py --phase region
-PYTHONPATH=. python demos/visualize_phase.py --phase region 13 17 24
+PYTHONPATH=. python demos/visualize_phase.py --phase region_graph 13 17 24
 ```

@@ -30,6 +30,9 @@ from .dimensions import DimensionPolicy
 from .schema import ShapeInput, ShapePart
 
 
+CONTACT_TOL = 1e-6
+
+
 @dataclass(frozen=True)
 class AtomEdge:
     atom_a: int
@@ -82,7 +85,7 @@ def build_atom_graph(
     edges: list[AtomEdge] = []
     seen: set[tuple[int, int]] = set()
     for i, poly_i in enumerate(polys):
-        candidates = tree.query(poly_i)
+        candidates = tree.query(poly_i.buffer(CONTACT_TOL))
         for j in candidates:
             j = int(j)
             if j <= i:
@@ -93,7 +96,7 @@ def build_atom_graph(
             seen.add(key)
 
             poly_j = polys[j]
-            shared = poly_i.intersection(poly_j)
+            shared = _shared_boundary_geom(poly_i, poly_j)
             length = _line_length(shared)
             if length < 1e-9:
                 continue
@@ -126,6 +129,29 @@ def build_atom_graph(
             )
 
     return AtomGraph(atoms=atoms, edges=tuple(edges))
+
+
+def _shared_boundary_geom(poly_a, poly_b):
+    """Return exact or tolerance-recovered shared boundary geometry.
+
+    Rotated parts that should share a boundary can land a few floating-point
+    ulps apart after separate affine transforms. Exact polygon intersection
+    then returns no line contact, which would disconnect the graph. The
+    fallback keeps only boundary portions whose length is much larger than the
+    tolerance, so point-only contacts still stay out of the graph.
+    """
+    exact = poly_a.intersection(poly_b)
+    if _line_length(exact) > 1e-9:
+        return exact
+    if poly_a.distance(poly_b) > CONTACT_TOL:
+        return exact
+
+    approx = poly_a.boundary.intersection(
+        poly_b.boundary.buffer(CONTACT_TOL, cap_style=2, join_style=2)
+    )
+    if _line_length(approx) > CONTACT_TOL * 10:
+        return approx
+    return exact
 
 
 def _outline_lines(footprint, *, ring: str) -> list[sg.LineString]:

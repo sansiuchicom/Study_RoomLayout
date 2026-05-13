@@ -1,6 +1,6 @@
 from celllayout_tf.cases import selected_cases
 from celllayout_tf.schema import ShapeInput, ShapePart
-from celllayout_tf.viz import save_input_figure
+from celllayout_tf.viz import save_input_figure, save_region_graph_figure
 
 
 def test_save_input_figure_writes_png(tmp_path):
@@ -41,3 +41,13 @@ def test_save_input_figure_for_showcase_subset(tmp_path):
         save_input_figure(shape, out, title=name)
         assert out.exists()
         assert out.stat().st_size > 0
+
+
+def test_save_region_graph_figure_writes_png(tmp_path):
+    shape = selected_cases([13])[0][2]
+    out = tmp_path / "region_graph.png"
+
+    save_region_graph_figure(shape, out)
+
+    assert out.exists()
+    assert out.stat().st_size > 0

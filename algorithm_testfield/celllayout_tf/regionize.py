@@ -57,6 +57,25 @@ class Region:
     cut_history: tuple[tuple[str, float], ...]
 
 
+@dataclass
+class _PropagationState:
+    """Per-theta-group seen-coord set for cross-cell cut alignment.
+
+    When a candidate's coord is already in ``seen``, the lattice selector
+    ranks it ahead of unseen candidates of equal balance — so the second
+    cell to subdivide tends to reuse cut coords picked by the first.
+    """
+
+    seen_xs: set[float]
+    seen_ys: set[float]
+
+    def has(self, label: str, coord: float) -> bool:
+        return coord in (self.seen_xs if label == "axis_x" else self.seen_ys)
+
+    def add(self, label: str, coord: float) -> None:
+        (self.seen_xs if label == "axis_x" else self.seen_ys).add(coord)
+
+
 def _collect_group_grid(
     atoms,
 ) -> dict[float, tuple[tuple[float, ...], tuple[float, ...]]]:
@@ -208,6 +227,7 @@ def regionize(
         atoms_by_pp[(a.part_id, a.piece_id)].append(a)
 
     group_grid = _collect_group_grid(atoms)
+    theta_states: dict[float, _PropagationState] = {}
 
     regions: list[Region] = []
     next_id = 0
@@ -216,6 +236,9 @@ def regionize(
         eff_theta = 0.0 if terr.kind == KIND_CURVED else terr.theta
         theta_key = round(eff_theta, 9)
         xs_pool, ys_pool = group_grid.get(theta_key, ((), ()))
+        state = theta_states.setdefault(
+            theta_key, _PropagationState(seen_xs=set(), seen_ys=set()),
+        )
         for piece_idx, _piece in enumerate(terr.pieces):
             piece_atoms = atoms_by_pp.get((terr.part_id, piece_idx), [])
             if not piece_atoms:
@@ -224,7 +247,7 @@ def regionize(
             atoms_with_local = _build_atoms_with_local(piece_atoms, eff_theta)
             piece_area = sum(aw[3] for aw in atoms_with_local)
             k = max(1, round(piece_area / target_area))
-            groups = _recurse_partition(atoms_with_local, k, xs_pool, ys_pool)
+            groups = _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state)
 
             for atom_list, cut_history in groups:
                 actual_atoms = [aw[0] for aw in atom_list]
@@ -274,18 +297,19 @@ def _build_atoms_with_local(piece_atoms, eff_theta):
 # Recursive partition ---------------------------------------------------------
 
 
-def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool):
+def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
     if k <= 1 or not atoms_with_local:
         return [(atoms_with_local, [])]
     total_area = sum(aw[3] for aw in atoms_with_local)
     if total_area < MIN_AREA * 2:
         return [(atoms_with_local, [])]
 
-    sel = _select_lattice_cut(atoms_with_local, k, xs_pool, ys_pool)
+    sel = _select_lattice_cut(atoms_with_local, k, xs_pool, ys_pool, state)
     if sel is None:
         return [(atoms_with_local, [])]
 
     label, coord, left, right = sel
+    state.add(label, coord)
     la = sum(aw[3] for aw in left)
     ra = sum(aw[3] for aw in right)
     k_alloc = _allocate_k_areas([la, ra], k)
@@ -293,7 +317,7 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool):
     result = []
     for sub_atoms, sub_k in zip((left, right), k_alloc):
         for group_atoms, group_history in _recurse_partition(
-            sub_atoms, sub_k, xs_pool, ys_pool,
+            sub_atoms, sub_k, xs_pool, ys_pool, state,
         ):
             result.append((group_atoms, [(label, coord)] + group_history))
     return result
@@ -302,11 +326,13 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool):
 # Cut selection (lattice / slab over shared atom grid) -----------------------
 
 
-def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool):
+def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
     """Pick the best slab cut from the shared-grid pool.
 
-    Balance and aspect are computed from cached per-atom area and local bbox
-    — no shapely operations in the hot path.
+    Ranking: balance descending, then seen-coord-first (Pass B neighbor
+    propagation), then local-bbox aspect ascending. Balance and aspect come
+    from cached per-atom area and local bbox — no shapely calls in the hot
+    path.
     """
     cuts = _lattice_cuts(atoms_with_local, xs_pool, ys_pool)
     valid = []
@@ -325,7 +351,11 @@ def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool):
         valid.append((label, coord, left, right, b, max(left_asp, right_asp)))
     if not valid:
         return None
-    valid.sort(key=lambda v: (-round(v[4], TIE_DECIMALS), v[5]))
+    valid.sort(key=lambda v: (
+        -round(v[4], TIE_DECIMALS),
+        0 if state.has(v[0], v[1]) else 1,
+        v[5],
+    ))
     label, coord, left, right, _b, _asp = valid[0]
     return label, coord, left, right
 

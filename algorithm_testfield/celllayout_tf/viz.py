@@ -23,11 +23,10 @@ from shapely.ops import unary_union
 
 from matplotlib.collections import LineCollection
 
-from matplotlib import cm
-
 from .atom_graph import AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
+from .region_graph import build_region_graph
 from .regionize import Region, regionize
 from .schema import ShapeInput, ShapePart, part_theta
 from .territory import Territory, resolve_territories
@@ -313,7 +312,7 @@ def save_region_figure(
                 alpha=0.6, linewidth=0.25, zorder=1,
             )
 
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.get_cmap("tab20")
     for r in regions:
         color = cmap(r.region_id % 20)
         poly = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
@@ -439,6 +438,110 @@ def save_atom_graph_figure(
     cross = sum(1 for e in graph.edges if not e.same_part)
     ax.set_title(
         title or f"{shape.name}: {n} atoms, {m} edges ({cross} cross-part)",
+        fontsize=10,
+    )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_region_graph_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+    target_area: float = 3.0,
+) -> Path:
+    """Render the region adjacency graph."""
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy, target_area=target_area)
+    graph = build_region_graph(shape, atoms=atoms, regions=regions, policy=policy)
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    cmap = plt.get_cmap("tab20")
+    region_centroids: dict[int, tuple[float, float]] = {}
+    for region in graph.regions:
+        color = cmap(region.region_id % 20)
+        poly = sg.Polygon(region.shape.exterior, [list(h) for h in region.shape.holes])
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor=color, edgecolor="#222222",
+            alpha=0.38, linewidth=0.9, zorder=2,
+        )
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.fill(
+                hx, hy,
+                facecolor="#444444", edgecolor="#111111",
+                alpha=1.0, linewidth=0.7, zorder=3,
+            )
+        c = poly.centroid
+        region_centroids[region.region_id] = (float(c.x), float(c.y))
+        ax.text(
+            c.x, c.y,
+            f"R{region.region_id}",
+            ha="center", va="center", fontsize=7,
+            bbox={
+                "boxstyle": "round,pad=0.16",
+                "facecolor": "white",
+                "edgecolor": "#777777",
+                "linewidth": 0.35,
+                "alpha": 0.9,
+            },
+            zorder=10,
+        )
+
+    same_segments: list[tuple] = []
+    cross_theta_segments: list[tuple] = []
+    exterior_segments: list[tuple] = []
+    hole_segments: list[tuple] = []
+    for edge in graph.edges:
+        seg = (region_centroids[edge.region_a], region_centroids[edge.region_b])
+        if edge.hole_contact:
+            hole_segments.append(seg)
+        elif edge.exterior_contact:
+            exterior_segments.append(seg)
+        elif not edge.same_theta_group:
+            cross_theta_segments.append(seg)
+        else:
+            same_segments.append(seg)
+
+    if same_segments:
+        ax.add_collection(LineCollection(
+            same_segments, colors="#444444", linewidths=0.8, alpha=0.65, zorder=5,
+        ))
+    if exterior_segments:
+        ax.add_collection(LineCollection(
+            exterior_segments, colors="#2266cc", linewidths=1.0, alpha=0.8, zorder=6,
+        ))
+    if hole_segments:
+        ax.add_collection(LineCollection(
+            hole_segments, colors="#dd8822", linewidths=1.0, alpha=0.9, zorder=6,
+        ))
+    if cross_theta_segments:
+        ax.add_collection(LineCollection(
+            cross_theta_segments, colors="#cc2222", linewidths=1.2, alpha=0.9, zorder=7,
+        ))
+
+    if region_centroids:
+        xs = [p[0] for p in region_centroids.values()]
+        ys = [p[1] for p in region_centroids.values()]
+        ax.plot(xs, ys, ".", color="#111111", markersize=2.2, zorder=11)
+
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+    n = len(graph.regions)
+    m = len(graph.edges)
+    door_ready = sum(1 for e in graph.edges if e.door_capable_length >= 0.9)
+    ax.set_title(
+        title or f"{shape.name}: {n} regions, {m} edges ({door_ready} door-ready)",
         fontsize=10,
     )
     fig.savefig(path, dpi=130, bbox_inches="tight")

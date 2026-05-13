@@ -21,12 +21,13 @@ from celllayout_tf.viz import (
     save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
+    save_region_graph_figure,
     save_region_figure,
     save_territory_figure,
 )
 
 
-PER_CASE_PHASES = ("input", "territory", "atom", "graph", "region")
+PER_CASE_PHASES = ("input", "territory", "atom", "graph", "region", "region_graph")
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -89,6 +90,12 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: regions",
+        )
+    if phase == "region_graph":
+        return save_region_graph_figure(
+            shape,
+            out,
+            title=f"{idx}. {name}: region graph",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

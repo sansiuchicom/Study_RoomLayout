@@ -69,7 +69,7 @@ def atomize(
 
     # Cross-theta-group contact projections — atom edges should land
     # exactly on these so regionize's Pass A cuts have no snap drift.
-    contact_xs, contact_ys = collect_cross_theta_contact_coords(territories)
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(shape, territories)
 
     # Group pieces by their effective theta (curved is treated as 0).
     groups: dict[float, list[tuple]] = defaultdict(list)

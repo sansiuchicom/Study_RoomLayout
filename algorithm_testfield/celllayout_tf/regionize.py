@@ -44,7 +44,7 @@ from .territory import (
 
 
 # Reference parameters --------------------------------------------------------
-MIN_AREA = 3.0          # m² minimum final region area
+MIN_AREA = 1.5          # m² minimum final region area
 MAX_ASPECT = 4.0        # final region local-bbox aspect cap
 BAL_MIN = 0.15          # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6        # balance tie-break precision (float drift tolerance)
@@ -106,6 +106,7 @@ def _collect_group_grid(
 
 
 def _collect_structural_coords(
+    shape,
     territories,
 ) -> dict[float, tuple[tuple[float, ...], tuple[float, ...]]]:
     """Return ``{theta_key: (xs, ys)}`` of structural coords per theta group.
@@ -140,7 +141,7 @@ def _collect_structural_coords(
                     xs_by_theta[key].add(round(x, 9))
                     ys_by_theta[key].add(round(y, 9))
 
-    contact_xs, contact_ys = collect_cross_theta_contact_coords(territories)
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(shape, territories)
     for key, vals in contact_xs.items():
         xs_by_theta[key].update(vals)
     for key, vals in contact_ys.items():
@@ -305,7 +306,7 @@ def regionize(
         atoms_by_pp[(a.part_id, a.piece_id)].append(a)
 
     atom_grid = _collect_group_grid(atoms)
-    structural_grid = _collect_structural_coords(territories)
+    structural_grid = _collect_structural_coords(shape, territories)
 
     # Pass A: collect structural cells per theta group.
     theta_cells: dict[float, list] = defaultdict(list)

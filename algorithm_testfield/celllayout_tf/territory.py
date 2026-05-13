@@ -102,13 +102,20 @@ def resolve_territories(shape: ShapeInput) -> tuple[Territory, ...]:
 
 
 def collect_cross_theta_contact_coords(
+    shape: ShapeInput,
     territories,
 ) -> tuple[dict[float, set[float]], dict[float, set[float]]]:
     """Cross-theta-group contact-boundary endpoints, per theta group.
 
-    For every pair of pieces in DIFFERENT theta groups, find their shared
-    boundary and project each endpoint into both pieces' local frames. The
-    resulting coords feed:
+    For every pair of parts in DIFFERENT theta groups, find where their
+    ORIGINAL polygon boundaries cross, and project each crossing point
+    into both parts' local frames. Original boundaries are used (rather
+    than post-clip territory pieces) so floating-point drift from
+    ``polygon.difference`` does not break collinear shared edges into a
+    near-but-not-touching pair — shapely then reports the boundary
+    intersection as empty.
+
+    The resulting coords feed:
 
       atomize.py    extends the per-theta-group atom grid so atom edges
                     land exactly on contact-induced cuts (no snap drift).
@@ -120,22 +127,22 @@ def collect_cross_theta_contact_coords(
     Returns ``(xs_by_theta, ys_by_theta)`` as sets keyed by
     ``round(eff_theta, 9)``.
     """
-    pieces_meta = []
+    parts_meta = []
     for terr in territories:
         eff_theta = 0.0 if terr.kind == KIND_CURVED else terr.theta
         key = round(eff_theta, 9)
         is_curved = terr.kind == KIND_CURVED
-        for piece in terr.pieces:
-            gp = sg.Polygon(piece.exterior, [list(h) for h in piece.holes])
-            if not gp.is_empty:
-                pieces_meta.append((key, eff_theta, is_curved, gp))
+        part = shape.parts[terr.part_id]
+        gp = sg.Polygon(part.exterior, [list(h) for h in part.holes])
+        if not gp.is_empty:
+            parts_meta.append((key, eff_theta, is_curved, gp))
 
     xs: dict[float, set[float]] = defaultdict(set)
     ys: dict[float, set[float]] = defaultdict(set)
-    for i in range(len(pieces_meta)):
-        ka, eta_a, curved_a, pa = pieces_meta[i]
-        for j in range(i + 1, len(pieces_meta)):
-            kb, eta_b, curved_b, pb = pieces_meta[j]
+    for i in range(len(parts_meta)):
+        ka, eta_a, curved_a, pa = parts_meta[i]
+        for j in range(i + 1, len(parts_meta)):
+            kb, eta_b, curved_b, pb = parts_meta[j]
             if ka == kb:
                 continue
             shared = pa.boundary.intersection(pb.boundary)

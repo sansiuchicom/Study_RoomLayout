@@ -44,7 +44,7 @@ from .territory import (
 
 
 # Reference parameters --------------------------------------------------------
-MIN_AREA = 1.0          # m² minimum final region area
+MIN_AREA = 0.7          # m² minimum final region area
 MAX_ASPECT = 3.0        # final region local-bbox aspect cap (~ 1m × 3m fits target)
 BAL_MIN = 0.15          # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6        # balance tie-break precision (float drift tolerance)
@@ -352,7 +352,9 @@ def regionize(
             k_area = max(1, round(_area / target_area))
             k_aspect = max(1, ceil(cell_aspect / MAX_ASPECT))
             k = max(k_area, k_aspect)
-            groups = _recurse_partition(cell_atoms, k, xs_pool, ys_pool, state)
+            groups = _recurse_partition(
+                cell_atoms, k, xs_pool, ys_pool, state, cell_aspect,
+            )
 
             for atom_list, sub_history in groups:
                 actual_atoms = [aw[0] for aw in atom_list]
@@ -415,14 +417,27 @@ def _build_atoms_with_local(piece_atoms, eff_theta):
 # Recursive partition ---------------------------------------------------------
 
 
-def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
+def _recurse_partition(
+    atoms_with_local, k, xs_pool, ys_pool, state, cell_aspect=1.0,
+):
+    """Recurse on a cell with given target k.
+
+    ``cell_aspect`` is the original cell's bbox aspect ratio. Used to
+    relax the terminal aspect gate inside thin cells — a 0.4×7 slab can
+    only ever produce sub-pieces with aspect well above MAX_ASPECT, so
+    enforcing the gate would block all subdivisions. The relaxation lets
+    the cell subdivide internally and align with seen-coord cuts from
+    its wider neighbors.
+    """
     if k <= 1 or not atoms_with_local:
         return [(atoms_with_local, [])]
     total_area = sum(aw[3] for aw in atoms_with_local)
     if total_area < MIN_AREA * 2:
         return [(atoms_with_local, [])]
 
-    sel = _select_lattice_cut(atoms_with_local, k, xs_pool, ys_pool, state)
+    sel = _select_lattice_cut(
+        atoms_with_local, k, xs_pool, ys_pool, state, cell_aspect,
+    )
     if sel is None:
         return [(atoms_with_local, [])]
 
@@ -435,7 +450,7 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
     result = []
     for sub_atoms, sub_k in zip((left, right), k_alloc):
         for group_atoms, group_history in _recurse_partition(
-            sub_atoms, sub_k, xs_pool, ys_pool, state,
+            sub_atoms, sub_k, xs_pool, ys_pool, state, cell_aspect,
         ):
             result.append((group_atoms, [(label, coord)] + group_history))
     return result
@@ -444,7 +459,9 @@ def _recurse_partition(atoms_with_local, k, xs_pool, ys_pool, state):
 # Cut selection (lattice / slab over shared atom grid) -----------------------
 
 
-def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
+def _select_lattice_cut(
+    atoms_with_local, k_total, xs_pool, ys_pool, state, cell_aspect=1.0,
+):
     """Pick the best slab cut from the shared-grid pool.
 
     Two-pool selection:
@@ -455,7 +472,8 @@ def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
          one, so sibling cells line up.
       2. Otherwise pick the overall best by the same key.
 
-    Balance, aspect, and area come from cached per-atom values.
+    ``cell_aspect`` is the enclosing cell's bbox aspect, used to relax the
+    terminal aspect gate for sub-pieces inside an already-thin cell.
     """
     cuts = _lattice_cuts(atoms_with_local, xs_pool, ys_pool)
     valid = []
@@ -469,7 +487,9 @@ def _select_lattice_cut(atoms_with_local, k_total, xs_pool, ys_pool, state):
             continue
         left_asp = _local_bbox_aspect(left)
         right_asp = _local_bbox_aspect(right)
-        if not _aspect_ok_areas([la, ra], [left_asp, right_asp], k_total):
+        if not _aspect_ok_areas(
+            [la, ra], [left_asp, right_asp], k_total, cell_aspect,
+        ):
             continue
         valid.append((label, coord, left, right, b, max(left_asp, right_asp)))
     if not valid:
@@ -501,11 +521,19 @@ def _local_bbox_aspect(atoms_with_local):
     return max(w, h) / min(w, h)
 
 
-def _aspect_ok_areas(areas, aspects, k_total):
-    """Aspect gate, only enforced on pieces that won't be subdivided further."""
+def _aspect_ok_areas(areas, aspects, k_total, cell_aspect=1.0):
+    """Aspect gate, only enforced on pieces that won't be subdivided further.
+
+    The effective cap is ``max(MAX_ASPECT, cell_aspect)`` — inside a cell
+    that is already thinner than MAX_ASPECT, no sub-piece can be more
+    square than the cell itself, so enforcing the strict cap would block
+    every cut. Relaxing to ``cell_aspect`` lets the cell subdivide along
+    seen-coord cuts from its wider neighbors.
+    """
+    effective_max = max(MAX_ASPECT, cell_aspect)
     k_alloc = _allocate_k_areas(areas, k_total)
     for ar, asp, kp in zip(areas, aspects, k_alloc):
-        if (kp <= 1 or ar < MIN_AREA * 2) and asp > MAX_ASPECT:
+        if (kp <= 1 or ar < MIN_AREA * 2) and asp > effective_max:
             return False
     return True
 

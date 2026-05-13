@@ -148,6 +148,40 @@ def test_cut_coords_come_from_shared_grid():
                 assert c in ys_by_theta[key], (r.region_id, label, coord)
 
 
+def test_case_13_regions_dont_span_cross_part_structural_cuts():
+    """十자: no region in the horizontal arm crosses the vertical arm's edges
+    (x=5, x=9). Pass A's cross-part structural cut must hold these as hard
+    boundaries — every region's atom centroids stay on one side.
+    """
+    case = selected_cases([13])[0][2]
+    atoms = atomize(case)
+    regions = regionize(case, atoms=atoms)
+    atom_by_id = {a.atom_id: a for a in atoms}
+    for r in regions:
+        xs = [atom_by_id[aid].centroid[0] for aid in r.atom_ids]
+        for cut in (5.0, 9.0):
+            below = all(x < cut for x in xs)
+            above = all(x > cut for x in xs)
+            assert below or above, (r.region_id, cut, xs)
+
+
+def test_case_17_regions_dont_span_hole_reflex_cuts():
+    """ㅁ자 big hole (3,3)-(11,7): no region crosses the hole's reflex coord
+    lines. Pass A must hold x=3, x=11, y=3, y=7 as hard region boundaries.
+    """
+    case = selected_cases([17])[0][2]
+    atoms = atomize(case)
+    regions = regionize(case, atoms=atoms)
+    atom_by_id = {a.atom_id: a for a in atoms}
+    for r in regions:
+        cs = [atom_by_id[aid].centroid for aid in r.atom_ids]
+        for axis, cut in ((0, 3.0), (0, 11.0), (1, 3.0), (1, 7.0)):
+            vals = [c[axis] for c in cs]
+            below = all(v < cut for v in vals)
+            above = all(v > cut for v in vals)
+            assert below or above, (r.region_id, axis, cut, vals)
+
+
 def test_target_area_smaller_produces_more_regions():
     case = selected_cases([1])[0][2]
     atoms = atomize(case)

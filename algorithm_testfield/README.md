@@ -297,7 +297,8 @@ algorithm runs per piece, in the theta-group's local frame, in two passes.
 Spec:
 
 ```text
-target_region_area     = 3-8m²
+target_region_area     = ~3m² (≈1평, Korean residential unit)
+min_region_area        = 1m²
 regions are connected atom sets
 sliver atoms are already absorbed at atomize
 every atom assigned to exactly one region

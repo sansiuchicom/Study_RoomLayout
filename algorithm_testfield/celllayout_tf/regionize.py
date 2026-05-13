@@ -44,7 +44,7 @@ from .territory import (
 
 
 # Reference parameters --------------------------------------------------------
-MIN_AREA = 1.5          # m² minimum final region area
+MIN_AREA = 1.0          # m² minimum final region area
 MAX_ASPECT = 4.0        # final region local-bbox aspect cap
 BAL_MIN = 0.15          # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6        # balance tie-break precision (float drift tolerance)
@@ -293,7 +293,7 @@ def regionize(
     atoms: tuple[Atom, ...] | None = None,
     policy: DimensionPolicy | None = None,
     *,
-    target_area: float = 6.0,
+    target_area: float = 3.0,
 ) -> tuple[Region, ...]:
     if atoms is None:
         atoms = atomize(shape, policy)

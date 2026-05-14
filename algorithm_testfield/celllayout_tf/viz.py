@@ -28,6 +28,7 @@ from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
+from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
 from .schema import ShapeInput, ShapePart, part_theta
 from .territory import Territory, resolve_territories
 
@@ -42,6 +43,14 @@ PART_COLORS = [
     "#fdd087",
     "#b3cde3",
 ]
+
+
+ROLE_COLORS: dict[str, str] = {
+    "public":  "#ff9a4c",   # warm amber — 거실/공용
+    "private": "#5b9bd5",   # blue — 침실
+    "wet":     "#70ad47",   # green — 욕실
+    "service": "#9467bd",   # purple — 주방·다용도실
+}
 
 
 def configure_fonts():
@@ -613,6 +622,146 @@ def save_dimension_examples_figure(
     )
     ax.set_title(f"Phase 2: split_interval examples\n{legend}", fontsize=9)
 
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_layout_figure(
+    shape: ShapeInput,
+    fixture: LayoutFixture,
+    path,
+    *,
+    result: GrowthResult | None = None,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+) -> Path:
+    """Render the Phase 7 seeded-growth result.
+
+    Layers (bottom-up):
+
+    1. faint region outlines (gray)
+    2. unassigned regions (hatched gray) — corridor / access candidates
+    3. grown rooms (role-colored, hub edge thicker)
+    4. region-id labels on unassigned, room-name labels on grown rooms
+    5. seed markers (white dot for normal rooms, star for hub)
+    6. footprint outline
+
+    If ``result`` is omitted, the algorithm runs internally.
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if result is None:
+        result = region_unit_greedy(shape, fixture, policy=policy)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint region outlines (background reference)
+    for r in regions:
+        poly = region_poly_by_id[r.region_id]
+        xs, ys = poly.exterior.xy
+        ax.plot(xs, ys, color="#cccccc", linewidth=0.4, zorder=1)
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.plot(hx, hy, color="#cccccc", linewidth=0.4, zorder=1)
+
+    # 2. unassigned regions (gray hatched — corridor candidate area)
+    for region_id in result.unassigned_region_ids:
+        poly = region_poly_by_id[region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor="#dddddd", edgecolor="#888888",
+            alpha=0.55, linewidth=0.6, hatch="///", zorder=2,
+        )
+        rp = poly.representative_point()
+        ax.text(
+            rp.x, rp.y, f"R{region_id}",
+            ha="center", va="center", fontsize=6, color="#555555",
+            zorder=10,
+        )
+
+    # 3. grown rooms (colored by role, hub edge thicker)
+    hub_idx = fixture.hub_room_index
+    for room_idx, grown in enumerate(result.rooms):
+        is_hub = room_idx == hub_idx
+        color = ROLE_COLORS.get(grown.role, "#888888")
+        alpha = 0.72 if is_hub else 0.55
+        edge_color = "#111111" if is_hub else "#333333"
+        edge_w = 1.8 if is_hub else 1.0
+
+        room_poly = unary_union(
+            [region_poly_by_id[rid] for rid in grown.region_ids]
+        )
+        for poly in _polygon_parts(room_poly):
+            xs, ys = poly.exterior.xy
+            ax.fill(
+                xs, ys,
+                facecolor=color, edgecolor=edge_color,
+                alpha=alpha, linewidth=edge_w, zorder=4,
+            )
+            for ring in poly.interiors:
+                hx, hy = ring.xy
+                ax.fill(
+                    hx, hy,
+                    facecolor="#444444", edgecolor="#111111",
+                    alpha=1.0, linewidth=0.7, zorder=5,
+                )
+
+        if not room_poly.is_empty:
+            rp = room_poly.representative_point()
+            hub_mark = "★ " if is_hub else ""
+            ax.text(
+                rp.x, rp.y,
+                f"{hub_mark}{grown.name}\n{grown.role}\n{grown.area_m2:.1f}㎡",
+                ha="center", va="center", fontsize=7,
+                bbox={
+                    "boxstyle": "round,pad=0.22",
+                    "facecolor": "white",
+                    "edgecolor": "#555555",
+                    "linewidth": 0.5,
+                    "alpha": 0.92,
+                },
+                zorder=12,
+            )
+
+    # 4. seed markers
+    for room_idx, spec in enumerate(fixture.rooms):
+        x, y = spec.seed_position
+        is_hub = room_idx == hub_idx
+        ax.scatter(
+            x, y,
+            s=120 if is_hub else 55,
+            marker="*" if is_hub else "o",
+            facecolor="#ffffff",
+            edgecolor="#000000",
+            linewidth=1.0,
+            zorder=15,
+        )
+
+    # 5. footprint outline + axis
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+
+    # title summary
+    parts = [
+        f"K={fixture.K}",
+        f"iter={result.diagnostics.get('total_iterations', 0)}",
+        f"unassigned={len(result.unassigned_region_ids)}",
+    ]
+    below_min = result.diagnostics.get("below_min_area", ())
+    if below_min:
+        parts.append(f"below_min={list(below_min)}")
+    ax.set_title(
+        title or f"{fixture.case_name}  |  " + ", ".join(parts),
+        fontsize=10,
+    )
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
     return path

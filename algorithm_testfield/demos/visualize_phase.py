@@ -16,18 +16,22 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from celllayout_tf.cases import case_slug, selected_cases
+from celllayout_tf.layout_fixtures import selected_fixtures
 from celllayout_tf.viz import (
     save_atom_figure,
     save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
+    save_layout_figure,
     save_region_graph_figure,
     save_region_figure,
     save_territory_figure,
 )
 
 
-PER_CASE_PHASES = ("input", "territory", "atom", "graph", "region", "region_graph")
+PER_CASE_PHASES = (
+    "input", "territory", "atom", "graph", "region", "region_graph", "layout",
+)
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -96,6 +100,16 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: region graph",
+        )
+    if phase == "layout":
+        fixtures = selected_fixtures([idx])
+        if not fixtures:
+            raise ValueError(f"no fixture for case index {idx}")
+        return save_layout_figure(
+            shape,
+            fixtures[0],
+            out,
+            title=f"{idx}. {name}: layout (region_unit_greedy)",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

@@ -18,8 +18,19 @@ for fixture data conventions.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Literal
+
+import shapely.geometry as sg
+from shapely.ops import unary_union
+
+from .atomize import atomize
+from .dimensions import DimensionPolicy
+from .region_graph import build_region_graph
+from .regionize import regionize
+from .schema import ShapeInput, ShapePart
+
 
 Role = Literal["public", "private", "service", "wet"]
 
@@ -182,18 +193,244 @@ class GrowthResult:
     diagnostics: dict = field(default_factory=dict)
 
 
-def region_unit_greedy(  # noqa: D401 — algorithm entry point
-    shape,
+def region_unit_greedy(
+    shape: ShapeInput,
     fixture: LayoutFixture,
     *,
-    policy=None,
+    policy: DimensionPolicy | None = None,
 ) -> GrowthResult:
     """Region-unit greedy seeded growth — Phase 7 first algorithm.
 
-    Implementation arrives in Round 2. Round 1 ships schema + fixtures
-    only so tests can pin the API before the body lands.
+    See README § Phase 7 for the full spec. Summary:
+
+      - seed each room from the region containing its ``seed_position``
+      - rank rooms by min-area shortfall (descending), else by smallest
+        current area (ascending)
+      - absorb one in-gate neighbor per iteration:
+          aspect gate (hard, role-based range) +
+          weak hub-connectivity gate (no room loses its hub path)
+      - stop when no room can grow without violating a gate.
+
+    Unassigned regions are returned in ``GrowthResult.unassigned_region_ids``
+    — they are the candidates for the later atom-level corridor / access
+    phase.
     """
-    raise NotImplementedError(
-        "region_unit_greedy is scheduled for Phase 7 Round 2; "
-        "Round 1 only ships schema + fixtures."
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    rg = build_region_graph(shape, atoms=atoms, regions=regions, policy=policy)
+
+    region_poly_by_id: dict[int, sg.Polygon] = {
+        r.region_id: _to_shapely(r.shape) for r in regions
+    }
+    region_area_by_id: dict[int, float] = {
+        rid: poly.area for rid, poly in region_poly_by_id.items()
+    }
+
+    neighbors_map: dict[int, set[int]] = defaultdict(set)
+    edge_shared: dict[tuple[int, int], float] = {}
+    for e in rg.edges:
+        neighbors_map[e.region_a].add(e.region_b)
+        neighbors_map[e.region_b].add(e.region_a)
+        key = (min(e.region_a, e.region_b), max(e.region_a, e.region_b))
+        edge_shared[key] = e.shared_boundary_length
+
+    num_rooms = len(fixture.rooms)
+    room_regions: dict[int, list[int]] = {i: [] for i in range(num_rooms)}
+    region_to_room: dict[int, int] = {}
+
+    for room_idx, spec in enumerate(fixture.rooms):
+        pt = sg.Point(*spec.seed_position)
+        # `covers` (not `contains`) so seeds sitting exactly on a region
+        # boundary still resolve to the first region in iteration order.
+        # Deterministic tie-break by region_id ascending.
+        found = None
+        for r in sorted(regions, key=lambda r: r.region_id):
+            if region_poly_by_id[r.region_id].covers(pt):
+                found = r.region_id
+                break
+        if found is None:
+            raise ValueError(
+                f"case {fixture.case_index} ({fixture.case_name}): "
+                f"seed {spec.name} at {spec.seed_position} does not fall "
+                f"inside any region (footprint hole or far outside?)"
+            )
+        if found in region_to_room:
+            other = fixture.rooms[region_to_room[found]].name
+            raise ValueError(
+                f"case {fixture.case_index} ({fixture.case_name}): "
+                f"seed {spec.name} at {spec.seed_position} resolves to "
+                f"region {found} already claimed by {other}"
+            )
+        region_to_room[found] = room_idx
+        room_regions[room_idx].append(found)
+
+    hub_idx = fixture.hub_room_index
+    aspect_ranges = [fixture.resolved_aspect_range(r) for r in fixture.rooms]
+    min_areas = [fixture.resolved_min_area(r) for r in fixture.rooms]
+    current_areas = [
+        region_area_by_id[room_regions[i][0]] for i in range(num_rooms)
+    ]
+
+    saturated = [False] * num_rooms
+    iterations: list[dict] = []
+
+    while True:
+        active = [i for i in range(num_rooms) if not saturated[i]]
+        if not active:
+            break
+
+        unmet = [i for i in active if current_areas[i] < min_areas[i]]
+        if unmet:
+            ranked = sorted(
+                unmet,
+                key=lambda i: -(min_areas[i] - current_areas[i]),
+            )
+        else:
+            ranked = sorted(active, key=lambda i: current_areas[i])
+
+        if hub_idx is not None:
+            before_hub_set = _rooms_connected_to_hub(
+                room_regions, hub_idx, region_to_room, neighbors_map,
+            )
+        else:
+            before_hub_set = None
+
+        picked = False
+        for room_idx in ranked:
+            cands: set[int] = set()
+            for region_id in room_regions[room_idx]:
+                for nbr in neighbors_map.get(region_id, ()):
+                    if nbr not in region_to_room:
+                        cands.add(nbr)
+            if not cands:
+                saturated[room_idx] = True
+                continue
+
+            a_range = aspect_ranges[room_idx]
+            in_gate: list[int] = []
+            for cand_id in cands:
+                # aspect gate
+                if a_range is not None:
+                    a_min, a_max = a_range
+                    union_poly = unary_union(
+                        [region_poly_by_id[rid]
+                         for rid in room_regions[room_idx]]
+                        + [region_poly_by_id[cand_id]]
+                    )
+                    if not (a_min <= _bbox_aspect(union_poly) <= a_max):
+                        continue
+                # hub gate (only when hub exists)
+                if hub_idx is not None:
+                    sim_region_to_room = dict(region_to_room)
+                    sim_region_to_room[cand_id] = room_idx
+                    sim_room_regions = {
+                        i: list(rs) for i, rs in room_regions.items()
+                    }
+                    sim_room_regions[room_idx].append(cand_id)
+                    after_hub_set = _rooms_connected_to_hub(
+                        sim_room_regions, hub_idx,
+                        sim_region_to_room, neighbors_map,
+                    )
+                    if not before_hub_set.issubset(after_hub_set):
+                        continue
+                in_gate.append(cand_id)
+
+            if not in_gate:
+                saturated[room_idx] = True
+                continue
+
+            def shared_with_room(cand_id: int, _room=room_idx) -> float:
+                total = 0.0
+                for rid in room_regions[_room]:
+                    key = (min(rid, cand_id), max(rid, cand_id))
+                    total += edge_shared.get(key, 0.0)
+                return total
+
+            best = max(in_gate, key=shared_with_room)
+            room_regions[room_idx].append(best)
+            region_to_room[best] = room_idx
+            current_areas[room_idx] += region_area_by_id[best]
+            iterations.append({
+                "room_idx": room_idx,
+                "absorbed_region_id": best,
+                "new_area_m2": current_areas[room_idx],
+            })
+            picked = True
+            break
+
+        if not picked:
+            break
+
+    grown_rooms = tuple(
+        GrownRoom(
+            name=spec.name,
+            role=spec.role,
+            region_ids=tuple(room_regions[i]),
+            area_m2=current_areas[i],
+        )
+        for i, spec in enumerate(fixture.rooms)
     )
+    unassigned = tuple(sorted(
+        rid for rid in region_poly_by_id if rid not in region_to_room
+    ))
+    diagnostics = {
+        "iterations": iterations,
+        "hub_room_index": hub_idx,
+        "total_iterations": len(iterations),
+        "below_min_area": tuple(
+            i for i in range(num_rooms) if current_areas[i] < min_areas[i]
+        ),
+    }
+    return GrowthResult(
+        fixture=fixture,
+        rooms=grown_rooms,
+        unassigned_region_ids=unassigned,
+        diagnostics=diagnostics,
+    )
+
+
+def _to_shapely(part: ShapePart) -> sg.Polygon:
+    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
+
+
+def _bbox_aspect(geom) -> float:
+    """Aspect ratio of the axis-aligned bbox: max_side / min_side, ≥ 1."""
+    xmin, ymin, xmax, ymax = geom.bounds
+    w = xmax - xmin
+    h = ymax - ymin
+    if w <= 0 or h <= 0:
+        return float("inf")
+    return max(w, h) / min(w, h)
+
+
+def _rooms_connected_to_hub(
+    room_regions: dict[int, list[int]],
+    hub_idx: int,
+    region_to_room: dict[int, int],
+    neighbors_map: dict[int, set[int]],
+) -> set[int]:
+    """Room indices path-connected to ``hub_idx`` in the room-supernode graph.
+
+    Two rooms are adjacent iff one region from each room is adjacent in
+    ``neighbors_map``. BFS from the hub supernode returns the reachable
+    set (always includes ``hub_idx`` itself).
+    """
+    room_adj: dict[int, set[int]] = defaultdict(set)
+    for region_id, r_idx in region_to_room.items():
+        for nbr in neighbors_map.get(region_id, ()):
+            other = region_to_room.get(nbr)
+            if other is not None and other != r_idx:
+                room_adj[r_idx].add(other)
+                room_adj[other].add(r_idx)
+
+    visited = {hub_idx}
+    queue = [hub_idx]
+    while queue:
+        nxt: list[int] = []
+        for cur in queue:
+            for nbr in room_adj[cur]:
+                if nbr not in visited:
+                    visited.add(nbr)
+                    nxt.append(nbr)
+        queue = nxt
+    return visited

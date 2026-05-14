@@ -392,13 +392,13 @@ Footprint: `rect(0,0,12,8)` rotated 60° around (6,4), area 96 m².
 ### Case 20 — ㄱ자 rotated 30°
 
 Footprint: ㄱ rotated 30° around its union centroid (≈4.71, 4.71), area 95 m².  
-*Seeds near centroid (verified inside the rotated polygon).*
+*Seeds inside the rotated polygon; space_3 moved off the main region to avoid collision with space_2.*
 
 | name | role | seed_position |
 |---|---|---|
 | space_1 | public | (4.5, 4.0) |
 | space_2 | private | (4.0, 6.0) |
-| space_3 | private | (3.0, 5.0) |
+| space_3 | private | (3.5, 6.5) |
 | space_4 | wet | (6.0, 2.5) |
 
 ### Case 21 — 7자 rotated 45°

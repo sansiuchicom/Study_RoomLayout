@@ -469,22 +469,22 @@ shared_boundary_length is symmetric (a,b) == (b,a)
 
 ### Phase 7: Seeded Room Growth (algorithm-only sandbox)
 
-**Scope.** Given per-room seeds + target_area as external input, test how
-well an algorithm grows regions/atoms into "그럴듯한" room shapes. Layout
-(which seed where), hub selection, corridor routing — **all deferred to
-later phases**.
+**Scope.** Given per-room seeds + role-based size/aspect constraints as
+external input, test how well an algorithm grows regions into "그럴듯한"
+room shapes. Layout, seed positioning, atom-level corridor carving —
+**all deferred to later phases**.
 
 This phase is a sandbox for the **growth algorithm itself**, isolated
 from layout decisions. Domain knowledge does not enter the algorithm; it
 enters only the fixture (room count K, role labels, seed coordinates,
-area constraints), which is parameterized externally.
+role-based area/aspect tables), which is parameterized externally.
 
-Out of scope for Phase 7 (deferred to later phases):
+Out of scope for Phase 7 (deferred):
 
 ```text
-hub selection                — separate phase (spine-first 또는 좌표 기반)
+hub designation               — fixture에서 implicit (public role 첫 방)
 seed positioning              — separate phase (manual / FPS / voronoi)
-corridor routing              — separate phase (spine-first에서 emerge)
+corridor carving (atom 단위)  — Phase 8+ (atom-level fine geometry)
 door-capable boundary check   — validation phase
 repair / rectangularization   — proto3 Stage 12 격, 별도 phase
 ```
@@ -498,7 +498,7 @@ Fixtures for the 33 cases live in [`PHASE7_Fixtures.md`](PHASE7_Fixtures.md).
 class RoomSpec:
     name: str                              # domain-free ID: "space_1", ...
     role: Literal["public", "private", "service", "wet"]
-    seed_position: tuple[float, float]     # algorithm resolves to region/atom
+    seed_position: tuple[float, float]     # algorithm resolves to region
     target_aspect_range: tuple[float, float] | None = None
     # None → use role default; (min, max) → explicit allowed range
 
@@ -507,27 +507,45 @@ class LayoutFixture:
     case_index: int
     case_name: str
     footprint_area_m2: float
-    target_area_each_m2: float
     rooms: tuple[RoomSpec, ...]
-    min_area_m2: float                     # target × 0.5
-    max_area_m2: float                     # target × 1.5
-    role_aspect_ranges: dict[str, tuple[float, float]]
-    # e.g., {"public": (1.0, 2.5), "private": (1.0, 2.0), ...}
+    role_min_areas: dict[str, float]                    # 절대 min per role
+    role_aspect_ranges: dict[str, tuple[float, float]]  # 절대 aspect per role
 ```
+
+**No `target_area`, no `max_area`.** Earlier drafts derived
+`target = footprint / K` and `max = target × 1.5` (or ×10). Both
+encoded an implicit "균등 분배가 default" assumption. The current schema
+drops both — growth dynamics + role constraints determine the
+distribution without a centrally imposed target.
 
 `role` mirrors proto3 `Role` Literal but uses only 4 of 6 values
 (`hub` and `corridor` are excluded — they belong to spine-first phases
 downstream).
 
-`target_aspect_range` is the only "shape constraint" the algorithm
-consumes, and it is **external input**. Algorithm never assumes "square
-is good" internally — instead, each room declares its allowed aspect
-range. Following proto3 D005 (gates, not scores), the range acts as a
-**hard gate**: a candidate region whose absorption would push the room's
-bbox aspect outside the range is rejected, not penalized. The fixture's
-`role_aspect_ranges` provides per-role defaults; a RoomSpec may override
-via `target_aspect_range`. See [PHASE7_Fixtures.md](PHASE7_Fixtures.md)
-for the range table.
+`target_aspect_range` and `role_min_areas` are the only "shape / size"
+knobs the algorithm consumes, and both are **external input**. The
+algorithm never assumes "square is good" or any target area internally
+— each room declares its allowed aspect range, the fixture declares
+per-role minimum areas. Following proto3 D005 (gates, not scores), both
+act as **hard gates**.
+
+#### Hub designation (weak invariant, Phase 7 only)
+
+The first `RoomSpec` with `role == "public"` is treated as the **hub**
+(no explicit fixture flag — implicit by role + listing order). If no
+room has `role == "public"` (K=2 원룸 cases), the hub invariant is
+disabled for that fixture.
+
+When a hub exists, growth must preserve **weak hub-connectivity**:
+
+> Every assigned room remains path-connected to the hub in the
+> region-graph induced subgraph over the rooms' assigned regions.
+
+This implements proto3 D011 (access-preserving atom growth) at the
+**region layer** — "moving through another room" is acceptable because
+this phase doesn't draw corridors. Atom-level **strong** hub-adjacency
+(each room walls-shares with hub directly or via corridor) is deferred
+to Phase 8+.
 
 #### Public API (planned)
 
@@ -546,38 +564,51 @@ grow_rooms(
 
 ```text
 init:
-  For each room: seed_position → containing region (via Polygon.contains).
+  For each room: seed_position → containing region (Polygon.contains).
                  Assign that region to the room.
-  For each room: resolve aspect_range:
-                   room.target_aspect_range if not None
-                   else fixture.role_aspect_ranges[room.role].
-loop while any region unassigned:
-  pressures = [(target_area - current_area) / target_area for each room]
-  process rooms in descending pressure order:
-    r = current room
-    if current_area(r) ≥ max_area: skip r.
-    candidates = region_graph neighbors of r's assigned regions
-                 that are still unassigned.
-    if candidates empty: mark r complete, skip.
-    if r.aspect_range is None:
-      pick max shared_boundary_length(r, cand)
+  hub_room = first room with role "public", else None.
+  For each room: resolve aspect_range (room override or role default),
+                                min_area (role_min_areas[role]).
+
+loop:
+  unmet = [r for r in rooms if current_area(r) < r.min_area]
+  if unmet:
+    rank by (min_area − current_area) descending     # min 미달 우선
+  else:
+    rank by current_area ascending                    # smallest first
+
+  picked_this_iter = False
+  for r in ranked order:
+    candidates = unassigned region_graph neighbors of r's regions.
+    if candidates empty: mark r saturated; continue.
+
+    filtered = candidates filtered by:
+      (a) aspect gate:
+            a_min, a_max = r.aspect_range
+            a_min ≤ bbox_aspect(r ∪ c) ≤ a_max
+      (b) hub invariant (only if hub_room is not None):
+            after absorbing c by r, all rooms still path-connected
+            to hub_room in region-graph induced subgraph.
+
+    if filtered:
+      pick max shared_boundary_length(r, c)
+      assign c to r; picked_this_iter = True; break.
     else:
-      a_min, a_max = r.aspect_range
-      in_range = [c for c in candidates 
-                  if a_min ≤ bbox_aspect(r ∪ c) ≤ a_max]
-      if in_range:
-        pick max shared_boundary_length(r, c)
-      else:
-        skip r this iteration (every cand violates the hard gate)
-    if picked: assign cand to r.
-  if no room grew this iteration: break (rest stays unassigned).
+      mark r saturated this iteration.
+
+  if not picked_this_iter: stop.   # every room saturated
 ```
 
-**Aspect range as hard gate** (D005 spirit): a candidate that pushes
-`bbox_aspect(r ∪ cand)` outside `[a_min, a_max]` is **rejected, not
-penalized**. If no candidate is in-range, the room is skipped — it may
-fail to reach `target_area`, but that failure is reported in diagnostics
-rather than masked by accepting a bad shape.
+**Stop condition**: every room is saturated — either no unassigned
+neighbor exists, or every neighbor violates the aspect or hub gate.
+There is no explicit "fill X% of footprint" target; the resulting
+unassigned regions are what spine-first will turn into corridor /
+access in a later phase.
+
+**Aspect & hub as hard gates** (D005 spirit): a candidate violating
+either is **rejected, not penalized**. If no candidate is in-range, the
+room is skipped — it may end up below `min_area`, but that failure is
+reported in diagnostics rather than masked by accepting a bad shape.
 
 Region-level. Atom-level fine tuning ignored at this phase. Phase 5
 regionize already produces near-rectangular regions, so the result
@@ -589,12 +620,12 @@ geometric (measurable) or external input:
 | value | source |
 |---|---|
 | `bbox_aspect(room)` | geometric: max_side / min_side of bbox |
-| `aspect_range` (per room) | external: `RoomSpec.target_aspect_range` 또는 role default |
-| `area_pressure` | derived: external `target_area` − measured `current_area` |
+| `aspect_range` (per room) | external: `RoomSpec.target_aspect_range` 또는 `role_aspect_ranges[role]` |
+| `min_area` (per room) | external: `fixture.role_min_areas[role]` |
 | `shared_boundary_length` | Phase 6 metadata (geometric) |
-| `min_area_m2`, `max_area_m2` | external: fixture |
+| hub designation | external: first `public`-role room |
 
-No tunable weights, no hardcoded thresholds inside the algorithm.
+No tunable weights, no hardcoded thresholds, no central area target.
 
 Deferred algorithm variants (compared visually after region_unit_greedy
 results are inspected):

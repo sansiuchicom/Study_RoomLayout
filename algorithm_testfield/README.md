@@ -499,6 +499,7 @@ class RoomSpec:
     name: str                              # domain-free ID: "space_1", ...
     role: Literal["public", "private", "service", "wet"]
     seed_position: tuple[float, float]     # algorithm resolves to region/atom
+    target_aspect: float | None = None     # None → use role default
 
 @dataclass(frozen=True)
 class LayoutFixture:
@@ -509,12 +510,20 @@ class LayoutFixture:
     rooms: tuple[RoomSpec, ...]
     min_area_m2: float                     # target × 0.5
     max_area_m2: float                     # target × 1.5
+    role_aspect_defaults: dict[str, float] # e.g., {"public": 1.2, "private": 1.0, ...}
 ```
 
 `role` mirrors proto3 `Role` Literal but uses only 4 of 6 values
 (`hub` and `corridor` are excluded — they belong to spine-first phases
-downstream). Algorithm currently ignores `role`; it is metadata for
-visualization and future role-aware variants.
+downstream).
+
+`target_aspect` is the only "shape preference" the algorithm consumes,
+and it is **external input**. Algorithm never assumes "square is good"
+internally — instead, each room declares its own aspect target (e.g.,
+1.0 = square, 2.0 = elongated for corridor-like, None = ignore aspect).
+The fixture's `role_aspect_defaults` provides per-role baselines; a
+RoomSpec may override via `target_aspect`. See [PHASE7_Fixtures.md](PHASE7_Fixtures.md)
+for the default table.
 
 #### Public API (planned)
 
@@ -535,15 +544,22 @@ grow_rooms(
 init:
   For each room: seed_position → containing region (via Polygon.contains).
                  Assign that region to the room.
+  For each room: resolve target_aspect:
+                   room.target_aspect if not None
+                   else fixture.role_aspect_defaults[room.role].
 loop while any region unassigned:
-  pressures = [(target - current_area) / target for each room]
+  pressures = [(target_area - current_area) / target_area for each room]
   pick highest-pressure room r:
     if current_area(r) ≥ max_area: skip r, try next-highest.
     candidates = region_graph neighbors of r's assigned regions
                  that are still unassigned.
     if candidates empty: skip r (cannot grow further).
-    pick candidate that minimizes |bbox_aspect(r ∪ cand) − 1.0|;
-       tie-break: max shared_boundary_length(r, cand).
+    pick candidate:
+      if r.resolved_target_aspect is None:
+        max shared_boundary_length(r, cand)
+      else:
+        min |bbox_aspect(r ∪ cand) − r.resolved_target_aspect|
+        tie-break: max shared_boundary_length(r, cand)
     assign cand to r.
   if no room grew this iteration: break (rest stays unassigned).
 ```
@@ -552,10 +568,18 @@ Region-level. Atom-level fine tuning ignored at this phase. Phase 5
 regionize already produces near-rectangular regions, so the result
 naturally inherits that shape quality.
 
-**Magic / scoring 회피**:
-- `bbox_aspect` is geometric (max_side / min_side), not a tunable weight.
-- `area_pressure` is derived from external `target_area`.
-- Tie-break uses `shared_boundary_length` (Phase 6 metadata, no constants).
+**Magic / scoring 회피** — every value the algorithm uses is either
+geometric (measurable) or external input:
+
+| value | source |
+|---|---|
+| `bbox_aspect(room)` | geometric: max_side / min_side of bbox |
+| `target_aspect` (per room) | external: fixture `RoomSpec.target_aspect` 또는 role default |
+| `area_pressure` | derived: external `target_area` − measured `current_area` |
+| `shared_boundary_length` | Phase 6 metadata (geometric) |
+| `min_area_m2`, `max_area_m2` | external: fixture |
+
+No tunable weights, no hardcoded thresholds inside the algorithm.
 
 Deferred algorithm variants (compared visually after region_unit_greedy
 results are inspected):

@@ -45,6 +45,27 @@ Room `name` is **domain-free** — `space_1, space_2, ..., space_K` in
 listed order. `role` carries the only domain hint, kept as metadata.
 The first room (`space_1`) is always the `public` room when K ≥ 3.
 
+### Role aspect defaults
+
+Per-role default `target_aspect` used by the algorithm when a RoomSpec
+doesn't override its own. `target_aspect` is the algorithm's only
+"shape preference" knob, and it lives here in the fixture — not inside
+the algorithm.
+
+| role | default target_aspect | rationale |
+|---|---:|---|
+| public | 1.2 | LDK 거실, 약간 길쭉 OK |
+| private | 1.0 | 사각형 선호 |
+| wet | 1.0 | 욕실 — 사각형 |
+| service | 1.5 | 주방·다용도실 — 약간 길쭉 |
+
+`target_aspect = None` (in a RoomSpec) → algorithm ignores aspect for
+that room and uses `shared_boundary_length` as the only tie-break.
+
+The 33 case fixtures below all omit `target_aspect` → role defaults
+apply. Override only when a case needs an unusual room shape (none in
+the current set).
+
 ### Seed position
 
 A `(x, y)` coordinate in the footprint's local frame. Resolved at

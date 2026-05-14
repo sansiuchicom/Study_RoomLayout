@@ -499,7 +499,8 @@ class RoomSpec:
     name: str                              # domain-free ID: "space_1", ...
     role: Literal["public", "private", "service", "wet"]
     seed_position: tuple[float, float]     # algorithm resolves to region/atom
-    target_aspect: float | None = None     # None → use role default
+    target_aspect_range: tuple[float, float] | None = None
+    # None → use role default; (min, max) → explicit allowed range
 
 @dataclass(frozen=True)
 class LayoutFixture:
@@ -510,20 +511,23 @@ class LayoutFixture:
     rooms: tuple[RoomSpec, ...]
     min_area_m2: float                     # target × 0.5
     max_area_m2: float                     # target × 1.5
-    role_aspect_defaults: dict[str, float] # e.g., {"public": 1.2, "private": 1.0, ...}
+    role_aspect_ranges: dict[str, tuple[float, float]]
+    # e.g., {"public": (1.0, 2.5), "private": (1.0, 2.0), ...}
 ```
 
 `role` mirrors proto3 `Role` Literal but uses only 4 of 6 values
 (`hub` and `corridor` are excluded — they belong to spine-first phases
 downstream).
 
-`target_aspect` is the only "shape preference" the algorithm consumes,
-and it is **external input**. Algorithm never assumes "square is good"
-internally — instead, each room declares its own aspect target (e.g.,
-1.0 = square, 2.0 = elongated for corridor-like, None = ignore aspect).
-The fixture's `role_aspect_defaults` provides per-role baselines; a
-RoomSpec may override via `target_aspect`. See [PHASE7_Fixtures.md](PHASE7_Fixtures.md)
-for the default table.
+`target_aspect_range` is the only "shape constraint" the algorithm
+consumes, and it is **external input**. Algorithm never assumes "square
+is good" internally — instead, each room declares its allowed aspect
+range. Following proto3 D005 (gates, not scores), the range acts as a
+**hard gate**: a candidate region whose absorption would push the room's
+bbox aspect outside the range is rejected, not penalized. The fixture's
+`role_aspect_ranges` provides per-role defaults; a RoomSpec may override
+via `target_aspect_range`. See [PHASE7_Fixtures.md](PHASE7_Fixtures.md)
+for the range table.
 
 #### Public API (planned)
 
@@ -544,25 +548,36 @@ grow_rooms(
 init:
   For each room: seed_position → containing region (via Polygon.contains).
                  Assign that region to the room.
-  For each room: resolve target_aspect:
-                   room.target_aspect if not None
-                   else fixture.role_aspect_defaults[room.role].
+  For each room: resolve aspect_range:
+                   room.target_aspect_range if not None
+                   else fixture.role_aspect_ranges[room.role].
 loop while any region unassigned:
   pressures = [(target_area - current_area) / target_area for each room]
-  pick highest-pressure room r:
-    if current_area(r) ≥ max_area: skip r, try next-highest.
+  process rooms in descending pressure order:
+    r = current room
+    if current_area(r) ≥ max_area: skip r.
     candidates = region_graph neighbors of r's assigned regions
                  that are still unassigned.
-    if candidates empty: skip r (cannot grow further).
-    pick candidate:
-      if r.resolved_target_aspect is None:
-        max shared_boundary_length(r, cand)
+    if candidates empty: mark r complete, skip.
+    if r.aspect_range is None:
+      pick max shared_boundary_length(r, cand)
+    else:
+      a_min, a_max = r.aspect_range
+      in_range = [c for c in candidates 
+                  if a_min ≤ bbox_aspect(r ∪ c) ≤ a_max]
+      if in_range:
+        pick max shared_boundary_length(r, c)
       else:
-        min |bbox_aspect(r ∪ cand) − r.resolved_target_aspect|
-        tie-break: max shared_boundary_length(r, cand)
-    assign cand to r.
+        skip r this iteration (every cand violates the hard gate)
+    if picked: assign cand to r.
   if no room grew this iteration: break (rest stays unassigned).
 ```
+
+**Aspect range as hard gate** (D005 spirit): a candidate that pushes
+`bbox_aspect(r ∪ cand)` outside `[a_min, a_max]` is **rejected, not
+penalized**. If no candidate is in-range, the room is skipped — it may
+fail to reach `target_area`, but that failure is reported in diagnostics
+rather than masked by accepting a bad shape.
 
 Region-level. Atom-level fine tuning ignored at this phase. Phase 5
 regionize already produces near-rectangular regions, so the result
@@ -574,7 +589,7 @@ geometric (measurable) or external input:
 | value | source |
 |---|---|
 | `bbox_aspect(room)` | geometric: max_side / min_side of bbox |
-| `target_aspect` (per room) | external: fixture `RoomSpec.target_aspect` 또는 role default |
+| `aspect_range` (per room) | external: `RoomSpec.target_aspect_range` 또는 role default |
 | `area_pressure` | derived: external `target_area` − measured `current_area` |
 | `shared_boundary_length` | Phase 6 metadata (geometric) |
 | `min_area_m2`, `max_area_m2` | external: fixture |

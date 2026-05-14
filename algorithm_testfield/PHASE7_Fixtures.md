@@ -45,26 +45,38 @@ Room `name` is **domain-free** — `space_1, space_2, ..., space_K` in
 listed order. `role` carries the only domain hint, kept as metadata.
 The first room (`space_1`) is always the `public` room when K ≥ 3.
 
-### Role aspect defaults
+### Role aspect ranges
 
-Per-role default `target_aspect` used by the algorithm when a RoomSpec
-doesn't override its own. `target_aspect` is the algorithm's only
-"shape preference" knob, and it lives here in the fixture — not inside
-the algorithm.
+Per-role default `target_aspect_range` used by the algorithm when a
+RoomSpec doesn't override its own. `target_aspect_range` is the
+algorithm's only "shape constraint" knob, and it lives here in the
+fixture — not inside the algorithm.
 
-| role | default target_aspect | rationale |
-|---|---:|---|
-| public | 1.2 | LDK 거실, 약간 길쭉 OK |
-| private | 1.0 | 사각형 선호 |
-| wet | 1.0 | 욕실 — 사각형 |
-| service | 1.5 | 주방·다용도실 — 약간 길쭉 |
+Following proto3 D005, the range is a **hard gate**: a candidate region
+whose absorption would push the room's `bbox_aspect` outside the range
+is rejected. The room may end up under `target_area` if no in-range
+candidate exists — that's reported in diagnostics, not silently
+worked around.
 
-`target_aspect = None` (in a RoomSpec) → algorithm ignores aspect for
-that room and uses `shared_boundary_length` as the only tie-break.
+| role | default `target_aspect_range` | rationale |
+|---|---|---|
+| public | (1.0, 2.5) | LDK 거실 — 사각형 ~ 1:2.5 길쭉 (전면 발코니형) |
+| private | (1.0, 2.0) | 침실 — 사각형 위주, 안방+드레스 통합 시 길쭉 |
+| wet | (1.0, 2.0) | 욕실 — 사각형 위주, 변기-세면-욕조 일렬 |
+| service | (1.0, 4.0) | 주방·다용도실 — 가늘고 긴 배치 흔함 |
 
-The 33 case fixtures below all omit `target_aspect` → role defaults
-apply. Override only when a case needs an unusual room shape (none in
-the current set).
+All ranges start at 1.0 because `bbox_aspect = max_side / min_side` is
+always ≥ 1 by definition.
+
+`target_aspect_range = None` (in a RoomSpec) → algorithm ignores aspect
+for that room and uses `shared_boundary_length` as the only tie-break.
+
+The 33 case fixtures below all omit `target_aspect_range` → role
+defaults apply. Override only when a case needs an unusual room shape
+(none in the current set).
+
+This is a first-pass set, intentionally on the loose side. Tighten
+after the first visualization round if rooms come out too elongated.
 
 ### Seed position
 

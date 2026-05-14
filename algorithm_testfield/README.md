@@ -467,74 +467,149 @@ door_capable_length(R_a, R_b) ≤ shared_boundary_length(R_a, R_b)
 shared_boundary_length is symmetric (a,b) == (b,a)
 ```
 
-### Phase 7: Layout v1
+### Phase 7: Seeded Room Growth (algorithm-only sandbox)
 
-Build the first room-layout result from regions, region_graph, and atom
-routing. Hub-first design — hub anchors the layout, rooms group around it,
-corridors connect.
+**Scope.** Given per-room seeds + target_area as external input, test how
+well an algorithm grows regions/atoms into "그럴듯한" room shapes. Layout
+(which seed where), hub selection, corridor routing — **all deferred to
+later phases**.
 
-Public API:
+This phase is a sandbox for the **growth algorithm itself**, isolated
+from layout decisions. Domain knowledge does not enter the algorithm; it
+enters only the fixture (room count K, role labels, seed coordinates,
+area constraints), which is parameterized externally.
 
-```python
-layout_input(
-    shape: ShapeInput,
-    target_room_count: int,
-    entry_point: tuple[float, float] | None = None,
-    corridor_width: float = 0.6,
-) -> LayoutResult
-```
-
-Sub-steps:
+Out of scope for Phase 7 (deferred to later phases):
 
 ```text
-7a. Hub selection
-    If entry_point given: the region containing that point. Else:
-    the region with highest atom-graph centrality.
-
-7b. Room grouping (hub-aware)
-    Greedy merge of regions until count == target_room_count, using
-    region_graph adjacency + (area balance, aspect, hub-distance)
-    as merge criteria.
-
-7c. Corridor routing
-    For each non-hub room, find atom-graph shortest path from a
-    hub atom to a room-boundary atom. Each path's atoms become
-    corridor atoms (subtracted from their original room). v1 target
-    width is 0.6m (about two atoms), expanded by adding adjacent atoms
-    around the path where possible.
-
-7d. Validation
-    - All atoms assigned to exactly one of {room_i, corridor}
-    - Each room has door_capable_length ≥ 0.9m onto corridor or hub
-    - room count == target_room_count (when feasible)
-    - rooms and corridor are connected sets
+hub selection                — separate phase (spine-first 또는 좌표 기반)
+seed positioning              — separate phase (manual / FPS / voronoi)
+corridor routing              — separate phase (spine-first에서 emerge)
+door-capable boundary check   — validation phase
+repair / rectangularization   — proto3 Stage 12 격, 별도 phase
 ```
 
-Output:
+#### External input (fixture-driven)
+
+Fixtures for the 33 cases live in [`PHASE7_Fixtures.md`](PHASE7_Fixtures.md).
 
 ```python
-Room(
-    room_id: int,
-    region_ids: tuple[int, ...],
-    atom_ids: tuple[int, ...],
-    polygon: ShapePart,
-    area: float,
-    is_hub: bool,
-)
+@dataclass(frozen=True)
+class RoomSpec:
+    name: str                              # domain-free ID: "space_1", ...
+    role: Literal["public", "private", "service", "wet"]
+    seed_position: tuple[float, float]     # algorithm resolves to region/atom
 
-Corridor(
-    atom_ids: tuple[int, ...],
-    polygon: ShapePart,
-    connected_room_ids: tuple[int, ...],
-    area: float,
-)
+@dataclass(frozen=True)
+class LayoutFixture:
+    case_index: int
+    case_name: str
+    footprint_area_m2: float
+    target_area_each_m2: float
+    rooms: tuple[RoomSpec, ...]
+    min_area_m2: float                     # target × 0.5
+    max_area_m2: float                     # target × 1.5
+```
 
-LayoutResult(
-    rooms: tuple[Room, ...],
-    corridor: Corridor,
-    hub_room_id: int,
-    diagnostics: dict,  # gap_area_ratio, unreachable_rooms, etc.
-)
+`role` mirrors proto3 `Role` Literal but uses only 4 of 6 values
+(`hub` and `corridor` are excluded — they belong to spine-first phases
+downstream). Algorithm currently ignores `role`; it is metadata for
+visualization and future role-aware variants.
+
+#### Public API (planned)
+
+```python
+grow_rooms(
+    shape: ShapeInput,
+    fixture: LayoutFixture,
+    algorithm: Literal["region_unit_greedy", ...],
+    policy: DimensionPolicy | None = None,
+) -> GrowthResult
+```
+
+#### Algorithm candidates (one at a time, visual comparison)
+
+**(1) `region_unit_greedy`** — first target, region-level growth:
+
+```text
+init:
+  For each room: seed_position → containing region (via Polygon.contains).
+                 Assign that region to the room.
+loop while any region unassigned:
+  pressures = [(target - current_area) / target for each room]
+  pick highest-pressure room r:
+    if current_area(r) ≥ max_area: skip r, try next-highest.
+    candidates = region_graph neighbors of r's assigned regions
+                 that are still unassigned.
+    if candidates empty: skip r (cannot grow further).
+    pick candidate that minimizes |bbox_aspect(r ∪ cand) − 1.0|;
+       tie-break: max shared_boundary_length(r, cand).
+    assign cand to r.
+  if no room grew this iteration: break (rest stays unassigned).
+```
+
+Region-level. Atom-level fine tuning ignored at this phase. Phase 5
+regionize already produces near-rectangular regions, so the result
+naturally inherits that shape quality.
+
+**Magic / scoring 회피**:
+- `bbox_aspect` is geometric (max_side / min_side), not a tunable weight.
+- `area_pressure` is derived from external `target_area`.
+- Tie-break uses `shared_boundary_length` (Phase 6 metadata, no constants).
+
+Deferred algorithm variants (compared visually after region_unit_greedy
+results are inspected):
+
+```text
+(2) aspect_min_BFS    — atom-unit aspect-minimizing growth
+(3) bbox_guided       — target bbox 안쪽 atom 우선 흡수
+(4) frontier_strip    — axis-aligned strip growth from seeds
+(5) region+atom 2-stage — (1) coarse + (2)/(3) fine-tune
+```
+
+#### Output
+
+```python
+@dataclass(frozen=True)
+class GrownRoom:
+    name: str
+    role: str
+    region_ids: tuple[int, ...]
+    area_m2: float
+    polygon: ShapePart
+
+@dataclass(frozen=True)
+class GrowthResult:
+    fixture: LayoutFixture
+    rooms: tuple[GrownRoom, ...]
+    unassigned_region_ids: tuple[int, ...]
+    diagnostics: dict      # per-room area_pressure history, etc.
+```
+
+#### Evaluation (first iteration)
+
+**Visualization only**. Quantitative metrics deferred — to be agreed
+case-by-case after looking at SVGs. Each case's growth result rendered
+with:
+
+```text
+- footprint outline
+- regions (faint outline)
+- atoms (background)
+- room assignment (color per room, color scheme by role)
+- seed positions (annotated dots)
+- unassigned regions (gray hatched)
+```
+
+#### Tests (initial sketch)
+
+```text
+seed_position 안쪽 → 정확히 한 region에 resolve
+seed_position 바깥/hole → fixture validation error
+모든 room이 connected (region_graph induced subgraph)
+모든 region이 정확히 한 room에 할당되거나 unassigned로 보고
+case 01 (rect, K=5) 시각화 통과
+case 24 (small angled, K=2) 시각화 통과
 ```
 
 ### Phase 8: Visualization + Metrics
@@ -549,18 +624,6 @@ regions
 region graph
 room groups
 corridor/access
-```
-
-Dataset metrics:
-
-```text
-coordinate_grid_compliance
-atom_width_distribution
-region_area_distribution
-room_area_distribution
-corridor_width_error
-gap_area / overlap_area / outside_area
-graph_connectivity
 ```
 
 Dataset metrics:

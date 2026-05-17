@@ -682,6 +682,138 @@ case 01 (rect, K=5) 시각화 통과
 case 24 (small angled, K=2) 시각화 통과
 ```
 
+#### Round 4 — Rect-Preserving Growth (in progress, branch `phase-7-rect-growth`)
+
+Round 3 result review (33 PNGs) surfaced two systemic issues:
+
+```text
+1. 사각형 유지 실패 — bbox_aspect gate는 외접 사각형 비율만 보므로
+   L자/T자 흡수가 합법적으로 통과됨. Rectangularity 개념 없음.
+2. 빈 공간 다수 — aspect gate가 너무 엄격하면 페리피럴 region이 어느
+   방의 게이트도 통과 못해 orphan으로 남음. 두 문제는 같은 뿌리:
+   bbox aspect 단일 게이트로는 좋은 모양을 표현 못함.
+```
+
+Round 4는 **(a) seed 자동 배치** + **(b) cut_history 기반 rectangle 게이트**로
+교체. 빈 공간은 의도적으로 corridor 단계까지 보류 (spec §"unassigned
+regions are what spine-first will turn into corridor"와 일치).
+
+##### Decisions (locked in)
+
+| 항목 | 결정 |
+|---|---|
+| Hub election | region_graph degree centrality, tie-break: area DESC |
+| "각 부분" 단위 | **Territory** (`resolve_territories` 결과). Connected component보다 강함. Hole 케이스는 1 territory, multi-part(22, 23, 28, 29)는 다 territory. |
+| Territory 수 > K | 살아있는 territory를 면적 DESC로 정렬, top K만 채택. 나머지 territory의 region은 unassigned (corridor 후보). |
+| Seed 잔여 배치 | Region-hop FPS, tie-break: area DESC |
+| `RoomSpec.seed_position` | `tuple | None` — None이면 자동 배치 |
+| 사각형 정의 | **cut_history boundary cancellation** (아래 §Rectangle gate) |
+| Cross-theta-group 흡수 | **금지** — wing은 자기 territory에서 자라거나 unassigned |
+| Seed region 초기 비-사각형 | 그대로 인정 (v1). 확장 후 사각형성만 검사 |
+
+##### Seed auto-placement
+
+```text
+Phase A — Hub (has_public인 경우만; K=2는 skip)
+  전체 region 중 (degree DESC, area DESC) → hub seed
+
+Phase B — Territory coverage
+  surviving_territories를 면적 DESC로 정렬
+  top min(len(territories), K)개를 선택
+  hub_seed의 territory는 이미 채워졌다고 간주
+  나머지 선택된 territory 각각:
+    territory 내 (degree DESC, area DESC) → forced seed
+
+Phase C — FPS for remaining
+  while len(seeds) < K:
+    candidates = (선택된 territory들의 unseeded regions)
+    pick argmax_{c} min_{s in seeds} hop_distance(c, s)  # region_graph 위
+    tie-break: area DESC
+```
+
+##### Rectangle gate (cut_history 기반)
+
+핵심 정의:
+
+```text
+room_boundary_cuts(room_regions) -> {axis: sorted coords}
+  1. room 내 모든 region.cut_history 좌표를 axis별로 모음.
+  2. 각 cut (axis, c)에 대해, 그 cut를 따라 인접한 두 region이
+     모두 room 내에 있으면 cancel (internal cut, room 경계 아님).
+     인접 판정은 region_graph edge metadata로 한다.
+  3. 남은 좌표가 room의 boundary cut.
+
+is_rectangle(room_regions) ⟺
+  len(boundary_cuts["axis_x"]) ≤ 2 AND
+  len(boundary_cuts["axis_y"]) ≤ 2
+  (2개 미만은 piece 외곽선에 의해 implicit하게 닫힘)
+```
+
+흡수 게이트:
+
+```text
+gate(R, C):
+  (a) cross-theta 금지:   R.theta_group == C.theta_group
+  (b) hub-connectivity:    기존 D011 유지
+  (c) rectangle 유지:      is_rectangle(R.regions ∪ {C})
+  (d) role aspect range:   기존 hard gate 유지
+```
+
+랭킹: `shared_boundary_length DESC` (기존 유지). v2에서는 cut-aligned
+bonus 없이 게이트만으로 사각형성을 강제하는지 본다.
+
+##### Work items (W1–W7)
+
+각 항목 = 별도 commit, no-squash로 보존.
+
+```text
+W1  centrality + territory 매핑 헬퍼
+    region_to_territory, region_degree, pick_top_centrality
+    tests: case 22, 23, 28, 29
+
+W2  auto_place_seeds(shape, region_graph, territories, K, has_public)
+    Phase A/B/C 구현
+    tests: 단일 territory, multi-part, territory 수 > K, K=2
+
+W3  RoomSpec.seed_position: tuple | None
+    fixture validation 갱신, 기존 33 fixture 호환
+
+W4  cut_history rectangle gate
+    room_boundary_cuts cancel 로직 (region_graph adjacency 활용)
+    is_rectangle_after(room, candidate)
+    tests: 합성 mini case + case 13 cross + case 18 rotated
+
+W5  region_unit_greedy v2 wire-up
+    필터에 cross-theta + rectangle gate 추가
+    기존 smoke test 통과 + 새 invariant tests
+
+W6  33-case 시각화 재생성, Round 3와 side-by-side 검수
+
+W7  메모리 + Current Status 업데이트
+```
+
+##### Branch / merge
+
+```text
+main
+ ├─ phase-7-region-unit-greedy   (Round 1-3 archive)
+ └─ phase-7-rect-growth          (Round 4, this branch)
+
+W6 검수 후:
+  통과 → phase-7-rect-growth → main (no-ff)
+         phase-7-region-unit-greedy archive 태그 (선택)
+  실패 → 브랜치 폐기 또는 experiment/ 이동
+         phase-7-region-unit-greedy → main (Round 3 baseline 채택)
+```
+
+##### Known risk
+
+`room_boundary_cuts` cancel 로직이 가장 까다로움. cut_history는 좌표만
+저장하지 "어느 쪽에 누가 있는지" 정보가 없어, 두 region이 정말 그 cut를
+따라 인접한지는 region_graph edge에서 다시 확인해야 함. W4 시작 시점에
+`RegionEdge` metadata에 cut-aligned 정보(`shared_axis`, `shared_coord`)가
+즉시 추출 가능한지 검토. 없으면 atom_graph까지 한 단계 내려갈 가능성.
+
 ### Phase 8: Visualization + Metrics
 
 Every phase should save debug figures:
@@ -710,9 +842,11 @@ graph_connectivity
 
 ## Current Status
 
-Phases 1–6 implemented and stable in the testfield. Phase 6 adds the
-region adjacency graph from atom-graph contacts and exposes a region-graph
-diagnostic renderer.
+Phases 1–6 stable on `main`. Phase 7 Rounds 1–3 (schema + fixtures +
+`region_unit_greedy` v1 + layout visualization) on branch
+`phase-7-region-unit-greedy`, not yet merged. Phase 7 Round 4
+(rect-preserving growth) in progress on branch `phase-7-rect-growth`
+— see §Phase 7 / Round 4 above.
 
 Implemented modules:
 
@@ -725,11 +859,14 @@ celllayout_tf/atom_graph.py
 celllayout_tf/regionize.py
 celllayout_tf/region_graph.py
 celllayout_tf/territory.py
+celllayout_tf/layout_fixtures.py     # Round 1
+celllayout_tf/room_growth.py         # Round 2 (v1), Round 4 (v2)
 celllayout_tf/viz.py
 ```
 
 Implemented phases of `demos/visualize_phase.py`:
-`input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `dimensions`.
+`input`, `territory`, `atom`, `graph`, `region`, `region_graph`,
+`dimensions`, `layout`.
 
 Run:
 

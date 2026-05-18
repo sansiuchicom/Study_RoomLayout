@@ -385,3 +385,333 @@ def region_local_polys_by_id(
 ) -> dict[int, sg.Polygon]:
     """Map region_id → local-frame polygon (cached for repeated gate queries)."""
     return {r.region_id: _region_to_local(r, r.theta) for r in region_graph.regions}
+
+
+# ---------- Main entry: region_priority_growth ----------
+
+
+def _aspect_gate_ok(
+    room_region_ids: list[int],
+    strip_ids: tuple[int, ...],
+    region_poly_by_id: dict[int, sg.Polygon],
+    aspect_range: tuple[float, float] | None,
+) -> bool:
+    """bbox aspect (max/min) of combined room ∪ strip within role range."""
+    if aspect_range is None:
+        return True
+    a_min, a_max = aspect_range
+    polys = (
+        [region_poly_by_id[rid] for rid in room_region_ids]
+        + [region_poly_by_id[rid] for rid in strip_ids]
+    )
+    union = unary_union(polys)
+    if union.is_empty:
+        return False
+    xmin, ymin, xmax, ymax = union.bounds
+    w = xmax - xmin
+    h = ymax - ymin
+    if w < 1e-9 or h < 1e-9:
+        return False
+    aspect = max(w / h, h / w)
+    return a_min <= aspect <= a_max
+
+
+def _hub_gate_ok(
+    room_idx: int,
+    strip_ids: tuple[int, ...],
+    room_regions: dict[int, list[int]],
+    region_to_room: dict[int, int],
+    hub_idx: int,
+    neighbors_map: dict[int, set[int]],
+) -> bool:
+    """After absorbing strip, the room-supernode graph keeps every previously
+    hub-connected room still hub-connected (D011)."""
+    from .room_growth import _rooms_connected_to_hub
+    before = _rooms_connected_to_hub(
+        room_regions, hub_idx, region_to_room, neighbors_map,
+    )
+    sim_region_to_room = dict(region_to_room)
+    sim_room_regions = {i: list(rs) for i, rs in room_regions.items()}
+    for cell in strip_ids:
+        sim_region_to_room[cell] = room_idx
+        sim_room_regions[room_idx].append(cell)
+    after = _rooms_connected_to_hub(
+        sim_room_regions, hub_idx, sim_region_to_room, neighbors_map,
+    )
+    return before.issubset(after)
+
+
+def _pick_winner(
+    claimants: list[int],
+    hub_idx: int | None,
+    current_areas: dict[int, float],
+) -> int:
+    """Hub wins. Else smallest current area (deterministic tie: room_idx ASC)."""
+    if hub_idx is not None and hub_idx in claimants:
+        return hub_idx
+    return min(claimants, key=lambda i: (current_areas[i], i))
+
+
+def _run_round(
+    ordering: list[int],
+    room_regions: dict[int, list[int]],
+    region_to_room: dict[int, int],
+    anchors: dict[int, SeedAnchor],
+    region_local_polys: dict[int, sg.Polygon],
+    ids_by_part: dict[int, list[int]],
+    terr_polys: dict[int, sg.base.BaseGeometry],
+    regions_by_id: dict[int, Region],
+    region_poly_by_id: dict[int, sg.Polygon],
+    region_area_by_id: dict[int, float],
+    aspect_ranges: list[tuple[float, float] | None],
+    hub_idx: int | None,
+    neighbors_map: dict[int, set[int]],
+    K: int,
+) -> set[int]:
+    """One round of priority growth + conflict resolution.
+
+    Returns set of room_idxs that committed (absorbed ≥1 strip) this round.
+    Within the round, losers of cell conflicts retry their next priority side.
+    """
+    committed: set[int] = set()
+    tried_sides: dict[int, set[Side]] = defaultdict(set)
+
+    while True:
+        # Phase 1: each non-committed room proposes its next valid strip
+        proposals: dict[int, tuple[tuple[int, ...], Side]] = {}
+        for room_idx in ordering:
+            if room_idx in committed:
+                continue
+            anchor = anchors[room_idx]
+            for side in anchor.side_priority:
+                if side in tried_sides[room_idx]:
+                    continue
+                part_id = regions_by_id[room_regions[room_idx][0]].part_id
+                strip = find_strip(
+                    tuple(room_regions[room_idx]),
+                    side,
+                    region_to_room,
+                    region_local_polys,
+                    ids_by_part,
+                    terr_polys[part_id],
+                    part_id,
+                )
+                if strip is None:
+                    tried_sides[room_idx].add(side)
+                    continue
+                if not _aspect_gate_ok(
+                    room_regions[room_idx], strip,
+                    region_poly_by_id, aspect_ranges[room_idx],
+                ):
+                    tried_sides[room_idx].add(side)
+                    continue
+                if hub_idx is not None and not _hub_gate_ok(
+                    room_idx, strip, room_regions, region_to_room,
+                    hub_idx, neighbors_map,
+                ):
+                    tried_sides[room_idx].add(side)
+                    continue
+                proposals[room_idx] = (strip, side)
+                break  # this room's proposal for this iteration
+
+        if not proposals:
+            break
+
+        # Phase 2: collect cell claimants
+        cell_claimants: dict[int, list[int]] = defaultdict(list)
+        for room_idx, (strip, _) in proposals.items():
+            for cell in strip:
+                cell_claimants[cell].append(room_idx)
+
+        # Phase 3: determine winners (must win ALL cells in their strip)
+        current_areas = {
+            i: sum(region_area_by_id[rid] for rid in room_regions[i])
+            for i in range(K)
+        }
+        winners: dict[int, tuple[tuple[int, ...], Side]] = {}
+        for room_idx, (strip, side) in proposals.items():
+            wins_all = True
+            for cell in strip:
+                claimants = cell_claimants[cell]
+                if len(claimants) == 1:
+                    continue
+                if _pick_winner(claimants, hub_idx, current_areas) != room_idx:
+                    wins_all = False
+                    break
+            if wins_all:
+                winners[room_idx] = (strip, side)
+
+        # Phase 4: apply winners; losers mark their tried side and retry
+        for room_idx, (strip, side) in proposals.items():
+            if room_idx in winners:
+                for cell in strip:
+                    region_to_room[cell] = room_idx
+                    room_regions[room_idx].append(cell)
+                committed.add(room_idx)
+                tried_sides[room_idx].add(side)
+            else:
+                tried_sides[room_idx].add(side)
+
+    return committed
+
+
+def region_priority_growth(
+    shape,                  # ShapeInput
+    fixture,                # LayoutFixture
+    *,
+    policy=None,
+):
+    """Round-based priority growth — Phase 7 Round 4 v2 main entry.
+
+    Each round: rooms (ordered by current area ASC for fairness) propose
+    rect-preserving strip extensions using their pre-computed side priority.
+    Conflicts resolved by hub > smallest current area. Losers retry the next
+    priority side within the same round.
+
+    Stops when no room commits any strip in a full round.
+    """
+    from .atomize import atomize
+    from .regionize import regionize
+    from .region_graph import build_region_graph
+    from .seed_placement import auto_place_seeds
+    from .territory import resolve_territories
+    from .room_growth import GrownRoom, GrowthResult
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    rg = build_region_graph(shape, atoms=atoms, regions=regions, policy=policy)
+    territories = resolve_territories(shape)
+    regions_by_id = {r.region_id: r for r in regions}
+
+    # ---- Seed determination ----
+    K = fixture.K
+    seeds_by_room: dict[int, int] = {}
+    if fixture.auto_seed:
+        has_public = fixture.hub_room_index is not None
+        placements = auto_place_seeds(
+            rg, territories, K=K, has_public=has_public,
+        )
+        if has_public:
+            hub_room_idx = fixture.hub_room_index
+            seeds_by_room[hub_room_idx] = placements[0].region.region_id
+            si = 1
+            for room_idx in range(K):
+                if room_idx == hub_room_idx:
+                    continue
+                seeds_by_room[room_idx] = placements[si].region.region_id
+                si += 1
+        else:
+            for room_idx in range(K):
+                seeds_by_room[room_idx] = placements[room_idx].region.region_id
+    else:
+        from .room_growth import _to_shapely as _rg_to_shapely
+        region_poly_by_id = {
+            r.region_id: _rg_to_shapely(r.shape) for r in regions
+        }
+        for room_idx, spec in enumerate(fixture.rooms):
+            pt = sg.Point(*spec.seed_position)
+            found = None
+            for r in sorted(regions, key=lambda r: r.region_id):
+                if region_poly_by_id[r.region_id].covers(pt):
+                    found = r.region_id
+                    break
+            if found is None:
+                raise ValueError(
+                    f"case {fixture.case_index} ({fixture.case_name}): "
+                    f"seed {spec.name} at {spec.seed_position} not in any region"
+                )
+            if found in seeds_by_room.values():
+                claimed_by = next(
+                    i for i, v in seeds_by_room.items() if v == found
+                )
+                raise ValueError(
+                    f"case {fixture.case_index}: seed {spec.name} resolves to "
+                    f"region {found} already claimed by "
+                    f"{fixture.rooms[claimed_by].name}"
+                )
+            seeds_by_room[room_idx] = found
+
+    # ---- Pre-compute caches ----
+    anchors = compute_seed_anchors(seeds_by_room, rg, territories, regions_by_id)
+    region_local_polys = region_local_polys_by_id(rg)
+    ids_by_part = region_ids_by_part(rg)
+    terr_polys = {t.part_id: territory_local_polygon(t) for t in territories}
+
+    from .room_growth import _to_shapely as _rg_to_shapely
+    region_poly_by_id = {
+        r.region_id: _rg_to_shapely(r.shape) for r in regions
+    }
+    region_area_by_id = {rid: p.area for rid, p in region_poly_by_id.items()}
+
+    neighbors_map: dict[int, set[int]] = defaultdict(set)
+    for e in rg.edges:
+        neighbors_map[e.region_a].add(e.region_b)
+        neighbors_map[e.region_b].add(e.region_a)
+
+    aspect_ranges = [fixture.resolved_aspect_range(r) for r in fixture.rooms]
+    hub_idx = fixture.hub_room_index
+
+    # ---- Initialize room state ----
+    room_regions: dict[int, list[int]] = {
+        i: [seeds_by_room[i]] for i in range(K)
+    }
+    region_to_room: dict[int, int] = {
+        sid: i for i, sid in seeds_by_room.items()
+    }
+
+    # ---- Main round loop ----
+    iterations_log: list[dict] = []
+    round_count = 0
+    while True:
+        round_count += 1
+        current_areas = {
+            i: sum(region_area_by_id[rid] for rid in room_regions[i])
+            for i in range(K)
+        }
+        ordering = sorted(range(K), key=lambda i: (current_areas[i], i))
+        committed = _run_round(
+            ordering, room_regions, region_to_room,
+            anchors, region_local_polys, ids_by_part, terr_polys,
+            regions_by_id, region_poly_by_id, region_area_by_id,
+            aspect_ranges, hub_idx, neighbors_map, K,
+        )
+        if not committed:
+            round_count -= 1  # last round had no commits
+            break
+        iterations_log.append({
+            "round": round_count,
+            "committed_rooms": sorted(committed),
+        })
+
+    # ---- Build result ----
+    current_areas = {
+        i: sum(region_area_by_id[rid] for rid in room_regions[i])
+        for i in range(K)
+    }
+    min_areas = [fixture.resolved_min_area(r) for r in fixture.rooms]
+    grown_rooms = tuple(
+        GrownRoom(
+            name=spec.name,
+            role=spec.role,
+            region_ids=tuple(room_regions[i]),
+            area_m2=current_areas[i],
+        )
+        for i, spec in enumerate(fixture.rooms)
+    )
+    unassigned = tuple(sorted(
+        rid for rid in region_poly_by_id if rid not in region_to_room
+    ))
+    diagnostics = {
+        "iterations": iterations_log,
+        "hub_room_index": hub_idx,
+        "total_rounds": round_count,
+        "below_min_area": tuple(
+            i for i in range(K) if current_areas[i] < min_areas[i]
+        ),
+    }
+    return GrowthResult(
+        fixture=fixture,
+        rooms=grown_rooms,
+        unassigned_region_ids=unassigned,
+        diagnostics=diagnostics,
+    )

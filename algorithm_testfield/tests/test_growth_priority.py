@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import shapely.geometry as sg
 
 from celllayout_tf.cases import selected_cases
 from celllayout_tf.growth_priority import (
@@ -357,3 +358,119 @@ def test_find_strip_returned_regions_form_clean_rect_with_room():
         bbox_area = (cxR - cxL) * (cyT - cyB)
         # Should be bbox-equivalent
         assert abs(bbox_area - union.area) < 1e-6 * union.area
+
+
+# ---------- W6c: region_priority_growth (end-to-end) ----------
+
+
+from celllayout_tf.cases import make_cases
+from celllayout_tf.growth_priority import region_priority_growth
+from celllayout_tf.layout_fixtures import make_fixtures
+
+
+def _all_cases_and_fixtures():
+    cases = {c.name: c for c in make_cases()}
+    return [
+        (cases[f.case_name], f) for f in make_fixtures()
+    ]
+
+
+def test_priority_growth_runs_on_every_fixture():
+    """No exception on any 33-case fixture."""
+    for shape, fixture in _all_cases_and_fixtures():
+        result = region_priority_growth(shape, fixture)
+        assert len(result.rooms) == fixture.K
+
+
+def test_priority_growth_each_region_assigned_at_most_once():
+    for shape, fixture in _all_cases_and_fixtures()[:5]:
+        result = region_priority_growth(shape, fixture)
+        seen: set[int] = set()
+        for room in result.rooms:
+            for rid in room.region_ids:
+                assert rid not in seen, (
+                    f"case {fixture.case_index}: region {rid} double-assigned"
+                )
+                seen.add(rid)
+
+
+def test_priority_growth_grown_rooms_are_rectangular():
+    """Every grown room (except in curved territories) should have its
+    region-union be bbox-equivalent in local frame."""
+    import shapely.ops
+    import shapely.affinity
+    from math import degrees as _deg
+    from celllayout_tf.regionize import regionize
+    for shape, fixture in _all_cases_and_fixtures():
+        result = region_priority_growth(shape, fixture)
+        regs = regionize(shape)
+        by_id = {r.region_id: r for r in regs}
+        from celllayout_tf.territory import resolve_territories
+        terrs = resolve_territories(shape)
+        kind_by_part = {t.part_id: t.kind for t in terrs}
+        for room in result.rooms:
+            if not room.region_ids:
+                continue
+            kinds = {kind_by_part.get(by_id[rid].part_id) for rid in room.region_ids}
+            if "curved" in kinds:
+                continue  # curved territory exempt
+            theta = by_id[room.region_ids[0]].theta
+            polys = []
+            for rid in room.region_ids:
+                r = by_id[rid]
+                p = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
+                if theta != 0.0:
+                    p = shapely.affinity.rotate(p, -_deg(theta), origin=(0, 0))
+                polys.append(p)
+            union = shapely.ops.unary_union(polys)
+            if union.is_empty or union.geom_type != "Polygon":
+                continue
+            xmin, ymin, xmax, ymax = union.bounds
+            bbox_area = (xmax - xmin) * (ymax - ymin)
+            assert abs(bbox_area - union.area) < 1e-6 * max(union.area, 1e-9), (
+                f"case {fixture.case_index} {fixture.case_name}: "
+                f"room {room.name} is NOT bbox-equivalent rect "
+                f"(bbox_area={bbox_area:.4f}, union_area={union.area:.4f})"
+            )
+
+
+def test_priority_growth_diagnostics_present():
+    shape, fixture = _all_cases_and_fixtures()[0]
+    result = region_priority_growth(shape, fixture)
+    diag = result.diagnostics
+    assert "iterations" in diag
+    assert "hub_room_index" in diag
+    assert "total_rounds" in diag
+    assert "below_min_area" in diag
+
+
+def test_priority_growth_is_deterministic():
+    shape, fixture = _all_cases_and_fixtures()[0]
+    r1 = region_priority_growth(shape, fixture)
+    r2 = region_priority_growth(shape, fixture)
+    assert r1.unassigned_region_ids == r2.unassigned_region_ids
+    for a, b in zip(r1.rooms, r2.rooms):
+        assert a.region_ids == b.region_ids
+
+
+def test_priority_growth_auto_seed_runs():
+    """auto_seed=True fixture works through priority growth."""
+    from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+    cases = {c.name: c for c in make_cases()}
+    manual = make_fixtures()[0]
+    auto_rooms = tuple(
+        RoomSpec(name=r.name, role=r.role, seed_position=None,
+                 target_aspect_range=r.target_aspect_range)
+        for r in manual.rooms
+    )
+    auto = LayoutFixture(
+        case_index=manual.case_index, case_name=manual.case_name,
+        footprint_area_m2=manual.footprint_area_m2,
+        rooms=auto_rooms,
+        role_min_areas=manual.role_min_areas,
+        role_aspect_ranges=manual.role_aspect_ranges,
+        max_l_rooms=manual.max_l_rooms,
+    )
+    result = region_priority_growth(cases[manual.case_name], auto)
+    assert len(result.rooms) == auto.K
+    assert all(len(r.region_ids) >= 1 for r in result.rooms)

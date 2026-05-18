@@ -28,6 +28,7 @@ from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
+from .growth_priority import region_priority_growth
 from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
 from .schema import ShapeInput, ShapePart, part_theta
 from .seed_placement import auto_place_seeds, territory_of_region
@@ -628,6 +629,12 @@ def save_dimension_examples_figure(
     return path
 
 
+_LAYOUT_ALGORITHMS = {
+    "region_unit_greedy": region_unit_greedy,
+    "region_priority_growth": region_priority_growth,
+}
+
+
 def save_layout_figure(
     shape: ShapeInput,
     fixture: LayoutFixture,
@@ -636,6 +643,7 @@ def save_layout_figure(
     result: GrowthResult | None = None,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
+    algorithm: str = "region_priority_growth",
 ) -> Path:
     """Render the Phase 7 seeded-growth result.
 
@@ -648,14 +656,22 @@ def save_layout_figure(
     5. seed markers (white dot for normal rooms, star for hub)
     6. footprint outline
 
-    If ``result`` is omitted, the algorithm runs internally.
+    ``algorithm`` selects which growth function runs when ``result`` is
+    None. ``"region_unit_greedy"`` is the Round 4 v1 baseline (kept for
+    comparison); ``"region_priority_growth"`` (default) is the Round 4 v2
+    Voronoi-priority algorithm.
     """
     configure_fonts()
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if result is None:
-        result = region_unit_greedy(shape, fixture, policy=policy)
+        if algorithm not in _LAYOUT_ALGORITHMS:
+            raise ValueError(
+                f"unknown algorithm {algorithm!r}; "
+                f"expected one of {sorted(_LAYOUT_ALGORITHMS)}"
+            )
+        result = _LAYOUT_ALGORITHMS[algorithm](shape, fixture, policy=policy)
 
     atoms = atomize(shape, policy)
     regions = regionize(shape, atoms=atoms, policy=policy)

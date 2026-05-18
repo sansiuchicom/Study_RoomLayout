@@ -158,43 +158,146 @@ def _assign_to_cells(
     return out
 
 
-def _bfs_voronoi_within_regions(
-    seed_region_ids: list[int],
-    candidate_region_ids: list[int],
-    neighbors_map: dict[int, set[int]],
-) -> dict[int, list[int]]:
-    """Multi-source BFS within the candidate region set, returning the cell
-    assignment for each seed (tie-break: smallest seed_id wins).
+def _snap_to_region_edge(
+    midpoint: float,
+    axis: str,
+    region_local_bboxes: dict[int, tuple[float, float, float, float]] | None,
+    region_ids_in_cell: list[int],
+    low_excl: float,
+    high_excl: float,
+) -> float:
+    """Snap a midpoint cut value to the nearest frequent region edge.
 
-    Used as a TEMPORARY fallback for W7a's multi-seed-in-cell case. W7b will
-    replace this with seed-position-based guillotine cuts.
+    Returns ``midpoint`` unchanged when ``region_local_bboxes`` is None or
+    no region edge falls strictly within ``(low_excl, high_excl)``.
+
+    Selection: highest-frequency edge (boundary shared by most regions),
+    tie-broken by closeness to midpoint.
     """
-    pool = set(candidate_region_ids)
-    seed_set = set(seed_region_ids)
-    pool |= seed_set
+    if not region_local_bboxes:
+        return midpoint
+    from collections import Counter
+    counter: Counter[float] = Counter()
+    for rid in region_ids_in_cell:
+        bbox = region_local_bboxes.get(rid)
+        if bbox is None:
+            continue
+        cxL, cyB, cxR, cyT = bbox
+        if axis == "x":
+            edges = (cxL, cxR)
+        else:
+            edges = (cyB, cyT)
+        for e in edges:
+            if low_excl < e < high_excl:
+                counter[round(e, 4)] += 1
+    if not counter:
+        return midpoint
+    return max(
+        counter.keys(),
+        key=lambda c: (counter[c], -abs(c - midpoint)),
+    )
 
-    seed_distances: dict[int, dict[int, int]] = {}
-    for sid in seed_region_ids:
-        dists = {sid: 0}
-        queue = deque([sid])
-        while queue:
-            node = queue.popleft()
-            for nbr in neighbors_map.get(node, ()):
-                if nbr not in pool or nbr in dists:
-                    continue
-                dists[nbr] = dists[node] + 1
-                queue.append(nbr)
-        seed_distances[sid] = dists
 
-    assignment: dict[int, list[int]] = defaultdict(list)
-    _INF = 10**9
-    for rid in pool:
-        best = min(
-            (seed_distances[sid].get(rid, _INF), sid)
-            for sid in seed_region_ids
+def _guillotine_partition(
+    cell_bbox: tuple[float, float, float, float],
+    seeds_in_cell: list[tuple[int, sg.Point]],
+    regions_in_cell: list[tuple[int, sg.Point]],
+    region_local_bboxes: dict[int, tuple[float, float, float, float]] | None = None,
+) -> dict[int, list[int]]:
+    """Recursive aspect-minimizing guillotine partition of a rect cell.
+
+    Each cut is a single straight axis-aligned line (in local frame). Cut
+    position starts at the midpoint between adjacent seeds along the chosen
+    axis, then SNAPS to the nearest frequent region-edge coord between those
+    seeds (so the cut prefers landing on an actual region boundary rather
+    than slicing through region interiors). Among all (axis, gap)
+    candidates, picks the one minimizing the max aspect of the two resulting
+    sub-rects.
+
+    Returns ``{seed_region_id: list of region_ids}``.
+
+    ``region_local_bboxes``: per-region (xmin, ymin, xmax, ymax) in local
+    frame, used for snap. Pass ``None`` to disable snap (midpoint only).
+    """
+    if len(seeds_in_cell) == 1:
+        seed_id = seeds_in_cell[0][0]
+        return {seed_id: [r[0] for r in regions_in_cell]}
+
+    x_L, y_B, x_R, y_T = cell_bbox
+    cell_w = x_R - x_L
+    cell_h = y_T - y_B
+
+    candidates: list[tuple[float, str, float, list, list]] = []
+    region_ids = [r[0] for r in regions_in_cell]
+
+    # Vertical cuts (along x axis)
+    seeds_x = sorted(seeds_in_cell, key=lambda s: (s[1].x, s[0]))
+    for i in range(len(seeds_x) - 1):
+        xl, xr = seeds_x[i][1].x, seeds_x[i + 1][1].x
+        if xr - xl < 1e-9:
+            continue
+        midpoint = (xl + xr) / 2.0
+        cut = _snap_to_region_edge(
+            midpoint, "x", region_local_bboxes, region_ids, xl, xr,
         )
-        assignment[best[1]].append(rid)
-    return dict(assignment)
+        if cut <= x_L + 1e-9 or cut >= x_R - 1e-9:
+            continue
+        left_w = cut - x_L
+        right_w = x_R - cut
+        left_aspect = max(left_w, cell_h) / min(left_w, cell_h)
+        right_aspect = max(right_w, cell_h) / min(right_w, cell_h)
+        score = max(left_aspect, right_aspect)
+        candidates.append((score, "x", cut, seeds_x[: i + 1], seeds_x[i + 1 :]))
+
+    # Horizontal cuts (along y axis)
+    seeds_y = sorted(seeds_in_cell, key=lambda s: (s[1].y, s[0]))
+    for i in range(len(seeds_y) - 1):
+        yb, yt = seeds_y[i][1].y, seeds_y[i + 1][1].y
+        if yt - yb < 1e-9:
+            continue
+        midpoint = (yb + yt) / 2.0
+        cut = _snap_to_region_edge(
+            midpoint, "y", region_local_bboxes, region_ids, yb, yt,
+        )
+        if cut <= y_B + 1e-9 or cut >= y_T - 1e-9:
+            continue
+        bot_h = cut - y_B
+        top_h = y_T - cut
+        bot_aspect = max(cell_w, bot_h) / min(cell_w, bot_h)
+        top_aspect = max(cell_w, top_h) / min(cell_w, top_h)
+        score = max(bot_aspect, top_aspect)
+        candidates.append((score, "y", cut, seeds_y[: i + 1], seeds_y[i + 1 :]))
+
+    if not candidates:
+        # Degenerate: no separating cut — give all regions to smallest seed_id
+        seed_id = min(s[0] for s in seeds_in_cell)
+        return {seed_id: [r[0] for r in regions_in_cell]}
+
+    # Min score; tie-break by axis (x before y) then cut value
+    candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+    score, axis, cut, group_a, group_b = candidates[0]
+
+    if axis == "x":
+        regions_a = [(rid, p) for rid, p in regions_in_cell if p.x < cut]
+        regions_b = [(rid, p) for rid, p in regions_in_cell if p.x >= cut]
+        cell_a = (x_L, y_B, cut, y_T)
+        cell_b = (cut, y_B, x_R, y_T)
+    else:
+        regions_a = [(rid, p) for rid, p in regions_in_cell if p.y < cut]
+        regions_b = [(rid, p) for rid, p in regions_in_cell if p.y >= cut]
+        cell_a = (x_L, y_B, x_R, cut)
+        cell_b = (x_L, cut, x_R, y_T)
+
+    out: dict[int, list[int]] = {}
+    out.update(_guillotine_partition(cell_a, group_a, regions_a, region_local_bboxes))
+    out.update(_guillotine_partition(cell_b, group_b, regions_b, region_local_bboxes))
+    return out
+
+
+def _rotate_point(point: sg.Point, theta: float, sign: int) -> sg.Point:
+    if theta == 0.0:
+        return point
+    return shapely.affinity.rotate(point, sign * degrees(theta), origin=(0, 0))
 
 
 def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = None):
@@ -314,12 +417,37 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                             room_regions[room_idx].append(rid)
                             region_to_room[rid] = room_idx
                 else:
-                    # 2+ seeds — temporary BFS-Voronoi fallback (W7b will
-                    # replace this with guillotine partition).
-                    bfs_assignment = _bfs_voronoi_within_regions(
-                        cell_seeds, cell_regions, neighbors_map,
+                    # 2+ seeds — aspect-minimizing guillotine partition with
+                    # snap-to-region-edge (W7b).
+                    # Work in local frame so cell is axis-aligned rect.
+                    cell_global = cells[cell_idx]
+                    cell_local = _rotate(cell_global, territory.theta, sign=-1)
+                    cell_bbox_local = cell_local.bounds
+                    seeds_local = [
+                        (sid, _rotate_point(
+                            region_poly_by_id[sid].centroid,
+                            territory.theta, sign=-1,
+                        ))
+                        for sid in cell_seeds
+                    ]
+                    regions_local = [
+                        (rid, _rotate_point(
+                            region_poly_by_id[rid].centroid,
+                            territory.theta, sign=-1,
+                        ))
+                        for rid in cell_regions
+                    ]
+                    region_local_bboxes = {
+                        rid: _rotate(
+                            region_poly_by_id[rid], territory.theta, sign=-1,
+                        ).bounds
+                        for rid in cell_regions
+                    }
+                    assignment = _guillotine_partition(
+                        cell_bbox_local, seeds_local, regions_local,
+                        region_local_bboxes,
                     )
-                    for seed_id, region_ids in bfs_assignment.items():
+                    for seed_id, region_ids in assignment.items():
                         room_idx = seed_to_room[seed_id]
                         for rid in region_ids:
                             if rid not in region_to_room:

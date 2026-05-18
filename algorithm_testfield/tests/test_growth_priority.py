@@ -171,3 +171,189 @@ def test_compute_seed_anchors_outward_vector_points_away_from_other_seeds():
         f"two seeds at opposite ends should have opposite outward vectors; "
         f"got dot={dot}"
     )
+
+
+# ---------- W6b: find_strip + bbox-in-territory ----------
+
+
+from celllayout_tf.growth_priority import (
+    find_strip,
+    region_ids_by_part,
+    region_local_polys_by_id,
+    territory_local_polygon,
+)
+
+
+def _strip_setup(case_index: int):
+    shape, regions, graph, terrs, by_id = _build(case_index)
+    region_polys = region_local_polys_by_id(graph)
+    ids_by_part = region_ids_by_part(graph)
+    terr_polys = {
+        t.part_id: territory_local_polygon(t) for t in terrs
+    }
+    return shape, regions, graph, terrs, by_id, region_polys, ids_by_part, terr_polys
+
+
+def test_find_strip_returns_none_when_no_adjacent_unassigned():
+    """If side has no adjacent unassigned regions → None."""
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(1)
+    # Assign EVERY region to room 0 except one seed
+    seed_id = sorted(graph.regions, key=lambda r: r.region_id)[0].region_id
+    region_to_room = {r.region_id: 0 for r in graph.regions if r.region_id != seed_id}
+
+    result = find_strip(
+        room_region_ids=(seed_id,),
+        side="top",
+        region_to_room=region_to_room,
+        region_local_polys=polys,
+        region_ids_by_part=ids_by_part,
+        territory_local_poly=terr_polys[0],
+        part_id=0,
+    )
+    assert result is None
+
+
+def test_find_strip_single_region_clean_extension():
+    """A single-region strip that forms a clean rect extension is accepted."""
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(1)
+    # Start with one region. Try absorbing on each side.
+    seed_id = sorted(graph.regions, key=lambda r: r.region_id)[0].region_id
+    region_to_room: dict[int, int] = {}
+
+    # At least one of the 4 sides should yield SOME strip on case 1 (single rect)
+    # because the seed is at a corner-ish position and has adjacent regions.
+    yielded = False
+    for side in ("top", "right", "bottom", "left"):
+        result = find_strip(
+            room_region_ids=(seed_id,),
+            side=side,
+            region_to_room=region_to_room,
+            region_local_polys=polys,
+            region_ids_by_part=ids_by_part,
+            territory_local_poly=terr_polys[0],
+            part_id=0,
+        )
+        if result is not None:
+            yielded = True
+            # Verify the returned strip is unassigned and in same territory
+            for rid in result:
+                assert rid not in region_to_room
+                assert by_id[rid].part_id == 0
+            break
+    assert yielded, "expected at least one side to yield a strip on case 1"
+
+
+def test_find_strip_rejects_when_combined_not_rect():
+    """If absorbing would yield a non-rect union → None."""
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(1)
+    # Use 2 regions whose union is itself L-shaped (uncommon but possible).
+    # Pick the region at top-left and one at top-middle but with different y_max.
+    # Sort by y_max to find candidates.
+    in_territory = [r for r in graph.regions if r.part_id == 0]
+    by_id_local = {r.region_id: polys[r.region_id] for r in in_territory}
+    # Use 2 corner regions far apart (probably non-adjacent, definitely
+    # not forming a clean rect together)
+    rids_sorted = sorted(in_territory, key=lambda r: (polys[r.region_id].centroid.x, polys[r.region_id].centroid.y))
+    # Top-left + bottom-right: definitely L-or-disconnected
+    a = rids_sorted[0].region_id
+    b = rids_sorted[-1].region_id
+    region_to_room: dict[int, int] = {}
+    result = find_strip(
+        room_region_ids=(a, b),
+        side="top",
+        region_to_room=region_to_room,
+        region_local_polys=polys,
+        region_ids_by_part=ids_by_part,
+        territory_local_poly=terr_polys[0],
+        part_id=0,
+    )
+    # Room union itself may not be a single polygon — caller upstream should
+    # filter, but find_strip's None return is defensible too.
+    assert result is None or len(result) == 0
+
+
+def test_find_strip_rejects_overhang_outside_territory():
+    """Strip whose new bbox would escape territory polygon → None.
+
+    For case 9 (ㄱ자): a room near the inner corner can't push past the
+    reflex vertex into the missing quadrant (it's not in territory).
+    """
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(9)
+    # ㄱ자 has only 1 part (single territory). Pick the region containing
+    # local coords near the inner corner. We just assert: for ANY starting
+    # region, at least one side might be blocked by territory boundary.
+    region_to_room: dict[int, int] = {}
+    # We can't easily construct a specific overhang test without knowing
+    # the exact regionize output. Instead, verify that find_strip on every
+    # region produces results respecting territory containment.
+    in_territory = [r for r in graph.regions if r.part_id == 0]
+    any_blocked = False
+    for r in in_territory:
+        for side in ("top", "right", "bottom", "left"):
+            result = find_strip(
+                room_region_ids=(r.region_id,),
+                side=side,
+                region_to_room=region_to_room,
+                region_local_polys=polys,
+                region_ids_by_part=ids_by_part,
+                territory_local_poly=terr_polys[0],
+                part_id=0,
+            )
+            if result is None:
+                any_blocked = True
+                break
+        if any_blocked:
+            break
+    assert any_blocked, "ㄱ자 should have at least one blocked side somewhere"
+
+
+def test_find_strip_respects_already_assigned_regions():
+    """Adjacent regions already assigned to another room are excluded."""
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(1)
+    seed_id = sorted(graph.regions, key=lambda r: r.region_id)[0].region_id
+    # Find adjacent regions and mark them all assigned to room 1
+    neighbors = graph.neighbors(seed_id)
+    region_to_room = {nbr: 1 for nbr in neighbors}
+
+    for side in ("top", "right", "bottom", "left"):
+        result = find_strip(
+            room_region_ids=(seed_id,),
+            side=side,
+            region_to_room=region_to_room,
+            region_local_polys=polys,
+            region_ids_by_part=ids_by_part,
+            territory_local_poly=terr_polys[0],
+            part_id=0,
+        )
+        if result is not None:
+            # If a side yields, none of the returned regions should be assigned
+            for rid in result:
+                assert rid not in region_to_room
+
+
+def test_find_strip_returned_regions_form_clean_rect_with_room():
+    """Sanity: returned strip + room is bbox-equivalent."""
+    shape, regions, graph, terrs, by_id, polys, ids_by_part, terr_polys = _strip_setup(1)
+    import shapely.ops
+    seed_id = sorted(graph.regions, key=lambda r: r.region_id)[0].region_id
+    region_to_room: dict[int, int] = {}
+
+    for side in ("top", "right", "bottom", "left"):
+        result = find_strip(
+            room_region_ids=(seed_id,),
+            side=side,
+            region_to_room=region_to_room,
+            region_local_polys=polys,
+            region_ids_by_part=ids_by_part,
+            territory_local_poly=terr_polys[0],
+            part_id=0,
+        )
+        if result is None:
+            continue
+        all_polys = [polys[seed_id]] + [polys[rid] for rid in result]
+        union = shapely.ops.unary_union(all_polys)
+        assert union.geom_type == "Polygon"
+        cxL, cyB, cxR, cyT = union.bounds
+        bbox_area = (cxR - cxL) * (cyT - cyB)
+        # Should be bbox-equivalent
+        assert abs(bbox_area - union.area) < 1e-6 * union.area

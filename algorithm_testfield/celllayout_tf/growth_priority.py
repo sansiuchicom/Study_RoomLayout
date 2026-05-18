@@ -288,3 +288,100 @@ def compute_seed_anchors(
             )
 
     return anchors
+
+
+# ---------- Strip extension (region-level) ----------
+
+
+def _local_bbox(union: sg.base.BaseGeometry) -> tuple[float, float, float, float]:
+    return union.bounds  # (minx, miny, maxx, maxy)
+
+
+def find_strip(
+    room_region_ids: tuple[int, ...],
+    side: Side,
+    region_to_room: dict[int, int],
+    region_local_polys: dict[int, sg.Polygon],
+    region_ids_by_part: dict[int, list[int]],
+    territory_local_poly: sg.base.BaseGeometry,
+    part_id: int,
+    rect_tol: float = 1e-6,
+) -> tuple[int, ...] | None:
+    """Find regions on ``side`` of the room that form a clean rect extension.
+
+    Hard constraints:
+      1. Strip + room union is bbox-equivalent (rect)
+      2. New bbox is covered by territory_local_poly (no overhang, no hole)
+      3. Strip regions are unassigned and in same territory
+
+    Returns the strip region_ids (tuple, sorted) or ``None`` if no valid
+    strip exists on this side.
+    """
+    if not room_region_ids:
+        return None
+
+    room_polys = [region_local_polys[rid] for rid in room_region_ids]
+    room_union = unary_union(room_polys)
+    if room_union.is_empty or room_union.geom_type != "Polygon":
+        return None
+    x_L, y_B, x_R, y_T = _local_bbox(room_union)
+
+    eps = 1e-6
+    strip_candidates: list[int] = []
+    for rid in region_ids_by_part.get(part_id, ()):
+        if rid in region_to_room or rid in room_region_ids:
+            continue
+        cxL, cyB, cxR, cyT = region_local_polys[rid].bounds
+        if side == "top":
+            adjacent = abs(cyB - y_T) < eps
+            in_span = cxL >= x_L - eps and cxR <= x_R + eps
+        elif side == "bottom":
+            adjacent = abs(cyT - y_B) < eps
+            in_span = cxL >= x_L - eps and cxR <= x_R + eps
+        elif side == "right":
+            adjacent = abs(cxL - x_R) < eps
+            in_span = cyB >= y_B - eps and cyT <= y_T + eps
+        else:  # "left"
+            adjacent = abs(cxR - x_L) < eps
+            in_span = cyB >= y_B - eps and cyT <= y_T + eps
+        if adjacent and in_span:
+            strip_candidates.append(rid)
+
+    if not strip_candidates:
+        return None
+
+    strip_polys = [region_local_polys[rid] for rid in strip_candidates]
+    combined = unary_union(room_polys + strip_polys)
+    if combined.is_empty or combined.geom_type != "Polygon":
+        return None
+
+    cxL, cyB, cxR, cyT = _local_bbox(combined)
+    bbox_area = (cxR - cxL) * (cyT - cyB)
+    if abs(bbox_area - combined.area) > rect_tol * max(combined.area, 1e-9):
+        return None  # not a clean rect
+
+    new_bbox = sg.box(cxL, cyB, cxR, cyT)
+    if not territory_local_poly.covers(new_bbox):
+        return None  # bbox escapes territory (overhang or hole)
+
+    return tuple(sorted(strip_candidates))
+
+
+def territory_local_polygon(territory: Territory) -> sg.base.BaseGeometry:
+    """Territory polygon (possibly multi-piece) rotated to its local frame."""
+    return _to_local_polygon(_territory_polygon(territory), territory.theta)
+
+
+def region_ids_by_part(region_graph: RegionGraph) -> dict[int, list[int]]:
+    """Index of region_ids grouped by part_id (= territory id)."""
+    out: dict[int, list[int]] = defaultdict(list)
+    for r in region_graph.regions:
+        out[r.part_id].append(r.region_id)
+    return dict(out)
+
+
+def region_local_polys_by_id(
+    region_graph: RegionGraph,
+) -> dict[int, sg.Polygon]:
+    """Map region_id → local-frame polygon (cached for repeated gate queries)."""
+    return {r.region_id: _region_to_local(r, r.theta) for r in region_graph.regions}

@@ -857,6 +857,100 @@ W6 검수 후:
    소비하면 후순위 방은 L 못 됨. 결과 품질이 흡수 순서에 따라 달라짐.
    v1에서는 수용. 결과 시각 검수 후 필요 시 후처리 swap 로직 도입 고려.
 
+#### Round 4 v2 — Voronoi-priority pivot (W6+)
+
+W5 결과 검수 후 두 가지 회의:
+
+1. **확장이 일찍 멈춤** — single-region greedy가 strip 단위 흡수 기회를
+   못 봄. 부분 흡수 = L → L 슬롯 소진 후 saturated. 결과적으로
+   unassigned 비율 높음.
+2. **L-budget + reflex-count는 magic** — fixture에 박힌 `max_l_rooms`,
+   reflex-tier(0/1/2+) 등 사실상 multi-criteria scoring. 학계 정직성
+   기준에서 정당화 약함 (proto3 D005 정신, README §Phase 7 "Magic /
+   scoring 회피"와 직접 충돌).
+
+→ 알고리즘 자체를 **bounded Voronoi + outward-vector 기반 priority
+growth** 로 교체. 모든 의사결정은 hard gate + 단일 tie-break.
+
+##### 알고리즘 정리
+
+```text
+사전 계산 (per fixture, 한 번):
+  per territory T:
+    bounded Voronoi of T's seeds (multi-source BFS on T's induced
+      region graph; hop distance; tie: seed_id ASC)
+    per seed s:
+      anchor =
+        multi-seed cell: length-weighted centroid of s's cell's
+                         internal edges (in T's theta-local frame)
+        single-seed:     T's centroid (local frame)
+        ambiguous (no internal edges, or |outward| < eps):
+                         hash-based perturbation seeded by seed_id
+                         (deterministic)
+      outward_vector = seed_centroid - anchor                (local frame)
+      side_priority (4-tier):
+        dominant_out   = side along the larger |outward| axis (sign +)
+        secondary_out  = side along the smaller |outward| axis (sign +)
+        secondary_in   = opposite of secondary_out
+        dominant_in    = opposite of dominant_out
+
+성장 (round-based):
+  while progress in last round:
+    for each room R (round-robin order, e.g., by current area ASC):
+      for side in R's side_priority order:
+        strip = candidate regions adjacent to R's bbox on `side`,
+                whose union with R yields a clean rect (= bbox-equiv)
+                AND fits inside R's territory (cell-membership check)
+        if strip is None: continue (next side)
+        check aspect gate (mid-of-role range, hard)
+        check hub gate (D011, hard)
+        if pass: mark cells of `strip` as R's proposed
+                 break out of side loop
+      if no side advanced R: R saturated this round
+    end-of-round conflict resolution:
+      for each cell proposed by 2+ rooms:
+        winner = hub if any, else smallest-area room
+        losers retry next priority side same round
+    if no room moved: stop
+
+Phase 2 (잔여 흡수): skip v1 — 결과 보고 결정
+```
+
+##### 핵심 hard gates
+
+| Gate | 정의 |
+|---|---|
+| **Strip rect 유지** | union(room ∪ strip) area == bbox(union) area (within tolerance) |
+| **Territory 포함** | strip의 각 region이 room의 territory에 속함 (part_id 일치) |
+| **Aspect 범위** | role_aspect_ranges[role] 이내 |
+| **Hub-connectivity** | strip 흡수 후 모든 방이 hub 도달 가능 (D011) |
+
+Tie-break: 단일 — strip area DESC (같은 side 후보 중)
+
+Magic 없음, weight 없음, reflex/L 슬롯/cut_history cancel 없음.
+
+##### W6 work items
+
+```text
+W6a  growth_priority.py — bounded Voronoi + anchor + outward + side priority
+     (사전 계산 only, 라운드 루프는 W6c)
+W6b  strip extension (region-level) + bbox-in-territory check
+W6c  round-based priority growth + proposal conflict resolution
+W6d  wire-up — region_priority_growth() entry, layout viz call site swap
+     (기존 region_unit_greedy 보존, viz는 새 함수로)
+W6e  33-case 재생성 + Round 3/4 v1/v2 비교 montage
+```
+
+W4 shape_gate 코드는 보존 (사용 안 함 — 후속 평가에 참조용). W5
+`region_unit_greedy`도 보존 (regression baseline 비교용). 검증 완료 후
+W7에서 deprecation 또는 제거 결정.
+
+##### Region-level의 한계 (인지)
+
+Phase 5 region들의 outer edge가 좌표적으로 들쭉날쭉이면 strip이
+clean rect 만들기 어려움 → 변 막힘 → unassigned 늘어남. atom-level
+격상은 결과 보고 W6e 이후 결정.
+
 ### Phase 8: Visualization + Metrics
 
 Every phase should save debug figures:

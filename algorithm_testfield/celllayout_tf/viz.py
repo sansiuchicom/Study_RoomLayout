@@ -28,6 +28,7 @@ from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
+from .growth_partition import region_partition_growth
 from .growth_priority import region_priority_growth
 from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
 from .schema import ShapeInput, ShapePart, part_theta
@@ -632,6 +633,7 @@ def save_dimension_examples_figure(
 _LAYOUT_ALGORITHMS = {
     "region_unit_greedy": region_unit_greedy,
     "region_priority_growth": region_priority_growth,
+    "region_partition_growth": region_partition_growth,
 }
 
 
@@ -643,7 +645,7 @@ def save_layout_figure(
     result: GrowthResult | None = None,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
-    algorithm: str = "region_priority_growth",
+    algorithm: str = "region_partition_growth",
 ) -> Path:
     """Render the Phase 7 seeded-growth result.
 
@@ -811,6 +813,7 @@ def save_seed_figure(
     has_public: bool,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
+    show_outward: bool = True,
 ) -> Path:
     """Render auto-placed seeds for Phase 7 Round 4 W2.
 
@@ -819,9 +822,14 @@ def save_seed_figure(
       2. region tint by territory (so multi-part footprints are legible)
       3. seed markers — phase-colored (hub=red star, coverage=orange square,
          fps=blue circle), annotated with region_id
-      4. footprint outline
+      4. (if show_outward) anchor dot + arrow from anchor → seed
+         (= outward direction, the dominant_out side for that seed)
+      5. footprint outline
     """
+    from math import cos, radians, sin
     from matplotlib.lines import Line2D
+
+    from .growth_priority import compute_seed_anchors
 
     configure_fonts()
     path = Path(path)
@@ -838,6 +846,15 @@ def save_seed_figure(
     )
 
     region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    # Outward / anchor computation (optional layer)
+    anchors_by_room: dict = {}
+    if show_outward:
+        regions_by_id = {r.region_id: r for r in regions}
+        seeds_by_room = {i: s.region.region_id for i, s in enumerate(seeds)}
+        anchors_by_room = compute_seed_anchors(
+            seeds_by_room, region_graph, territories, regions_by_id,
+        )
 
     fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
 
@@ -873,9 +890,11 @@ def save_seed_figure(
             )
 
     # 3. seed markers + region_id labels
-    for s in seeds:
+    seed_global_positions: dict[int, tuple[float, float]] = {}
+    for i, s in enumerate(seeds):
         poly = region_poly_by_id[s.region.region_id]
         rp = poly.representative_point()
+        seed_global_positions[i] = (rp.x, rp.y)
         ax.scatter(
             rp.x, rp.y,
             s=SEED_PHASE_SIZES[s.phase],
@@ -892,6 +911,36 @@ def save_seed_figure(
             color="white",
             zorder=16,
         )
+
+    # 3.5 anchor + outward vector (debug)
+    if show_outward and anchors_by_room:
+        for room_idx, sa in anchors_by_room.items():
+            seed_x, seed_y = seed_global_positions[room_idx]
+            # anchor is in local frame; rotate back to global by +theta
+            theta = regions[0].theta if not regions else next(
+                r.theta for r in regions if r.region_id == sa.seed_region_id
+            )
+            ax_local, ay_local = sa.anchor_point
+            c, s_ = cos(theta), sin(theta)
+            anchor_x = ax_local * c - ay_local * s_
+            anchor_y = ax_local * s_ + ay_local * c
+            # Anchor dot
+            ax.scatter(
+                anchor_x, anchor_y,
+                s=30, marker="x", color="#000000",
+                linewidth=1.5, zorder=17,
+            )
+            # Arrow from anchor to seed (= outward direction in global frame)
+            dx, dy = seed_x - anchor_x, seed_y - anchor_y
+            if dx * dx + dy * dy > 1e-9:
+                ax.annotate(
+                    "", xy=(seed_x, seed_y), xytext=(anchor_x, anchor_y),
+                    arrowprops=dict(
+                        arrowstyle="->", color="#000000",
+                        linewidth=1.2, alpha=0.85,
+                    ),
+                    zorder=14,
+                )
 
     # 4. footprint outline + axis
     _draw_footprint_outline(ax, shape)

@@ -111,7 +111,7 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             fixtures[0],
             out,
-            title=f"{idx}. {name}: layout (region_priority_growth)",
+            title=f"{idx}. {name}: layout (region_partition_growth)",
         )
     if phase == "seed":
         fixtures = selected_fixtures([idx])

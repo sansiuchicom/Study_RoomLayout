@@ -694,9 +694,13 @@ Round 3 result review (33 PNGs) surfaced two systemic issues:
    bbox aspect 단일 게이트로는 좋은 모양을 표현 못함.
 ```
 
-Round 4는 **(a) seed 자동 배치** + **(b) cut_history 기반 rectangle 게이트**로
-교체. 빈 공간은 의도적으로 corridor 단계까지 보류 (spec §"unassigned
-regions are what spine-first will turn into corridor"와 일치).
+Round 4는 **(a) seed 자동 배치** + **(b) reflex-count + 전역 L 슬롯 shape
+게이트**로 교체. 빈 공간은 의도적으로 corridor 단계까지 보류 (spec
+§"unassigned regions are what spine-first will turn into corridor"와 일치).
+
+§Rectangle gate (cut_history 기반) 초기안은 §Shape gate로 대체되었다 —
+같은 geometric 검사를 더 단순하게 표현 (Phase 5 region이 이미 local frame
+axis-aligned 사각형이므로 cut_history cancel 회계는 over-engineering).
 
 ##### Decisions (locked in)
 
@@ -707,9 +711,13 @@ regions are what spine-first will turn into corridor"와 일치).
 | Territory 수 > K | 살아있는 territory를 면적 DESC로 정렬, top K만 채택. 나머지 territory의 region은 unassigned (corridor 후보). |
 | Seed 잔여 배치 | Region-hop FPS, tie-break: area DESC |
 | `RoomSpec.seed_position` | `tuple | None` — None이면 자동 배치 |
-| 사각형 정의 | **cut_history boundary cancellation** (아래 §Rectangle gate) |
+| 모양 검사 | **Reflex vertex count of local-frame union** (아래 §Shape gate) |
+| L 슬롯 정책 | 전역 `max_l_rooms` (fixture, default 2) — hub도 같은 풀 공유 |
+| T/U/Z/+ 모양 | **never OK** (reflex ≥ 2 즉시 거부) |
+| 더 깊은 L | 한 방이 이미 L (reflex=1) 인 채로 더 자라기 OK (슬롯 추가 소모 X, 결과 reflex=1 유지하면) |
 | Cross-theta-group 흡수 | **금지** — wing은 자기 territory에서 자라거나 unassigned |
-| Seed region 초기 비-사각형 | 그대로 인정 (v1). 확장 후 사각형성만 검사 |
+| Curved territory | 사각형 게이트 면제 (다른 gate들만 작동) |
+| Seed region 초기 비-사각형 | 그대로 인정 (v1). 확장 후 reflex만 검사 |
 
 ##### Seed auto-placement
 
@@ -731,36 +739,64 @@ Phase C — FPS for remaining
     tie-break: area DESC
 ```
 
-##### Rectangle gate (cut_history 기반)
+##### Shape gate (reflex-count + global L budget)
 
-핵심 정의:
-
-```text
-room_boundary_cuts(room_regions) -> {axis: sorted coords}
-  1. room 내 모든 region.cut_history 좌표를 axis별로 모음.
-  2. 각 cut (axis, c)에 대해, 그 cut를 따라 인접한 두 region이
-     모두 room 내에 있으면 cancel (internal cut, room 경계 아님).
-     인접 판정은 region_graph edge metadata로 한다.
-  3. 남은 좌표가 room의 boundary cut.
-
-is_rectangle(room_regions) ⟺
-  len(boundary_cuts["axis_x"]) ≤ 2 AND
-  len(boundary_cuts["axis_y"]) ≤ 2
-  (2개 미만은 piece 외곽선에 의해 implicit하게 닫힘)
-```
-
-흡수 게이트:
+Phase 5 regionize가 모든 region을 local-frame axis-aligned 사각형으로
+생산하므로, room의 모양은 local-frame union의 **reflex(오목) vertex
+개수** 로 충분히 표현된다.
 
 ```text
-gate(R, C):
-  (a) cross-theta 금지:   R.theta_group == C.theta_group
-  (b) hub-connectivity:    기존 D011 유지
-  (c) rectangle 유지:      is_rectangle(R.regions ∪ {C})
-  (d) role aspect range:   기존 hard gate 유지
+reflex_count(local_union):
+  0  → axis-aligned 사각형          (always OK)
+  1  → L자                          ("L 슬롯" 1개 소모, 전역 max_l_rooms 까지)
+ ≥2  → T자 / U자 / Z자 / +자 등    (never OK)
 ```
 
-랭킹: `shared_boundary_length DESC` (기존 유지). v2에서는 cut-aligned
-bonus 없이 게이트만으로 사각형성을 강제하는지 본다.
+L 슬롯은 fixture의 ``max_l_rooms`` (default 2) 까지 전역 공유. hub도 같은
+풀에서 점유 — 따로 면제 없음. 이미 L인 방이 더 깊은 L (여전히 reflex=1)
+로 자라는 건 새 슬롯 소모 없이 허용. L → rect 복원 (코너 채우기) 도 가능
+하며 슬롯이 회수된다.
+
+흡수 게이트 (3-layer):
+
+```text
+gate(room_idx, room_region_ids_after, rooms_state_before, regions_by_id,
+     kind_by_part, max_l_rooms) -> bool:
+
+  Layer 1 — cross-theta
+    room_region_ids_after 안의 모든 region이 같은 theta-group인가?
+    아니면 즉시 False (회전 wing 흡수 금지).
+
+  Layer 2 — curved exemption
+    하나라도 territory.kind == "curved" 인 region이 포함되면 True 즉시
+    리턴. 곡선 territory는 reflex 검사 무의미하므로 다른 gate들
+    (hub-connectivity, role aspect) 만으로 제어.
+
+  Layer 3 — reflex + L budget
+    new_reflex = reflex_count(union_in_local_frame)
+    if new_reflex == 0:        return True
+    if new_reflex >= 2:        return False
+    # new_reflex == 1 (L 자)
+    if 이미 L 이었던 방:        return True   # 슬롯 추가 소모 X
+    other_l_count = (다른 방 중 reflex >= 1 개수)
+    return other_l_count < max_l_rooms
+```
+
+Geometric union:
+
+```text
+union(region.shape rotated by -theta, for region in room_region_ids_after)
+→ shapely Polygon (MultiPolygon이면 disconnected — reflex sentinel로 거부)
+
+count_reflex(union.exterior, CCW-oriented):
+  각 vertex (a, b, c) at index i in exterior coords:
+    cross = (bx - ax) * (cy - by) - (by - ay) * (cx - bx)
+    if cross < -1e-9:   reflex 증가
+```
+
+랭킹: `shared_boundary_length DESC` (기존 유지). reflex==0 후보가
+reflex>=1 후보보다 자연스럽게 더 자주 게이트 통과 → 추가 ranking 조정
+불필요.
 
 ##### Work items (W1–W7)
 
@@ -778,13 +814,14 @@ W2  auto_place_seeds(shape, region_graph, territories, K, has_public)
 W3  RoomSpec.seed_position: tuple | None
     fixture validation 갱신, 기존 33 fixture 호환
 
-W4  cut_history rectangle gate
-    room_boundary_cuts cancel 로직 (region_graph adjacency 활용)
-    is_rectangle_after(room, candidate)
-    tests: 합성 mini case + case 13 cross + case 18 rotated
+W4  shape gate (cross-theta + curved exempt + reflex/L-budget)
+    celllayout_tf/shape_gate.py — count_reflex_vertices, make_shape_gate
+    fixture LayoutFixture.max_l_rooms 필드 추가
+    tests: 합성 (rect/L/T/+) reflex 카운트, 전역 budget 동작
 
 W5  region_unit_greedy v2 wire-up
-    필터에 cross-theta + rectangle gate 추가
+    필터에 shape_gate 추가, auto-seed 분기 추가
+    rooms_state를 게이트에 전달 (L 슬롯 카운트용)
     기존 smoke test 통과 + 새 invariant tests
 
 W6  33-case 시각화 재생성, Round 3와 side-by-side 검수
@@ -806,13 +843,19 @@ W6 검수 후:
          phase-7-region-unit-greedy → main (Round 3 baseline 채택)
 ```
 
-##### Known risk
+##### Known risks
 
-`room_boundary_cuts` cancel 로직이 가장 까다로움. cut_history는 좌표만
-저장하지 "어느 쪽에 누가 있는지" 정보가 없어, 두 region이 정말 그 cut를
-따라 인접한지는 region_graph edge에서 다시 확인해야 함. W4 시작 시점에
-`RegionEdge` metadata에 cut-aligned 정보(`shared_axis`, `shared_coord`)가
-즉시 추출 가능한지 검토. 없으면 atom_graph까지 한 단계 내려갈 가능성.
+1. **Phase 5 region rectangularity** — Layer 3 reflex 검사는 각 region이
+   local frame에서 axis-aligned 사각형이라는 promise에 의존. 곡선 piece
+   안 region은 Layer 2가 면제하지만, axis-aligned/rotated piece의 region
+   중 비-rect가 있으면 그 region이 들어간 방은 무조건 reflex 게이트 위
+   ≥ 0 추가 vertex를 가지게 되어 게이트 동작 왜곡. W4 시작 시 검증
+   테스트로 33-case × all regions 의 (local_frame 회전 후) rect 여부
+   sanity check.
+
+2. **Greedy ordering 의존성** — L 슬롯이 "선착순". 한 방이 슬롯을 먼저
+   소비하면 후순위 방은 L 못 됨. 결과 품질이 흡수 순서에 따라 달라짐.
+   v1에서는 수용. 결과 시각 검수 후 필요 시 후처리 swap 로직 도입 고려.
 
 ### Phase 8: Visualization + Metrics
 

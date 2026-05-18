@@ -92,6 +92,7 @@ class LayoutFixture:
     rooms: tuple[RoomSpec, ...]
     role_min_areas: dict[str, float]
     role_aspect_ranges: dict[str, tuple[float, float]]
+    max_l_rooms: int = 2
 
     def __post_init__(self) -> None:
         if not self.rooms:
@@ -100,6 +101,11 @@ class LayoutFixture:
             raise ValueError(
                 f"LayoutFixture case {self.case_index}: "
                 f"footprint_area_m2 must be > 0"
+            )
+        if self.max_l_rooms < 0:
+            raise ValueError(
+                f"LayoutFixture case {self.case_index}: "
+                f"max_l_rooms must be >= 0, got {self.max_l_rooms}"
             )
 
         # role coverage: every role used by a RoomSpec must have entries

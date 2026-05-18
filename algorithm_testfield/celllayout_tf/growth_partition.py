@@ -389,26 +389,28 @@ def auto_place_seeds_by_cells(
     K: int,
     has_public: bool,
 ) -> tuple[SeedPlacement, ...]:
-    """Cell-aware seed placement (Round 4 v2 W8).
+    """Cell-aware seed placement (Round 4 v2 W9 — load-balanced).
 
-    1. Hub (if has_public): pick_top_centrality globally (same as Phase A of
-       ``auto_place_seeds``). Marks the hub's containing cell as "claimed".
+    Phase A — Hub: pick_top_centrality globally (if has_public).
+    Phase B — Territory coverage: each surviving territory not yet covered
+              by hub gets 1 seed in its BIGGEST cell. Sorted by territory
+              total area DESC. Stops at K.
+    Phase C — Load-balanced extras:
+              while seeds < K:
+                candidate_territories = those having non-hub cells with
+                                        unused regions
+                target_territory = argmax(area / seed_count) among candidates
+                target_cell      = argmax(area / (seed_count + 1)) among
+                                   target_territory's non-hub cells
+                                   (post-placement load: small empty cells
+                                   lose to bigger cells getting extras)
+                place seed:
+                  empty cell  → pick_top_centrality
+                  has seeds   → Euclidean FPS within cell
+              Fallback: when no candidate territories remain (e.g., hub has
+              the only cell), place extras in the hub cell.
 
-    2. Remaining seeds = K - has_public. Sort non-hub cells by area DESC.
-
-       - if remaining ≤ #other_cells: top-`remaining` cells each get 1 seed
-         (smallest cells skipped — their regions stay unassigned)
-       - if remaining > #other_cells: every other cell gets 1 seed, then
-         extras go to the largest non-hub cells (Euclidean FPS within each
-         cell — farthest from existing seeds in that cell)
-
-    3. Within each cell, the chosen seed = pick_top_centrality of the cell's
-       regions (degree DESC, area DESC tie-break).
-
-    The hub's cell is EXCLUDED from the "extras" distribution — hub stays
-    alone in its cell unless K demands sharing (which would only happen if
-    hub already covers many cells with extras and we still need more, but
-    by construction that doesn't occur for K ≤ #regions).
+    Hub cell is excluded from Phase C unless all alternatives exhausted.
     """
     if K <= 0:
         raise ValueError(f"K must be >= 1, got {K}")
@@ -426,9 +428,18 @@ def auto_place_seeds_by_cells(
     if not all_cells:
         raise ValueError("no vertex cells could be enumerated")
 
+    cells_by_territory: dict[int, list[int]] = defaultdict(list)
+    territory_areas: dict[int, float] = defaultdict(float)
+    for idx, cell in enumerate(all_cells):
+        pid = cell["territory"].part_id
+        cells_by_territory[pid].append(idx)
+        territory_areas[pid] += cell["area"]
+
     seeds: list[SeedPlacement] = []
     used: set[int] = set()
     hub_cell_idx: int | None = None
+    cell_seed_count: dict[int, int] = {i: 0 for i in range(len(all_cells))}
+    territory_seed_count: dict[int, int] = defaultdict(int)
 
     # Phase A — Hub
     if has_public:
@@ -439,59 +450,94 @@ def auto_place_seeds_by_cells(
         for idx, cell in enumerate(all_cells):
             if hub.region_id in cell["regions"]:
                 hub_cell_idx = idx
+                cell_seed_count[idx] += 1
+                territory_seed_count[cell["territory"].part_id] += 1
                 break
 
-    # Non-hub cells ordered by area DESC
-    other_cell_indices = sorted(
-        [i for i in range(len(all_cells)) if i != hub_cell_idx],
-        key=lambda i: -all_cells[i]["area"],
+    # Phase B — Territory coverage (1 seed per uncovered surviving territory)
+    uncovered_pids = sorted(
+        [pid for pid in cells_by_territory if territory_seed_count[pid] == 0],
+        key=lambda pid: -territory_areas[pid],
     )
-
-    # Phase B — 1 seed per non-hub cell, biggest first (skip smallest if
-    # seeds_remaining is smaller than number of other cells)
-    seeds_remaining = K - len(seeds)
-    take_count = min(seeds_remaining, len(other_cell_indices))
-    for cell_idx in other_cell_indices[:take_count]:
-        cell = all_cells[cell_idx]
-        candidates = [
-            regions_by_id[rid] for rid in cell["regions"] if rid not in used
-        ]
-        picked = pick_top_centrality(candidates, region_graph)
-        if picked is None:
-            continue
-        seeds.append(SeedPlacement(region=picked, phase="coverage"))
-        used.add(picked.region_id)
-
-    # Phase C — Extras (only when seeds_remaining > #other_cells)
-    # Place additional seeds in biggest non-hub cells, picking the farthest
-    # candidate from existing seeds in that cell (Euclidean centroid FPS).
-    # Fallback: when no other cells are available (e.g., piece has 0 reflex
-    # vertices = 1 cell, hub takes it), extras share the hub cell.
-    while len(seeds) < K:
-        eligible_cells = [
-            i for i in other_cell_indices
-            if any(rid not in used for rid in all_cells[i]["regions"])
-        ]
-        if not eligible_cells and hub_cell_idx is not None and any(
-            rid not in used for rid in all_cells[hub_cell_idx]["regions"]
-        ):
-            eligible_cells = [hub_cell_idx]
-        if not eligible_cells:
+    for pid in uncovered_pids:
+        if len(seeds) >= K:
             break
-        eligible_cells.sort(key=lambda i: -all_cells[i]["area"])
-        target_idx = eligible_cells[0]
-        cell = all_cells[target_idx]
-        existing_in_cell = [
-            seed.region for seed in seeds
-            if seed.region.region_id in cell["regions"]
-        ]
+        territory_cells_idx = sorted(
+            cells_by_territory[pid], key=lambda i: -all_cells[i]["area"],
+        )
+        for biggest_idx in territory_cells_idx:
+            cell = all_cells[biggest_idx]
+            candidates = [
+                regions_by_id[rid] for rid in cell["regions"] if rid not in used
+            ]
+            picked = pick_top_centrality(candidates, region_graph)
+            if picked is None:
+                continue
+            seeds.append(SeedPlacement(region=picked, phase="coverage"))
+            used.add(picked.region_id)
+            cell_seed_count[biggest_idx] += 1
+            territory_seed_count[pid] += 1
+            break  # next uncovered territory
+
+    # Phase C — Load-balanced extras
+    while len(seeds) < K:
+        # Candidate territories: have at least one non-hub cell with unused regions
+        candidate_pids: list[int] = []
+        for pid, t_cells in cells_by_territory.items():
+            non_hub = [i for i in t_cells if i != hub_cell_idx]
+            if not non_hub:
+                continue
+            if any(
+                any(rid not in used for rid in all_cells[i]["regions"])
+                for i in non_hub
+            ):
+                candidate_pids.append(pid)
+
+        target_cell_idx: int
+        target_pid: int
+        if candidate_pids:
+            target_pid = max(
+                candidate_pids,
+                key=lambda pid: (
+                    territory_areas[pid] / max(1, territory_seed_count[pid]),
+                    territory_areas[pid],
+                ),
+            )
+            target_cells = [
+                i for i in cells_by_territory[target_pid]
+                if i != hub_cell_idx
+                and any(rid not in used for rid in all_cells[i]["regions"])
+            ]
+            target_cell_idx = max(
+                target_cells,
+                key=lambda i: (
+                    all_cells[i]["area"] / (cell_seed_count[i] + 1),
+                    all_cells[i]["area"],
+                ),
+            )
+        else:
+            # Fallback: hub cell extras
+            if hub_cell_idx is None or not any(
+                rid not in used for rid in all_cells[hub_cell_idx]["regions"]
+            ):
+                break
+            target_cell_idx = hub_cell_idx
+            target_pid = all_cells[hub_cell_idx]["territory"].part_id
+
+        cell = all_cells[target_cell_idx]
         candidate_regions = [
             regions_by_id[rid] for rid in cell["regions"] if rid not in used
         ]
         if not candidate_regions:
             break
+
+        existing_in_cell = [
+            seed.region for seed in seeds
+            if seed.region.region_id in cell["regions"]
+        ]
         if not existing_in_cell:
             picked = pick_top_centrality(candidate_regions, region_graph)
+            phase_label = "coverage"
         else:
             existing_centroids = [
                 region_poly_by_id[s.region_id].centroid for s in existing_in_cell
@@ -505,10 +551,13 @@ def auto_place_seeds_by_cells(
                 candidate_regions,
                 key=lambda r: (_min_dist(r), region_area(r), -r.region_id),
             )
+            phase_label = "fps"
         if picked is None:
             break
-        seeds.append(SeedPlacement(region=picked, phase="fps"))
+        seeds.append(SeedPlacement(region=picked, phase=phase_label))
         used.add(picked.region_id)
+        cell_seed_count[target_cell_idx] += 1
+        territory_seed_count[target_pid] += 1
 
     return tuple(seeds)
 

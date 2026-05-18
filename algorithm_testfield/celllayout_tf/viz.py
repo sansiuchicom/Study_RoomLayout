@@ -30,6 +30,7 @@ from .region_graph import build_region_graph
 from .regionize import Region, regionize
 from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
 from .schema import ShapeInput, ShapePart, part_theta
+from .seed_placement import auto_place_seeds, territory_of_region
 from .territory import Territory, resolve_territories
 
 
@@ -762,6 +763,150 @@ def save_layout_figure(
         title or f"{fixture.case_name}  |  " + ", ".join(parts),
         fontsize=10,
     )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+SEED_PHASE_COLORS: dict[str, str] = {
+    "hub":      "#d62728",  # red
+    "coverage": "#ff8c00",  # orange
+    "fps":      "#1f77b4",  # blue
+}
+
+SEED_PHASE_MARKERS: dict[str, str] = {
+    "hub":      "*",
+    "coverage": "s",
+    "fps":      "o",
+}
+
+SEED_PHASE_SIZES: dict[str, int] = {
+    "hub":      240,
+    "coverage": 110,
+    "fps":      80,
+}
+
+
+def save_seed_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    K: int,
+    has_public: bool,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+) -> Path:
+    """Render auto-placed seeds for Phase 7 Round 4 W2.
+
+    Layers (bottom-up):
+      1. faint atom backdrop
+      2. region tint by territory (so multi-part footprints are legible)
+      3. seed markers — phase-colored (hub=red star, coverage=orange square,
+         fps=blue circle), annotated with region_id
+      4. footprint outline
+    """
+    from matplotlib.lines import Line2D
+
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    region_graph = build_region_graph(
+        shape, atoms=atoms, regions=regions, policy=policy,
+    )
+    territories = resolve_territories(shape)
+    seeds = auto_place_seeds(
+        region_graph, territories, K=K, has_public=has_public,
+    )
+
+    region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint atom backdrop
+    for atom in atoms:
+        xs, ys = zip(*atom.shape.exterior)
+        ax.fill(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            facecolor="#f5f5f5", edgecolor="#cccccc",
+            alpha=0.6, linewidth=0.2, zorder=1,
+        )
+
+    # 2. region tint by territory
+    for r in regions:
+        terr = territory_of_region(r, territories)
+        color = (
+            PART_COLORS[terr.part_id % len(PART_COLORS)]
+            if terr is not None else "#dddddd"
+        )
+        poly = region_poly_by_id[r.region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor=color, edgecolor="#999999",
+            alpha=0.28, linewidth=0.5, zorder=2,
+        )
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.fill(
+                hx, hy,
+                facecolor="#444444", edgecolor="#111111",
+                alpha=1.0, linewidth=0.7, zorder=3,
+            )
+
+    # 3. seed markers + region_id labels
+    for s in seeds:
+        poly = region_poly_by_id[s.region.region_id]
+        rp = poly.representative_point()
+        ax.scatter(
+            rp.x, rp.y,
+            s=SEED_PHASE_SIZES[s.phase],
+            marker=SEED_PHASE_MARKERS[s.phase],
+            facecolor=SEED_PHASE_COLORS[s.phase],
+            edgecolor="#000000",
+            linewidth=1.0,
+            zorder=15,
+        )
+        ax.text(
+            rp.x, rp.y,
+            f"R{s.region.region_id}",
+            ha="center", va="center", fontsize=6,
+            color="white",
+            zorder=16,
+        )
+
+    # 4. footprint outline + axis
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+
+    # legend (phase → marker/color)
+    legend_handles = [
+        Line2D(
+            [], [], marker=SEED_PHASE_MARKERS[p], color="w",
+            markerfacecolor=SEED_PHASE_COLORS[p], markeredgecolor="black",
+            markersize=10 if p == "hub" else 8,
+            label=p,
+        )
+        for p in ("hub", "coverage", "fps")
+    ]
+    ax.legend(
+        handles=legend_handles, loc="upper right",
+        fontsize=7, frameon=True, framealpha=0.85,
+    )
+
+    # title summary (always appended so caller's title remains informative)
+    phase_counts = {"hub": 0, "coverage": 0, "fps": 0}
+    for s in seeds:
+        phase_counts[s.phase] += 1
+    summary = (
+        f"K={K} · territories={len(territories)} · "
+        + " ".join(f"{k}={v}" for k, v in phase_counts.items())
+    )
+    base_title = title or shape.name
+    ax.set_title(f"{base_title}  |  {summary}", fontsize=10)
+
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
     return path

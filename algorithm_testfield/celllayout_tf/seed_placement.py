@@ -2,14 +2,22 @@
 
 ``auto_place_seeds`` runs three phases:
   A — hub election (highest-centrality region overall; skipped if no public role)
-  B — territory coverage (force one seed per top-K-by-area surviving territory)
-  C — region-hop FPS for remaining slots, within covered territories only
+  B — territory coverage (one seed per top-K-by-area surviving territory,
+      spread-aware: prefer the territory member farthest from existing seeds)
+  C — FPS for remaining slots, within covered territories only
+
+Both Phase B and Phase C use the same ``_pick_farthest`` ranking:
+``(min_hop DESC, min_euclidean DESC, area DESC)``. The Euclidean term breaks
+hop ties that arise once 2–3 seeds saturate the region-graph diameter; without
+it, hop-tied candidates fall back to area DESC and cluster on large central
+regions.
 """
 
 from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+from math import hypot
 from typing import Iterable, Literal
 
 import shapely.geometry as sg
@@ -103,6 +111,12 @@ def _bfs_all_distances(src: int, graph: RegionGraph) -> dict[int, int]:
     return dists
 
 
+def _region_centroid(region: Region) -> tuple[float, float]:
+    poly = sg.Polygon(region.shape.exterior, [list(h) for h in region.shape.holes])
+    rp = poly.representative_point()
+    return (rp.x, rp.y)
+
+
 _INF_HOP = 10**9
 
 
@@ -114,32 +128,67 @@ def auto_place_seeds(
 ) -> tuple[SeedPlacement, ...]:
     """Place ``K`` seeds across the region graph in three phases.
 
-    Selected territories = top ``K`` by area (out of surviving territories).
-    Seeds only fall in selected territories; smaller territories' regions
-    are intentionally left as unassigned (corridor candidates).
+    Selected territories = top ``K`` by area. Smaller territories are left
+    unassigned (corridor candidates). Phase B and Phase C share a unified
+    spread-aware ranking that breaks hop ties by Euclidean distance.
 
     Raises ``ValueError`` if ``K`` exceeds the total region count of the
-    selected territories — that is a fixture misalignment.
+    selected territories.
     """
     if K <= 0:
         raise ValueError(f"K must be >= 1, got {K}")
 
-    seeds: list[SeedPlacement] = []
-    used_ids: set[int] = set()
+    all_regions = region_graph.regions
+    if not all_regions:
+        raise ValueError("region_graph has no regions")
 
-    # Phase A — Hub
+    centroid_by_id: dict[int, tuple[float, float]] = {
+        r.region_id: _region_centroid(r) for r in all_regions
+    }
+    distance_caches: dict[int, dict[int, int]] = {}
+    seeds: list[SeedPlacement] = []
+
+    def _pick_farthest(candidates: list[Region]) -> Region | None:
+        """Spread-aware pick: max(min_hop, min_euclidean, area).
+
+        Falls back to centrality when no seed has been placed yet.
+        """
+        if not candidates:
+            return None
+        if not distance_caches:
+            return pick_top_centrality(candidates, region_graph)
+
+        seed_ids = list(distance_caches.keys())
+        seed_centroids = [centroid_by_id[sid] for sid in seed_ids]
+
+        def key(r: Region) -> tuple[int, float, float]:
+            min_hop = min(
+                distance_caches[sid].get(r.region_id, _INF_HOP)
+                for sid in seed_ids
+            )
+            rx, ry = centroid_by_id[r.region_id]
+            min_euc = min(
+                hypot(rx - sx, ry - sy) for sx, sy in seed_centroids
+            )
+            return (min_hop, min_euc, region_area(r))
+
+        return max(candidates, key=key)
+
+    def _record(region: Region, phase: PlacementPhase) -> None:
+        seeds.append(SeedPlacement(region=region, phase=phase))
+        distance_caches[region.region_id] = _bfs_all_distances(
+            region.region_id, region_graph
+        )
+
+    # Phase A — Hub (global highest centrality)
     hub_territory_id: int | None = None
     if has_public:
-        hub = pick_top_centrality(region_graph.regions, region_graph)
-        if hub is None:
-            raise ValueError("region_graph has no regions")
-        seeds.append(SeedPlacement(region=hub, phase="hub"))
-        used_ids.add(hub.region_id)
+        hub = pick_top_centrality(all_regions, region_graph)
+        assert hub is not None  # all_regions checked above
+        _record(hub, "hub")
         hub_territory_id = hub.part_id
 
-    # Phase B — Territory coverage
-    # Pick selected_territories = top (K) by area, ALWAYS including hub's
-    # territory if present (it already holds the hub seed).
+    # Phase B — Territory coverage (spread-aware within each territory)
     covered_part_ids: set[int] = set()
     if hub_territory_id is not None:
         covered_part_ids.add(hub_territory_id)
@@ -149,46 +198,30 @@ def auto_place_seeds(
     other_terrs.sort(key=_territory_area, reverse=True)
     coverage_budget = K - len(covered_part_ids)
     for t in other_terrs[:coverage_budget]:
-        members = regions_in_territory(t, region_graph)
-        forced = pick_top_centrality(members, region_graph)
+        members = [
+            r for r in regions_in_territory(t, region_graph)
+            if r.region_id not in distance_caches
+        ]
+        forced = _pick_farthest(members)
         if forced is None:
-            # surviving territory with zero regions — unexpected, but skip
             continue
-        seeds.append(SeedPlacement(region=forced, phase="coverage"))
-        used_ids.add(forced.region_id)
+        _record(forced, "coverage")
         covered_part_ids.add(t.part_id)
 
-    # Phase C — FPS within covered territories only
-    fps_pool: list[Region] = [
-        r for r in region_graph.regions
-        if r.part_id in covered_part_ids and r.region_id not in used_ids
+    # Phase C — FPS over covered territories
+    fps_pool = [
+        r for r in all_regions
+        if r.part_id in covered_part_ids and r.region_id not in distance_caches
     ]
-    distance_caches: dict[int, dict[int, int]] = {
-        s.region.region_id: _bfs_all_distances(s.region.region_id, region_graph)
-        for s in seeds
-    }
-
     while len(seeds) < K:
         if not fps_pool:
             raise ValueError(
                 f"auto_place_seeds: K={K} exceeds available regions "
                 f"({len(seeds)} placed). Check fixture sizing."
             )
-
-        def _min_hop(r: Region) -> int:
-            return min(
-                distance_caches[seed_id].get(r.region_id, _INF_HOP)
-                for seed_id in distance_caches
-            )
-
-        next_seed = max(
-            fps_pool, key=lambda r: (_min_hop(r), region_area(r))
-        )
-        seeds.append(SeedPlacement(region=next_seed, phase="fps"))
-        used_ids.add(next_seed.region_id)
-        distance_caches[next_seed.region_id] = _bfs_all_distances(
-            next_seed.region_id, region_graph
-        )
+        next_seed = _pick_farthest(fps_pool)
+        assert next_seed is not None  # fps_pool non-empty
+        _record(next_seed, "fps")
         fps_pool = [r for r in fps_pool if r.region_id != next_seed.region_id]
 
     return tuple(seeds)

@@ -25,12 +25,14 @@ from celllayout_tf.viz import (
     save_layout_figure,
     save_region_graph_figure,
     save_region_figure,
+    save_seed_figure,
     save_territory_figure,
 )
 
 
 PER_CASE_PHASES = (
-    "input", "territory", "atom", "graph", "region", "region_graph", "layout",
+    "input", "territory", "atom", "graph", "region", "region_graph",
+    "seed", "layout",
 )
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
@@ -110,6 +112,18 @@ def _render_case(phase, idx, name, shape, args):
             fixtures[0],
             out,
             title=f"{idx}. {name}: layout (region_unit_greedy)",
+        )
+    if phase == "seed":
+        fixtures = selected_fixtures([idx])
+        if not fixtures:
+            raise ValueError(f"no fixture for case index {idx}")
+        fx = fixtures[0]
+        return save_seed_figure(
+            shape,
+            out,
+            K=fx.K,
+            has_public=fx.hub_room_index is not None,
+            title=f"{idx}. {name}: auto seed placement",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

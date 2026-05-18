@@ -118,6 +118,8 @@ def test_every_seed_lies_strictly_inside_its_footprint():
         shape = cases[fixture.case_name]
         footprint = _footprint(shape)
         for room in fixture.rooms:
+            if room.seed_position is None:
+                continue  # auto-placement; bounds verified by growth path
             pt = sg.Point(*room.seed_position)
             assert footprint.contains(pt), (
                 f"case {fixture.case_index} ({fixture.case_name}): "
@@ -131,6 +133,8 @@ def test_no_two_seeds_share_the_exact_same_coordinate():
     for fixture in make_fixtures():
         seen: set[tuple[float, float]] = set()
         for room in fixture.rooms:
+            if room.seed_position is None:
+                continue
             assert room.seed_position not in seen, (
                 f"case {fixture.case_index}: two seeds at "
                 f"{room.seed_position}"
@@ -174,3 +178,53 @@ def test_layoutfixture_rejects_missing_role_tables():
             role_min_areas={"public": 5.0},
             role_aspect_ranges={},  # missing 'public'
         )
+
+
+# ---------- W3: seed_position optional (auto-placement support) ----------
+
+
+def _minimal_fixture(rooms: tuple[RoomSpec, ...]) -> LayoutFixture:
+    return LayoutFixture(
+        case_index=1, case_name="x", footprint_area_m2=10.0,
+        rooms=rooms,
+        role_min_areas=DEFAULT_ROLE_MIN_AREAS,
+        role_aspect_ranges=DEFAULT_ROLE_ASPECT_RANGES,
+    )
+
+
+def test_roomspec_accepts_seed_position_none():
+    """Auto-placement: seed_position may be None."""
+    spec = RoomSpec("space_1", "public", None)
+    assert spec.seed_position is None
+
+
+def test_layoutfixture_auto_seed_true_when_all_none():
+    rooms = (
+        RoomSpec("space_1", "public", None),
+        RoomSpec("space_2", "private", None),
+    )
+    fixture = _minimal_fixture(rooms)
+    assert fixture.auto_seed is True
+
+
+def test_layoutfixture_auto_seed_false_when_all_tuple():
+    """All 33 existing fixtures: manual placement, auto_seed=False."""
+    for f in make_fixtures():
+        assert f.auto_seed is False
+
+
+def test_layoutfixture_rejects_mixed_seed_positions():
+    """Mixed None + tuple is ambiguous (which seeds are fixed?) — reject."""
+    import pytest
+    rooms = (
+        RoomSpec("space_1", "public", None),
+        RoomSpec("space_2", "private", (1.0, 1.0)),  # mixed
+    )
+    with pytest.raises(ValueError, match="seed_position must be all-None"):
+        _minimal_fixture(rooms)
+
+
+def test_roomspec_rejects_invalid_seed_tuple_shape():
+    import pytest
+    with pytest.raises(ValueError, match="seed_position must be"):
+        RoomSpec("x", "public", (1.0, 2.0, 3.0))  # type: ignore[arg-type]

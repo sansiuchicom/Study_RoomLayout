@@ -41,13 +41,18 @@ ROLE_VALUES: frozenset[str] = frozenset(("public", "private", "service", "wet"))
 class RoomSpec:
     """One room's input declaration in a fixture.
 
+    ``seed_position``: ``(x, y)`` for manual placement, or ``None`` to let
+    the algorithm auto-place via ``auto_place_seeds``. A fixture's rooms
+    must be all-None or all-tuples — mixed mode is rejected by
+    ``LayoutFixture``.
+
     ``target_aspect_range``: ``None`` → fall back to fixture's per-role
     default; ``(a_min, a_max)`` → explicit range. Algorithm uses this as
     a hard gate when deciding which region to absorb next.
     """
     name: str
     role: Role
-    seed_position: tuple[float, float]
+    seed_position: tuple[float, float] | None
     target_aspect_range: tuple[float, float] | None = None
 
     def __post_init__(self) -> None:
@@ -58,9 +63,9 @@ class RoomSpec:
                 f"RoomSpec.role must be one of {sorted(ROLE_VALUES)}, "
                 f"got {self.role!r}"
             )
-        if len(self.seed_position) != 2:
+        if self.seed_position is not None and len(self.seed_position) != 2:
             raise ValueError(
-                f"RoomSpec.seed_position must be (x, y), "
+                f"RoomSpec.seed_position must be (x, y) or None, "
                 f"got {self.seed_position!r}"
             )
         if self.target_aspect_range is not None:
@@ -141,9 +146,25 @@ class LayoutFixture:
                     f"1.0 <= min <= max"
                 )
 
+        # seed_position consistency: all-None (auto-placement) or all-tuple
+        # (manual placement). Mixed mode rejected to avoid ambiguity over
+        # which seeds the algorithm should treat as fixed anchors.
+        seed_states = {r.seed_position is None for r in self.rooms}
+        if len(seed_states) > 1:
+            raise ValueError(
+                f"LayoutFixture case {self.case_index}: "
+                f"seed_position must be all-None (auto placement) or "
+                f"all-tuple (manual placement) — mixed mode is not allowed."
+            )
+
     @property
     def K(self) -> int:
         return len(self.rooms)
+
+    @property
+    def auto_seed(self) -> bool:
+        """True iff every room has ``seed_position=None`` (auto-placement)."""
+        return all(r.seed_position is None for r in self.rooms)
 
     @property
     def hub_room_index(self) -> int | None:

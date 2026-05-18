@@ -43,6 +43,12 @@ def parse_args(argv):
     parser.add_argument("case_indices", nargs="*", type=int)
     parser.add_argument("--phase", choices=IMPLEMENTED_PHASES, default="input")
     parser.add_argument("--out-root", default=str(ROOT / "outputs"))
+    parser.add_argument(
+        "--auto-seed",
+        action="store_true",
+        help="For --phase layout: override fixture seed_position with None "
+             "(triggers auto_place_seeds_by_cells in the algorithm).",
+    )
     return parser.parse_args(argv)
 
 
@@ -107,11 +113,31 @@ def _render_case(phase, idx, name, shape, args):
         fixtures = selected_fixtures([idx])
         if not fixtures:
             raise ValueError(f"no fixture for case index {idx}")
+        fixture = fixtures[0]
+        if args.auto_seed:
+            from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+            auto_rooms = tuple(
+                RoomSpec(
+                    name=r.name, role=r.role, seed_position=None,
+                    target_aspect_range=r.target_aspect_range,
+                )
+                for r in fixture.rooms
+            )
+            fixture = LayoutFixture(
+                case_index=fixture.case_index,
+                case_name=fixture.case_name,
+                footprint_area_m2=fixture.footprint_area_m2,
+                rooms=auto_rooms,
+                role_min_areas=fixture.role_min_areas,
+                role_aspect_ranges=fixture.role_aspect_ranges,
+                max_l_rooms=fixture.max_l_rooms,
+            )
+        mode = "auto" if args.auto_seed else "manual"
         return save_layout_figure(
             shape,
-            fixtures[0],
+            fixture,
             out,
-            title=f"{idx}. {name}: layout (region_partition_growth)",
+            title=f"{idx}. {name}: layout (partition, {mode} seeds)",
         )
     if phase == "seed":
         fixtures = selected_fixtures([idx])

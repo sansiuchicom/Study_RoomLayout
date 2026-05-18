@@ -750,9 +750,20 @@ def save_layout_figure(
                 zorder=12,
             )
 
-    # 4. seed markers
+    # 4. seed markers (use fixture seed_position if set, else first region centroid)
     for room_idx, spec in enumerate(fixture.rooms):
-        x, y = spec.seed_position
+        if spec.seed_position is not None:
+            x, y = spec.seed_position
+        else:
+            grown = result.rooms[room_idx]
+            if not grown.region_ids:
+                continue
+            seed_region_id = grown.region_ids[0]
+            poly = region_poly_by_id.get(seed_region_id)
+            if poly is None or poly.is_empty:
+                continue
+            c = poly.centroid
+            x, y = c.x, c.y
         is_hub = room_idx == hub_idx
         ax.scatter(
             x, y,

@@ -29,12 +29,24 @@ import shapely.geometry as sg
 import shapely.geometry.polygon
 import shapely.ops
 
+from math import hypot
+
 from .atomize import atomize
 from .dimensions import DimensionPolicy
-from .region_graph import build_region_graph
+from .region_graph import RegionGraph, build_region_graph
 from .regionize import regionize
-from .seed_placement import auto_place_seeds
-from .territory import Territory, resolve_territories
+from .seed_placement import (
+    SeedPlacement,
+    auto_place_seeds,
+    pick_top_centrality,
+    region_area,
+)
+from .territory import (
+    KIND_CURVED,
+    Territory,
+    collect_cross_theta_contact_coords,
+    resolve_territories,
+)
 
 
 def _to_shapely(part) -> sg.Polygon:
@@ -83,24 +95,37 @@ def reflex_vertices_local(piece, theta: float) -> list[tuple[float, float]]:
     return reflex
 
 
-def vertex_cells_of_piece(piece, theta: float) -> list[sg.Polygon]:
+def vertex_cells_of_piece(
+    piece,
+    theta: float,
+    extra_cut_xs: set[float] | tuple[float, ...] = (),
+    extra_cut_ys: set[float] | tuple[float, ...] = (),
+) -> list[sg.Polygon]:
     """Split piece into axis-aligned rect cells using reflex-vertex cuts.
 
-    Cuts are axis-aligned LINES in the piece's local frame through each
-    reflex vertex. Cells returned in GLOBAL frame (rotated back by +theta).
+    Cuts are axis-aligned LINES in the piece's local frame at:
+      - each reflex vertex (exterior + hole) of the piece itself
+      - each extra_cut_xs / extra_cut_ys coord (cross-piece contact
+        projections, computed by ``collect_cross_theta_contact_coords``)
 
-    For a piece with no reflex (rect, curved): returns [piece] in global frame.
+    Cells returned in GLOBAL frame (rotated back by +theta).
+    For a piece with no cut coords (rect, curved without contacts): returns
+    [piece] in global frame.
     """
     poly_global = _to_shapely(piece)
     poly_local = _rotate(poly_global, theta, sign=-1)
     reflex = reflex_vertices_local(piece, theta)
 
-    if not reflex:
+    x_cuts_set = {round(v[0], 6) for v in reflex}
+    y_cuts_set = {round(v[1], 6) for v in reflex}
+    x_cuts_set.update(round(c, 6) for c in extra_cut_xs)
+    y_cuts_set.update(round(c, 6) for c in extra_cut_ys)
+
+    if not x_cuts_set and not y_cuts_set:
         return [poly_global]
 
-    # Unique cut coords
-    x_cuts = sorted({round(v[0], 6) for v in reflex})
-    y_cuts = sorted({round(v[1], 6) for v in reflex})
+    x_cuts = sorted(x_cuts_set)
+    y_cuts = sorted(y_cuts_set)
 
     # Bounds for cut line endpoints (extend well beyond piece)
     minx, miny, maxx, maxy = poly_local.bounds
@@ -117,7 +142,7 @@ def vertex_cells_of_piece(piece, theta: float) -> list[sg.Polygon]:
                 result = shapely.ops.split(cell, cut_line)
                 new_cells.extend(
                     g for g in result.geoms
-                    if g.geom_type == "Polygon" and g.area > 1e-9
+                    if g.geom_type == "Polygon" and g.area > 1e-3
                 )
             except Exception:
                 new_cells.append(cell)
@@ -130,7 +155,7 @@ def vertex_cells_of_piece(piece, theta: float) -> list[sg.Polygon]:
                 result = shapely.ops.split(cell, cut_line)
                 new_cells.extend(
                     g for g in result.geoms
-                    if g.geom_type == "Polygon" and g.area > 1e-9
+                    if g.geom_type == "Polygon" and g.area > 1e-3
                 )
             except Exception:
                 new_cells.append(cell)
@@ -300,6 +325,194 @@ def _rotate_point(point: sg.Point, theta: float, sign: int) -> sg.Point:
     return shapely.affinity.rotate(point, sign * degrees(theta), origin=(0, 0))
 
 
+# ---------- Cell-aware seed placement (W8) ----------
+
+
+def _enumerate_cells_with_regions(
+    shape,
+    region_graph: RegionGraph,
+    territories: tuple[Territory, ...],
+    region_poly_by_id: dict[int, sg.Polygon],
+) -> list[dict]:
+    """Enumerate all vertex cells across all (territory, piece) pairs.
+
+    Cells include cross-piece contact projections from
+    ``collect_cross_theta_contact_coords`` so a piece next to another piece
+    gets a cut at the neighbor's endpoint (e.g., case 20's right arm cut at
+    where the vertical arm meets).
+
+    Returns a list of dicts each with:
+      polygon, area, regions (list of region_ids whose centroid lies in cell),
+      territory, piece_idx.
+    """
+    contact_xs, contact_ys = collect_cross_theta_contact_coords(shape, territories)
+    out: list[dict] = []
+    for territory in territories:
+        eff_key = round(
+            0.0 if territory.kind == KIND_CURVED else territory.theta, 9,
+        )
+        ex = contact_xs.get(eff_key, set())
+        ey = contact_ys.get(eff_key, set())
+        for piece_idx, piece in enumerate(territory.pieces):
+            piece_global = _to_shapely(piece)
+            piece_region_ids = [
+                r.region_id for r in region_graph.regions
+                if r.part_id == territory.part_id
+                and piece_global.covers(region_poly_by_id[r.region_id].centroid)
+            ]
+            if not piece_region_ids:
+                continue
+            cells = vertex_cells_of_piece(
+                piece, territory.theta,
+                extra_cut_xs=ex, extra_cut_ys=ey,
+            )
+            for cell in cells:
+                cell_regions = [
+                    rid for rid in piece_region_ids
+                    if cell.covers(region_poly_by_id[rid].centroid)
+                ]
+                if cell_regions:
+                    out.append({
+                        "polygon": cell,
+                        "area": cell.area,
+                        "regions": cell_regions,
+                        "territory": territory,
+                        "piece_idx": piece_idx,
+                    })
+    return out
+
+
+def auto_place_seeds_by_cells(
+    shape,
+    region_graph: RegionGraph,
+    territories: tuple[Territory, ...],
+    K: int,
+    has_public: bool,
+) -> tuple[SeedPlacement, ...]:
+    """Cell-aware seed placement (Round 4 v2 W8).
+
+    1. Hub (if has_public): pick_top_centrality globally (same as Phase A of
+       ``auto_place_seeds``). Marks the hub's containing cell as "claimed".
+
+    2. Remaining seeds = K - has_public. Sort non-hub cells by area DESC.
+
+       - if remaining ≤ #other_cells: top-`remaining` cells each get 1 seed
+         (smallest cells skipped — their regions stay unassigned)
+       - if remaining > #other_cells: every other cell gets 1 seed, then
+         extras go to the largest non-hub cells (Euclidean FPS within each
+         cell — farthest from existing seeds in that cell)
+
+    3. Within each cell, the chosen seed = pick_top_centrality of the cell's
+       regions (degree DESC, area DESC tie-break).
+
+    The hub's cell is EXCLUDED from the "extras" distribution — hub stays
+    alone in its cell unless K demands sharing (which would only happen if
+    hub already covers many cells with extras and we still need more, but
+    by construction that doesn't occur for K ≤ #regions).
+    """
+    if K <= 0:
+        raise ValueError(f"K must be >= 1, got {K}")
+    if not region_graph.regions:
+        raise ValueError("region_graph has no regions")
+
+    regions_by_id = {r.region_id: r for r in region_graph.regions}
+    region_poly_by_id = {
+        r.region_id: _to_shapely(r.shape) for r in region_graph.regions
+    }
+
+    all_cells = _enumerate_cells_with_regions(
+        shape, region_graph, territories, region_poly_by_id,
+    )
+    if not all_cells:
+        raise ValueError("no vertex cells could be enumerated")
+
+    seeds: list[SeedPlacement] = []
+    used: set[int] = set()
+    hub_cell_idx: int | None = None
+
+    # Phase A — Hub
+    if has_public:
+        hub = pick_top_centrality(region_graph.regions, region_graph)
+        assert hub is not None
+        seeds.append(SeedPlacement(region=hub, phase="hub"))
+        used.add(hub.region_id)
+        for idx, cell in enumerate(all_cells):
+            if hub.region_id in cell["regions"]:
+                hub_cell_idx = idx
+                break
+
+    # Non-hub cells ordered by area DESC
+    other_cell_indices = sorted(
+        [i for i in range(len(all_cells)) if i != hub_cell_idx],
+        key=lambda i: -all_cells[i]["area"],
+    )
+
+    # Phase B — 1 seed per non-hub cell, biggest first (skip smallest if
+    # seeds_remaining is smaller than number of other cells)
+    seeds_remaining = K - len(seeds)
+    take_count = min(seeds_remaining, len(other_cell_indices))
+    for cell_idx in other_cell_indices[:take_count]:
+        cell = all_cells[cell_idx]
+        candidates = [
+            regions_by_id[rid] for rid in cell["regions"] if rid not in used
+        ]
+        picked = pick_top_centrality(candidates, region_graph)
+        if picked is None:
+            continue
+        seeds.append(SeedPlacement(region=picked, phase="coverage"))
+        used.add(picked.region_id)
+
+    # Phase C — Extras (only when seeds_remaining > #other_cells)
+    # Place additional seeds in biggest non-hub cells, picking the farthest
+    # candidate from existing seeds in that cell (Euclidean centroid FPS).
+    # Fallback: when no other cells are available (e.g., piece has 0 reflex
+    # vertices = 1 cell, hub takes it), extras share the hub cell.
+    while len(seeds) < K:
+        eligible_cells = [
+            i for i in other_cell_indices
+            if any(rid not in used for rid in all_cells[i]["regions"])
+        ]
+        if not eligible_cells and hub_cell_idx is not None and any(
+            rid not in used for rid in all_cells[hub_cell_idx]["regions"]
+        ):
+            eligible_cells = [hub_cell_idx]
+        if not eligible_cells:
+            break
+        eligible_cells.sort(key=lambda i: -all_cells[i]["area"])
+        target_idx = eligible_cells[0]
+        cell = all_cells[target_idx]
+        existing_in_cell = [
+            seed.region for seed in seeds
+            if seed.region.region_id in cell["regions"]
+        ]
+        candidate_regions = [
+            regions_by_id[rid] for rid in cell["regions"] if rid not in used
+        ]
+        if not candidate_regions:
+            break
+        if not existing_in_cell:
+            picked = pick_top_centrality(candidate_regions, region_graph)
+        else:
+            existing_centroids = [
+                region_poly_by_id[s.region_id].centroid for s in existing_in_cell
+            ]
+            def _min_dist(r):
+                c = region_poly_by_id[r.region_id].centroid
+                return min(
+                    hypot(c.x - ec.x, c.y - ec.y) for ec in existing_centroids
+                )
+            picked = max(
+                candidate_regions,
+                key=lambda r: (_min_dist(r), region_area(r), -r.region_id),
+            )
+        if picked is None:
+            break
+        seeds.append(SeedPlacement(region=picked, phase="fps"))
+        used.add(picked.region_id)
+
+    return tuple(seeds)
+
+
 def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = None):
     """Top-down piece-based partition growth (Round 4 v2 W7a)."""
     from .room_growth import GrownRoom, GrowthResult
@@ -317,12 +530,17 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
         neighbors_map[e.region_a].add(e.region_b)
         neighbors_map[e.region_b].add(e.region_a)
 
-    # --- Seed determination (same as growth_priority) ---
+    # --- Seed determination ---
     K = fixture.K
     seeds_by_room: dict[int, int] = {}
     if fixture.auto_seed:
         has_public = fixture.hub_room_index is not None
-        placements = auto_place_seeds(rg, territories, K=K, has_public=has_public)
+        # Cell-aware seed placement: hub via global centrality, remaining
+        # seeds allocated to vertex cells (biggest first; hub cell excluded
+        # from extras).
+        placements = auto_place_seeds_by_cells(
+            shape, rg, territories, K=K, has_public=has_public,
+        )
         if has_public:
             hub_idx = fixture.hub_room_index
             seeds_by_room[hub_idx] = placements[0].region.region_id
@@ -356,6 +574,13 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
     room_regions: dict[int, list[int]] = {i: [] for i in range(K)}
     region_to_room: dict[int, int] = {}
 
+    # Pre-compute cross-piece contact projections (used by every piece's
+    # vertex_cells_of_piece call) — gives each piece extra cut coords at
+    # points where another piece's boundary endpoint lands on its edge.
+    contact_xs_map, contact_ys_map = collect_cross_theta_contact_coords(
+        shape, territories,
+    )
+
     for territory in territories:
         # Regions in this territory
         terr_regions = [r for r in regions if r.part_id == territory.part_id]
@@ -363,6 +588,11 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
             sid for sid in seeds_by_room.values()
             if regions_by_id[sid].part_id == territory.part_id
         ]
+        eff_key = round(
+            0.0 if territory.kind == KIND_CURVED else territory.theta, 9,
+        )
+        ex = contact_xs_map.get(eff_key, set())
+        ey = contact_ys_map.get(eff_key, set())
 
         for piece_idx, piece in enumerate(territory.pieces):
             piece_global = _to_shapely(piece)
@@ -386,8 +616,13 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                 # No seed in this piece — all its regions are unassigned
                 continue
 
-            # Vertex cells (in global frame)
-            cells = vertex_cells_of_piece(piece, territory.theta)
+            # Vertex cells (in global frame) — include cross-piece contact
+            # projections so a piece adjacent to another piece gets extra
+            # cuts at the neighbor's boundary endpoints.
+            cells = vertex_cells_of_piece(
+                piece, territory.theta,
+                extra_cut_xs=ex, extra_cut_ys=ey,
+            )
 
             # Assign regions to cells by centroid
             region_to_cell = _assign_to_cells(

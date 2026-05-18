@@ -30,6 +30,9 @@ from .dimensions import DimensionPolicy
 from .region_graph import build_region_graph
 from .regionize import regionize
 from .schema import ShapeInput, ShapePart
+from .seed_placement import auto_place_seeds
+from .shape_gate import make_shape_gate
+from .territory import resolve_territories
 
 
 Role = Literal["public", "private", "service", "wet"]
@@ -230,10 +233,13 @@ def region_unit_greedy(
 
     See README § Phase 7 for the full spec. Summary:
 
-      - seed each room from the region containing its ``seed_position``
+      - seed each room: manual fixture ``seed_position`` or, if all rooms
+        have ``seed_position=None``, ``auto_place_seeds`` (hub + territory
+        coverage + FPS).
       - rank rooms by min-area shortfall (descending), else by smallest
         current area (ascending)
       - absorb one in-gate neighbor per iteration:
+          shape gate (cross-theta + curved exempt + reflex + L budget) +
           aspect gate (hard, role-based range) +
           weak hub-connectivity gate (no room loses its hub path)
       - stop when no room can grow without violating a gate.
@@ -245,6 +251,7 @@ def region_unit_greedy(
     atoms = atomize(shape, policy)
     regions = regionize(shape, atoms=atoms, policy=policy)
     rg = build_region_graph(shape, atoms=atoms, regions=regions, policy=policy)
+    territories = resolve_territories(shape)
 
     region_poly_by_id: dict[int, sg.Polygon] = {
         r.region_id: _to_shapely(r.shape) for r in regions
@@ -252,6 +259,7 @@ def region_unit_greedy(
     region_area_by_id: dict[int, float] = {
         rid: poly.area for rid, poly in region_poly_by_id.items()
     }
+    regions_by_id = {r.region_id: r for r in regions}
 
     neighbors_map: dict[int, set[int]] = defaultdict(set)
     edge_shared: dict[tuple[int, int], float] = {}
@@ -265,31 +273,61 @@ def region_unit_greedy(
     room_regions: dict[int, list[int]] = {i: [] for i in range(num_rooms)}
     region_to_room: dict[int, int] = {}
 
-    for room_idx, spec in enumerate(fixture.rooms):
-        pt = sg.Point(*spec.seed_position)
-        # `covers` (not `contains`) so seeds sitting exactly on a region
-        # boundary still resolve to the first region in iteration order.
-        # Deterministic tie-break by region_id ascending.
-        found = None
-        for r in sorted(regions, key=lambda r: r.region_id):
-            if region_poly_by_id[r.region_id].covers(pt):
-                found = r.region_id
-                break
-        if found is None:
-            raise ValueError(
-                f"case {fixture.case_index} ({fixture.case_name}): "
-                f"seed {spec.name} at {spec.seed_position} does not fall "
-                f"inside any region (footprint hole or far outside?)"
-            )
-        if found in region_to_room:
-            other = fixture.rooms[region_to_room[found]].name
-            raise ValueError(
-                f"case {fixture.case_index} ({fixture.case_name}): "
-                f"seed {spec.name} at {spec.seed_position} resolves to "
-                f"region {found} already claimed by {other}"
-            )
-        region_to_room[found] = room_idx
-        room_regions[room_idx].append(found)
+    shape_gate = make_shape_gate(territories, fixture.max_l_rooms)
+
+    if fixture.auto_seed:
+        has_public = fixture.hub_room_index is not None
+        placements = auto_place_seeds(
+            rg, territories, K=fixture.K, has_public=has_public,
+        )
+        # Distribute placements: hub (index 0 in placements when has_public)
+        # → fixture.hub_room_index. Remaining placements fill remaining rooms
+        # in listed order. K=2 (no public) just zips placements with rooms.
+        if has_public:
+            hub_room_idx = fixture.hub_room_index
+            seed_for_room: dict[int, int] = {
+                hub_room_idx: placements[0].region.region_id,
+            }
+            si = 1
+            for room_idx in range(num_rooms):
+                if room_idx == hub_room_idx:
+                    continue
+                seed_for_room[room_idx] = placements[si].region.region_id
+                si += 1
+        else:
+            seed_for_room = {
+                room_idx: placements[room_idx].region.region_id
+                for room_idx in range(num_rooms)
+            }
+        for room_idx, region_id in seed_for_room.items():
+            room_regions[room_idx].append(region_id)
+            region_to_room[region_id] = room_idx
+    else:
+        for room_idx, spec in enumerate(fixture.rooms):
+            pt = sg.Point(*spec.seed_position)
+            # ``covers`` (not ``contains``) so seeds sitting exactly on a
+            # region boundary still resolve to the first region in iteration
+            # order. Deterministic tie-break by region_id ascending.
+            found = None
+            for r in sorted(regions, key=lambda r: r.region_id):
+                if region_poly_by_id[r.region_id].covers(pt):
+                    found = r.region_id
+                    break
+            if found is None:
+                raise ValueError(
+                    f"case {fixture.case_index} ({fixture.case_name}): "
+                    f"seed {spec.name} at {spec.seed_position} does not fall "
+                    f"inside any region (footprint hole or far outside?)"
+                )
+            if found in region_to_room:
+                other = fixture.rooms[region_to_room[found]].name
+                raise ValueError(
+                    f"case {fixture.case_index} ({fixture.case_name}): "
+                    f"seed {spec.name} at {spec.seed_position} resolves to "
+                    f"region {found} already claimed by {other}"
+                )
+            region_to_room[found] = room_idx
+            room_regions[room_idx].append(found)
 
     hub_idx = fixture.hub_room_index
     aspect_ranges = [fixture.resolved_aspect_range(r) for r in fixture.rooms]
@@ -334,8 +372,22 @@ def region_unit_greedy(
                 continue
 
             a_range = aspect_ranges[room_idx]
+            # Pre-cache rooms_state_before for shape gate (immutable in this
+            # candidate loop — only one absorption commits per while iter).
+            rooms_state_before: dict[int, tuple[int, ...]] = {
+                i: tuple(rs) for i, rs in room_regions.items()
+            }
             in_gate: list[int] = []
             for cand_id in cands:
+                # shape gate (cross-theta + curved exempt + reflex + L budget)
+                room_after = rooms_state_before[room_idx] + (cand_id,)
+                if not shape_gate(
+                    room_idx,
+                    room_after,
+                    rooms_state_before,
+                    regions_by_id,
+                ):
+                    continue
                 # aspect gate
                 if a_range is not None:
                     a_min, a_max = a_range

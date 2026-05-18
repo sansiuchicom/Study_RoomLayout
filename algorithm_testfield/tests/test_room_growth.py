@@ -235,3 +235,93 @@ def test_diagnostics_contain_iteration_log():
     assert "hub_room_index" in diag
     assert "below_min_area" in diag
     assert diag["total_iterations"] == len(diag["iterations"])
+
+
+# ---------- W5: auto-seed + shape-gate integration ----------
+
+
+def _make_auto_fixture(original):
+    """Clone a fixture with all room seed_positions set to None."""
+    from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+    auto_rooms = tuple(
+        RoomSpec(
+            name=r.name, role=r.role, seed_position=None,
+            target_aspect_range=r.target_aspect_range,
+        )
+        for r in original.rooms
+    )
+    return LayoutFixture(
+        case_index=original.case_index,
+        case_name=original.case_name,
+        footprint_area_m2=original.footprint_area_m2,
+        rooms=auto_rooms,
+        role_min_areas=original.role_min_areas,
+        role_aspect_ranges=original.role_aspect_ranges,
+        max_l_rooms=original.max_l_rooms,
+    )
+
+
+def test_auto_seed_runs_for_simple_rect():
+    """case 01 with auto-seed mode produces a valid GrowthResult."""
+    cases = {c.name: c for c in make_cases()}
+    manual_fixture = make_fixtures()[0]  # case 01
+    shape = cases[manual_fixture.case_name]
+    auto_fixture = _make_auto_fixture(manual_fixture)
+    assert auto_fixture.auto_seed is True
+    result = region_unit_greedy(shape, auto_fixture)
+    # All rooms have at least 1 region (their seed)
+    assert all(len(r.region_ids) >= 1 for r in result.rooms)
+    # Hub room (first public) seeded correctly
+    assert result.diagnostics["hub_room_index"] == manual_fixture.hub_room_index
+
+
+def test_auto_seed_k2_case():
+    """K=2 fixture (no public) under auto-seed mode."""
+    cases = {c.name: c for c in make_cases()}
+    manual = make_fixtures()[23]  # case 24 (K=2)
+    assert manual.hub_room_index is None
+    shape = cases[manual.case_name]
+    auto = _make_auto_fixture(manual)
+    result = region_unit_greedy(shape, auto)
+    assert len(result.rooms) == 2
+    assert all(len(r.region_ids) >= 1 for r in result.rooms)
+
+
+def test_shape_gate_keeps_grown_rooms_within_reflex_budget():
+    """Every grown room's union must have reflex <= 1 in local frame.
+
+    With max_l_rooms=2 default, at most 2 rooms can have reflex>=1.
+    """
+    from celllayout_tf.shape_gate import _reflex_of_union, _REFLEX_INVALID
+    for shape, fixture in _all_cases_and_fixtures():
+        result = region_unit_greedy(shape, fixture)
+        regions_list = regionize(shape)
+        regions_by_id = {r.region_id: r for r in regions_list}
+        l_rooms = 0
+        for room in result.rooms:
+            if not room.region_ids:
+                continue
+            theta = regions_by_id[room.region_ids[0]].theta
+            # find a region's territory kind via part_id of any included region
+            from celllayout_tf.territory import resolve_territories
+            terrs = resolve_territories(shape)
+            kinds_in_room = {
+                next((t.kind for t in terrs
+                     if t.part_id == regions_by_id[rid].part_id), "axis_aligned")
+                for rid in room.region_ids
+            }
+            if "curved" in kinds_in_room:
+                continue  # curved territories exempt
+            refl = _reflex_of_union(room.region_ids, regions_by_id, theta)
+            if refl == _REFLEX_INVALID:
+                continue  # disconnected (shouldn't happen)
+            assert refl <= 1, (
+                f"case {fixture.case_index} {fixture.case_name}: "
+                f"room {room.name} has reflex={refl} (T+ shape leaked)"
+            )
+            if refl == 1:
+                l_rooms += 1
+        assert l_rooms <= fixture.max_l_rooms, (
+            f"case {fixture.case_index}: {l_rooms} L-rooms exceed budget "
+            f"{fixture.max_l_rooms}"
+        )

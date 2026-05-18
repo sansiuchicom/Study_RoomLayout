@@ -79,7 +79,9 @@ def _reflex_of_union(
 ) -> int:
     """Reflex count of the union of regions rotated to local frame.
 
-    Returns ``_REFLEX_INVALID`` if union is empty or non-Polygon.
+    Returns ``_REFLEX_INVALID`` if union is empty or non-Polygon. Fast-paths
+    bbox-equivalent unions to 0 so FP rotation noise on rotated cases does
+    not register phantom reflex vertices on truly axis-aligned shapes.
     """
     if not region_ids:
         return _REFLEX_INVALID
@@ -93,6 +95,14 @@ def _reflex_of_union(
     union = shapely.ops.unary_union(polys)
     if union.is_empty or union.geom_type != "Polygon":
         return _REFLEX_INVALID
+
+    # Fast path: union == its bbox (area-wise) → axis-aligned rectangle.
+    # Bypasses cross-product reflex count which can register phantom reflex
+    # on FP-noisy rotated polygons whose geometry is still rectangular.
+    minx, miny, maxx, maxy = union.bounds
+    bbox_area = (maxx - minx) * (maxy - miny)
+    if abs(bbox_area - union.area) < 1e-6 * max(union.area, 1e-9):
+        return 0
     return count_reflex_vertices(union)
 
 

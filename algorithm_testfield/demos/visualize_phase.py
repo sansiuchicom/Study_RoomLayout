@@ -150,7 +150,7 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             fixture,
             out,
-            title=f"{idx}. {name}: corridor W2 Stage 1",
+            title=f"{idx}. {name}: corridor (base + detour shortcut)",
         )
     if phase == "seed":
         fixtures = selected_fixtures([idx])

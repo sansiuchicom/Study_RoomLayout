@@ -49,9 +49,9 @@ def _region_adj_for(shape):
 # ---------- LayoutFixture.detour_threshold ----------
 
 
-def test_layout_fixture_default_detour_threshold_is_2_5():
+def test_layout_fixture_default_detour_threshold_is_2_0():
     fix = next(iter(make_fixtures()))
-    assert fix.detour_threshold == 2.5
+    assert fix.detour_threshold == 2.0
 
 
 def test_layout_fixture_rejects_threshold_below_one():
@@ -137,6 +137,12 @@ def test_w2_partition_is_exact():
                 f"{seen[rid]} and base_corridor"
             )
             seen[rid] = "base_corridor"
+        for rid in layout.shortcut_corridor_region_ids:
+            assert rid not in seen, (
+                f"case {fixture.case_index}: region {rid} in both "
+                f"{seen[rid]} and shortcut_corridor"
+            )
+            seen[rid] = "shortcut_corridor"
         for rid in layout.leftover_region_ids:
             assert rid not in seen, (
                 f"case {fixture.case_index}: region {rid} in both "
@@ -200,7 +206,7 @@ def test_w2_every_non_hub_room_reachable_from_hub():
         for room_idx, grown in enumerate(layout.rooms):
             for rid in grown.region_ids:
                 region_to_room[rid] = room_idx
-        corridor_set = set(layout.base_corridor_region_ids)
+        corridor_set = set(layout.corridor_region_ids)
         hub_idx = fixture.hub_room_index
 
         # BFS from hub-region union through (hub regions ∪ corridor),

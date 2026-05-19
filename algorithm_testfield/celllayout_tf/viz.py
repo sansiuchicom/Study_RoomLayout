@@ -638,11 +638,13 @@ _LAYOUT_ALGORITHMS = {
 }
 
 
-# Phase 8 corridor palette — base = warm yellow, shortcut = deeper orange.
+# Phase 8 corridor palette — base = warm yellow, shortcut = magenta.
+# Shortcut must be visually distinct from hub (public role = warm amber),
+# so we pick a hue far from amber/yellow.
 CORRIDOR_BASE_FILL     = "#ffe066"
 CORRIDOR_BASE_EDGE     = "#b88a00"
-CORRIDOR_SHORTCUT_FILL = "#ffa64d"
-CORRIDOR_SHORTCUT_EDGE = "#a55400"
+CORRIDOR_SHORTCUT_FILL = "#e34fa3"
+CORRIDOR_SHORTCUT_EDGE = "#8a1c5b"
 
 
 def save_layout_figure(

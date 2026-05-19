@@ -96,7 +96,7 @@ class LayoutFixture:
     role_min_areas: dict[str, float]
     role_aspect_ranges: dict[str, tuple[float, float]]
     max_l_rooms: int = 2
-    detour_threshold: float = 2.5
+    detour_threshold: float = 2.0
 
     def __post_init__(self) -> None:
         if not self.rooms:

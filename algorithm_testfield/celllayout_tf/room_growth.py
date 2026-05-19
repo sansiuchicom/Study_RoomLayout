@@ -96,6 +96,7 @@ class LayoutFixture:
     role_min_areas: dict[str, float]
     role_aspect_ranges: dict[str, tuple[float, float]]
     max_l_rooms: int = 2
+    detour_threshold: float = 2.5
 
     def __post_init__(self) -> None:
         if not self.rooms:
@@ -109,6 +110,11 @@ class LayoutFixture:
             raise ValueError(
                 f"LayoutFixture case {self.case_index}: "
                 f"max_l_rooms must be >= 0, got {self.max_l_rooms}"
+            )
+        if self.detour_threshold < 1.0:
+            raise ValueError(
+                f"LayoutFixture case {self.case_index}: "
+                f"detour_threshold must be >= 1.0, got {self.detour_threshold}"
             )
 
         # role coverage: every role used by a RoomSpec must have entries

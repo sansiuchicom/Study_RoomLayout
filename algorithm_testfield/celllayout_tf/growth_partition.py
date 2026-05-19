@@ -562,6 +562,194 @@ def auto_place_seeds_by_cells(
     return tuple(seeds)
 
 
+# ---------- Post-processing: 3-stage unassigned absorption (W10) ----------
+
+
+def _local_bbox_aspect(
+    region_ids,
+    regions_by_id: dict,
+    theta: float,
+) -> float | None:
+    """bbox aspect (max/min) of regions' union in local frame; None if degenerate."""
+    polys = []
+    for rid in region_ids:
+        r = regions_by_id[rid]
+        p = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
+        if theta != 0.0:
+            p = shapely.affinity.rotate(p, -degrees(theta), origin=(0, 0))
+        polys.append(p)
+    union = shapely.ops.unary_union(polys)
+    if union.is_empty:
+        return None
+    minx, miny, maxx, maxy = union.bounds
+    w = maxx - minx
+    h = maxy - miny
+    if w < 1e-9 or h < 1e-9:
+        return None
+    return max(w, h) / min(w, h)
+
+
+def _absorb_remaining(
+    *,
+    shape,
+    rg,
+    territories,
+    room_regions: dict[int, list[int]],
+    region_to_room: dict[int, int],
+    regions_by_id: dict,
+    region_poly_by_id: dict,
+    neighbors_map: dict[int, set[int]],
+    hub_room_idx: int | None,
+) -> None:
+    """Mutates ``room_regions``/``region_to_room`` in place. 3 stages:
+
+    Stage 1 — Single-seed territory bulk absorb:
+      For each territory whose room_count == 1, all unassigned regions in
+      that territory go to that single room (shape unrestricted).
+
+    Stage 2 — Vertex-cell-level absorption (one pass, biggest cells first):
+      For each unassigned cell:
+        1) hub adjacent → absorb to hub (any shape)
+        2) else: prefer adjacent rooms that stay rect after absorbing the
+           whole cell; among rect-keepers, pick aspect-closest-to-1.
+        3) else: skip (defer to Stage 3).
+
+    Stage 3 — Region-level absorption (one pass, biggest regions first):
+      For each still-unassigned region:
+        - exactly 1 adjacent room → absorb (any shape)
+        - 2+ adjacent rooms → prefer rect-keepers, aspect-closest-to-1
+        - no rect-keeper among multi-adjacent → skip (stays unassigned)
+    """
+    from .shape_gate import _reflex_of_union
+
+    K = len(room_regions)
+
+    # ----- Stage 1 -----
+    territory_room_count: dict[int, int] = defaultdict(int)
+    room_per_territory: dict[int, int] = {}
+    for room_idx, rids in room_regions.items():
+        if not rids:
+            continue
+        part_id = regions_by_id[rids[0]].part_id
+        territory_room_count[part_id] += 1
+        # When >1 room shares a part_id, this overwrites — but we only use it for single-seed territories.
+        room_per_territory[part_id] = room_idx
+    single_seed_part_ids = {
+        pid for pid, c in territory_room_count.items() if c == 1
+    }
+
+    for rid in list(regions_by_id.keys()):
+        if rid in region_to_room:
+            continue
+        part_id = regions_by_id[rid].part_id
+        if part_id not in single_seed_part_ids:
+            continue
+        target = room_per_territory[part_id]
+        room_regions[target].append(rid)
+        region_to_room[rid] = target
+
+    # ----- Stage 2 -----
+    all_cells = _enumerate_cells_with_regions(
+        shape, rg, territories, region_poly_by_id,
+    )
+    # Cells with all regions unassigned (= no seed inside)
+    cells_unassigned = [
+        (idx, cell) for idx, cell in enumerate(all_cells)
+        if all(rid not in region_to_room for rid in cell["regions"])
+    ]
+    # Biggest first
+    cells_unassigned.sort(key=lambda x: -x[1]["area"])
+
+    for cell_idx, cell in cells_unassigned:
+        cell_unassigned = [
+            rid for rid in cell["regions"] if rid not in region_to_room
+        ]
+        if not cell_unassigned:
+            continue
+
+        adj_rooms: set[int] = set()
+        for rid in cell_unassigned:
+            for nbr in neighbors_map.get(rid, ()):
+                if nbr in region_to_room:
+                    adj_rooms.add(region_to_room[nbr])
+        if not adj_rooms:
+            continue
+
+        chosen: int | None = None
+        if hub_room_idx is not None and hub_room_idx in adj_rooms:
+            chosen = hub_room_idx
+        else:
+            rect_keepers: list[tuple[int, float]] = []
+            for room_idx in adj_rooms:
+                room_rids = room_regions[room_idx]
+                if not room_rids:
+                    continue
+                theta = regions_by_id[room_rids[0]].theta
+                combined_ids = tuple(room_rids) + tuple(cell_unassigned)
+                refl = _reflex_of_union(combined_ids, regions_by_id, theta)
+                if refl != 0:
+                    continue
+                aspect = _local_bbox_aspect(combined_ids, regions_by_id, theta)
+                if aspect is None:
+                    continue
+                rect_keepers.append((room_idx, aspect))
+            if rect_keepers:
+                rect_keepers.sort(key=lambda x: (abs(x[1] - 1.0), x[0]))
+                chosen = rect_keepers[0][0]
+
+        if chosen is None:
+            continue
+        for rid in cell_unassigned:
+            room_regions[chosen].append(rid)
+            region_to_room[rid] = chosen
+
+    # ----- Stage 3 -----
+    unassigned_regions = sorted(
+        [
+            r for r in regions_by_id.values()
+            if r.region_id not in region_to_room
+        ],
+        key=lambda r: -region_poly_by_id[r.region_id].area,
+    )
+    for region in unassigned_regions:
+        rid = region.region_id
+        if rid in region_to_room:
+            continue
+        adj_rooms = set()
+        for nbr in neighbors_map.get(rid, ()):
+            if nbr in region_to_room:
+                adj_rooms.add(region_to_room[nbr])
+        if not adj_rooms:
+            continue
+
+        chosen = None
+        if len(adj_rooms) == 1:
+            chosen = next(iter(adj_rooms))
+        else:
+            rect_keepers = []
+            for room_idx in adj_rooms:
+                room_rids = room_regions[room_idx]
+                if not room_rids:
+                    continue
+                theta = regions_by_id[room_rids[0]].theta
+                combined_ids = tuple(room_rids) + (rid,)
+                refl = _reflex_of_union(combined_ids, regions_by_id, theta)
+                if refl != 0:
+                    continue
+                aspect = _local_bbox_aspect(combined_ids, regions_by_id, theta)
+                if aspect is None:
+                    continue
+                rect_keepers.append((room_idx, aspect))
+            if rect_keepers:
+                rect_keepers.sort(key=lambda x: (abs(x[1] - 1.0), x[0]))
+                chosen = rect_keepers[0][0]
+
+        if chosen is None:
+            continue
+        room_regions[chosen].append(rid)
+        region_to_room[rid] = chosen
+
+
 def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = None):
     """Top-down piece-based partition growth (Round 4 v2 W7a)."""
     from .room_growth import GrownRoom, GrowthResult
@@ -737,6 +925,19 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                             if rid not in region_to_room:
                                 room_regions[room_idx].append(rid)
                                 region_to_room[rid] = room_idx
+
+    # --- Post-processing: 3-stage absorption (W10) ---
+    _absorb_remaining(
+        shape=shape,
+        rg=rg,
+        territories=territories,
+        room_regions=room_regions,
+        region_to_room=region_to_room,
+        regions_by_id=regions_by_id,
+        region_poly_by_id=region_poly_by_id,
+        neighbors_map=neighbors_map,
+        hub_room_idx=fixture.hub_room_index,
+    )
 
     # --- Build result ---
     current_areas = {

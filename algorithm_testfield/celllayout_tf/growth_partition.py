@@ -968,12 +968,20 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                     # cell unassigned (corridor candidate)
                     continue
                 elif len(cell_seeds) == 1:
-                    # whole cell → that room
+                    # whole cell → that room, with W12 aspect gate per region
                     room_idx = seed_to_room[cell_seeds[0]]
+                    room_theta = regions_by_id[cell_seeds[0]].theta
+                    room_max = room_max_aspect.get(room_idx, float("inf"))
                     for rid in cell_regions:
-                        if rid not in region_to_room:
-                            room_regions[room_idx].append(rid)
-                            region_to_room[rid] = room_idx
+                        if rid in region_to_room:
+                            continue
+                        combined = tuple(room_regions[room_idx]) + (rid,)
+                        if not _aspect_ok_for_max(
+                            combined, regions_by_id, room_theta, room_max,
+                        ):
+                            continue  # aspect violation — stays unassigned
+                        room_regions[room_idx].append(rid)
+                        region_to_room[rid] = room_idx
                 else:
                     # 2+ seeds — aspect-minimizing guillotine partition with
                     # snap-to-region-edge (W7b).

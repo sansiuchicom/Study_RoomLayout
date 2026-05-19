@@ -30,10 +30,10 @@ DEFAULT_ROLE_MIN_AREAS: dict[str, float] = {
 
 
 DEFAULT_ROLE_ASPECT_RANGES: dict[str, tuple[float, float]] = {
-    "public":  (1.0, 5.0),   # W12: lenient 1:5 across all roles
-    "private": (1.0, 5.0),
-    "wet":     (1.0, 5.0),
-    "service": (1.0, 5.0),
+    "public":  (1.0, 4.0),   # W12: uniform 1:4 across roles (tested 1:5/1:3,
+    "private": (1.0, 4.0),   # 1:4 is the sweet spot — most rooms fit, only
+    "wet":     (1.0, 4.0),   # extreme long arms (case 11 thin) get clipped
+    "service": (1.0, 4.0),   # to corridor candidates)
 }
 
 

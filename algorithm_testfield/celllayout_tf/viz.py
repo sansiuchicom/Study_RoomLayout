@@ -28,6 +28,7 @@ from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
+from .corridor import CorridoredLayout, carve_corridors
 from .growth_partition import region_partition_growth
 from .growth_priority import region_priority_growth
 from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
@@ -637,6 +638,13 @@ _LAYOUT_ALGORITHMS = {
 }
 
 
+# Phase 8 corridor palette — base = warm yellow, shortcut = deeper orange.
+CORRIDOR_BASE_FILL     = "#ffe066"
+CORRIDOR_BASE_EDGE     = "#b88a00"
+CORRIDOR_SHORTCUT_FILL = "#ffa64d"
+CORRIDOR_SHORTCUT_EDGE = "#a55400"
+
+
 def save_layout_figure(
     shape: ShapeInput,
     fixture: LayoutFixture,
@@ -788,6 +796,155 @@ def save_layout_figure(
     below_min = result.diagnostics.get("below_min_area", ())
     if below_min:
         parts.append(f"below_min={list(below_min)}")
+    ax.set_title(
+        title or f"{fixture.case_name}  |  " + ", ".join(parts),
+        fontsize=10,
+    )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def save_corridor_figure(
+    shape: ShapeInput,
+    fixture: LayoutFixture,
+    path,
+    *,
+    layout: CorridoredLayout | None = None,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+    algorithm: str = "region_partition_growth",
+) -> Path:
+    """Render the Phase 8 corridor carving result.
+
+    Layers (bottom-up):
+
+    1. faint region outlines (gray reference)
+    2. leftover (hatched gray) — unassigned regions that survived cleanup
+    3. base corridor regions (yellow fill, dark amber edge)
+    4. shortcut corridor regions (orange fill, dark orange edge) — W3+
+    5. grown rooms (role-colored, hub edge thicker)
+    6. room labels (name / role / area)
+    7. footprint outline
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if layout is None:
+        if algorithm not in _LAYOUT_ALGORITHMS:
+            raise ValueError(
+                f"unknown algorithm {algorithm!r}; "
+                f"expected one of {sorted(_LAYOUT_ALGORITHMS)}"
+            )
+        growth = _LAYOUT_ALGORITHMS[algorithm](shape, fixture, policy=policy)
+        layout = carve_corridors(shape, growth, policy=policy)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint region outlines
+    for r in regions:
+        poly = region_poly_by_id[r.region_id]
+        xs, ys = poly.exterior.xy
+        ax.plot(xs, ys, color="#cccccc", linewidth=0.4, zorder=1)
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.plot(hx, hy, color="#cccccc", linewidth=0.4, zorder=1)
+
+    # 2. leftover (still-unassigned after carve + cleanup)
+    for region_id in layout.leftover_region_ids:
+        poly = region_poly_by_id[region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor="#dddddd", edgecolor="#888888",
+            alpha=0.55, linewidth=0.6, hatch="///", zorder=2,
+        )
+
+    # 3. base corridor
+    for region_id in layout.base_corridor_region_ids:
+        poly = region_poly_by_id[region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor=CORRIDOR_BASE_FILL, edgecolor=CORRIDOR_BASE_EDGE,
+            alpha=0.92, linewidth=0.9, zorder=3,
+        )
+
+    # 4. shortcut corridor (empty pre-W3, but already wired)
+    for region_id in layout.shortcut_corridor_region_ids:
+        poly = region_poly_by_id[region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor=CORRIDOR_SHORTCUT_FILL, edgecolor=CORRIDOR_SHORTCUT_EDGE,
+            alpha=0.95, linewidth=1.0, zorder=3,
+        )
+
+    # 5. grown rooms
+    hub_idx = fixture.hub_room_index
+    for room_idx, grown in enumerate(layout.rooms):
+        if not grown.region_ids:
+            continue
+        is_hub = room_idx == hub_idx
+        color = ROLE_COLORS.get(grown.role, "#888888")
+        alpha = 0.72 if is_hub else 0.55
+        edge_color = "#111111" if is_hub else "#333333"
+        edge_w = 1.8 if is_hub else 1.0
+
+        room_poly = unary_union(
+            [region_poly_by_id[rid] for rid in grown.region_ids]
+        )
+        for poly in _polygon_parts(room_poly):
+            xs, ys = poly.exterior.xy
+            ax.fill(
+                xs, ys,
+                facecolor=color, edgecolor=edge_color,
+                alpha=alpha, linewidth=edge_w, zorder=4,
+            )
+            for ring in poly.interiors:
+                hx, hy = ring.xy
+                ax.fill(
+                    hx, hy,
+                    facecolor="#444444", edgecolor="#111111",
+                    alpha=1.0, linewidth=0.7, zorder=5,
+                )
+
+        # 6. label
+        if not room_poly.is_empty:
+            rp = room_poly.representative_point()
+            hub_mark = "★ " if is_hub else ""
+            ax.text(
+                rp.x, rp.y,
+                f"{hub_mark}{grown.name}\n{grown.role}\n{grown.area_m2:.1f}㎡",
+                ha="center", va="center", fontsize=7,
+                bbox={
+                    "boxstyle": "round,pad=0.22",
+                    "facecolor": "white",
+                    "edgecolor": "#555555",
+                    "linewidth": 0.5,
+                    "alpha": 0.92,
+                },
+                zorder=12,
+            )
+
+    # 7. footprint outline + axis
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+
+    parts = [
+        f"K={fixture.K}",
+        f"base={len(layout.base_corridor_region_ids)}",
+        f"shortcut={len(layout.shortcut_corridor_region_ids)}",
+        f"leftover={len(layout.leftover_region_ids)}",
+    ]
+    disc = layout.diagnostics.get("disconnected_rooms", ())
+    if disc:
+        parts.append(f"disconnected={list(disc)}")
     ax.set_title(
         title or f"{fixture.case_name}  |  " + ", ".join(parts),
         fontsize=10,

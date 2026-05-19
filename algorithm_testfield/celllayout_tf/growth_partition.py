@@ -37,6 +37,7 @@ from .region_graph import RegionGraph, build_region_graph
 from .regionize import regionize
 from .seed_placement import (
     SeedPlacement,
+    _bfs_all_distances,
     auto_place_seeds,
     pick_top_centrality,
     region_area,
@@ -471,6 +472,10 @@ def auto_place_seeds_by_cells(
     hub_cell_idx: int | None = None
     cell_seed_count: dict[int, int] = {i: 0 for i in range(len(all_cells))}
     piece_seed_count: dict[tuple[int, int], int] = defaultdict(int)
+    # Distance bookkeeping (W13): seeds are picked to maximize min-hop to
+    # existing seeds, with Euclidean centroid distance as tie-break.
+    seed_region_ids: list[int] = []
+    bfs_cache: dict[int, dict[int, int]] = {}
 
     # Phase A — Hub
     if has_public:
@@ -478,6 +483,7 @@ def auto_place_seeds_by_cells(
         assert hub is not None
         seeds.append(SeedPlacement(region=hub, phase="hub"))
         used.add(hub.region_id)
+        seed_region_ids.append(hub.region_id)
         for idx, cell in enumerate(all_cells):
             if hub.region_id in cell["regions"]:
                 hub_cell_idx = idx
@@ -503,11 +509,15 @@ def auto_place_seeds_by_cells(
             candidates = [
                 regions_by_id[rid] for rid in cell["regions"] if rid not in used
             ]
-            picked = pick_top_centrality(candidates, region_graph)
+            picked = _farthest_or_centrality(
+                candidates, seed_region_ids,
+                region_graph, region_poly_by_id, bfs_cache,
+            )
             if picked is None:
                 continue
             seeds.append(SeedPlacement(region=picked, phase="coverage"))
             used.add(picked.region_id)
+            seed_region_ids.append(picked.region_id)
             cell_seed_count[biggest_idx] += 1
             piece_seed_count[pkey] += 1
             break  # next uncovered piece
@@ -571,7 +581,10 @@ def auto_place_seeds_by_cells(
             if seed.region.region_id in cell["regions"]
         ]
         if not existing_in_cell:
-            picked = pick_top_centrality(candidate_regions, region_graph)
+            picked = _farthest_or_centrality(
+                candidate_regions, seed_region_ids,
+                region_graph, region_poly_by_id, bfs_cache,
+            )
             phase_label = "coverage"
         else:
             existing_centroids = [
@@ -591,10 +604,56 @@ def auto_place_seeds_by_cells(
             break
         seeds.append(SeedPlacement(region=picked, phase=phase_label))
         used.add(picked.region_id)
+        seed_region_ids.append(picked.region_id)
         cell_seed_count[target_cell_idx] += 1
         piece_seed_count[target_pkey] += 1
 
     return tuple(seeds)
+
+
+_INF_HOP = 10**9
+
+
+def _farthest_or_centrality(
+    candidate_regions,
+    seed_region_ids,
+    region_graph,
+    region_poly_by_id,
+    bfs_cache: dict,
+):
+    """Pick region farthest from existing seeds: hop primary, Euclidean tie.
+
+    Ranking key: (min_hop DESC, min_euclidean DESC, area DESC, -region_id).
+    Falls back to ``pick_top_centrality`` when no existing seeds yet.
+
+    ``bfs_cache``: dict[seed_id, dict[region_id, hop_distance]], mutated.
+    """
+    if not candidate_regions:
+        return None
+    if not seed_region_ids:
+        return pick_top_centrality(candidate_regions, region_graph)
+
+    # Populate cache lazily
+    for sid in seed_region_ids:
+        if sid not in bfs_cache:
+            bfs_cache[sid] = _bfs_all_distances(sid, region_graph)
+
+    existing_centroids = [
+        region_poly_by_id[sid].centroid for sid in seed_region_ids
+    ]
+
+    def key(r):
+        rc = region_poly_by_id[r.region_id].centroid
+        min_hop = min(
+            bfs_cache[sid].get(r.region_id, _INF_HOP)
+            for sid in seed_region_ids
+        )
+        min_euc = min(
+            hypot(rc.x - ec.x, rc.y - ec.y) for ec in existing_centroids
+        )
+        return (min_hop, min_euc, region_area(r), -r.region_id)
+
+    return max(candidate_regions, key=key)
 
 
 def _aspect_ok_for_max(
@@ -894,8 +953,14 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
         room_max_aspect[i] = rng[1] if rng is not None else float("inf")
 
     # --- Partition: per piece, per cell ---
+    # Initialize each room with its seed FIRST so region_ids[0] always points
+    # at the seed (for diagnostics + viz markers). Main loop / stages skip
+    # regions already in region_to_room, so this doesn't double-process.
     room_regions: dict[int, list[int]] = {i: [] for i in range(K)}
     region_to_room: dict[int, int] = {}
+    for room_idx, seed_id in seeds_by_room.items():
+        room_regions[room_idx].append(seed_id)
+        region_to_room[seed_id] = room_idx
 
     # Pre-compute cross-piece contact projections (used by every piece's
     # vertex_cells_of_piece call) — gives each piece extra cut coords at

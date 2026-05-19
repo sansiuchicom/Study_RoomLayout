@@ -112,23 +112,30 @@ class CorridoredLayout:
 2. **아니면 A* carve**: hub의 region들에서 시작, R의 region들에서 종료.
    region_graph 위에서 A*.
 
-### Stage 1 cost table (region 단위)
+### Stage 1 cost table (region 단위, W2 구현)
 
 | Region 종류 | Cost |
 |---|---|
 | Hub region (시작점) | 0.01 |
 | Target room R의 region (종료점) | 0.01 |
-| Unclaimed region (`unassigned_region_ids`) | 0.01 (★ 변경: 0.1→0.01) |
+| Unclaimed region (`unassigned_region_ids`) | 0.01 |
 | 이미 깎인 corridor region | 0.01 |
-| 다른 방의 boundary region | `1.0 × (20 / room_size_m2)` |
+| 다른 방의 **outline** region | `1.0 × (20 / room_size_m2)` |
 | 다른 방의 interior region | `8.0 × (20 / room_size_m2)` |
 
-**Boundary vs interior 판정**: 그 방의 region 중 하나라도 그 방이
-아닌 region에 4-인접하면 boundary, 아니면 interior.
+`room_size_m2`는 carve 시점의 그 방 area, `max(room_size, 4 m²)` 하한.
 
-**`room_size_m2` 하한**: post-carve 방 area가 `fixture.role_area_ranges[role].min`
-이하로 떨어질 위험이 있는 region은 **hard block** (cost ∞). 아래
-"Hard gates" 참조.
+**Outline 판정** (room R에 속하는 region X에 대해):
+
+X의 둘레 어딘가가 R의 **outer outline**에 닿으면 outline. 한 가지로
+통일:
+
+- 다른 방의 region과 4-인접 — outline ✓
+- **Footprint 외벽 또는 구멍 경계에 닿음** — outline ✓
+- 위 둘 다 아니고 모든 둘레가 같은 방 region과 공유 — interior
+
+호텔처럼 내부 corridor도 자연스러우니 footprint-edge와 다른방-인접은
+동등 cost. "방 쪼개기 금지"는 cost 차별이 아니라 별도 hard gate(아래)로 보장.
 
 ### Carve action
 
@@ -138,11 +145,24 @@ A*가 찾은 path의 region들 중:
 - 다른 방의 region → 그 방의 `region_ids`에서 빼고 `base_corridor_region_ids`에 추가
 - unclaimed region → 바로 `base_corridor_region_ids`에 추가
 
-### Disconnection 검사
+### Disconnection gate (simulation + minimal-cut retry)
 
-Carve 후 각 방이 region_graph 상 single connected component인지 확인.
-disconnect되면 그 carve를 abort + 다음 후보 path 시도. 후보가 없으면
-A*를 cost penalty 올려서 재시도.
+A* path는 **commit 전 simulation**으로 검증:
+
+> 이 path를 carve하면 어떤 non-target 방이 empty되거나 split되는가?
+
+위반 시 그 path의 carved regions 중 *진짜로* split/empty를 일으키는
+**greedy minimal cut**만 `forbidden`에 추가 (각 region을 한 번씩
+빼보면서 그래도 split이면 그 region은 무고하므로 drop). 무고한
+region — slicing path와 valid path가 공유하는 region — 은 보호되어
+다음 A* 시도에서 재사용 가능.
+
+`forbidden` 갱신 후 A* 재시도, 최대 30회. 30회 이내에 valid path를
+못 찾으면 그 target은 unreached로 기록 (`stage1.log`에 `astar-failed`).
+
+★ 정정 (초기 설계 대비): single-removal cut vertex 사전 차단은 시도
+했으나 multi-region carve에서 false positive 너무 많음 (각 region은
+무고하지만 합쳐서 slicing). 제거하고 full-path simulation으로 일원화.
 
 ---
 
@@ -307,6 +327,8 @@ Disconnection 검사 (Stage 1과 동일).
 ### 6.2 Post-carve connectivity
 
 각 방이 region_graph 상 single connected component (Stage 1/2 모두).
+**Enforcement**: §3 "Disconnection gate" 참조 — A* simulation + minimal-cut
+forbidden retry로 hard 보장. Stage 2도 같은 mechanism 적용 예정.
 
 ### 6.3 Post-carve rectness/aspect (hub 보호)
 
@@ -360,19 +382,21 @@ Region carve 결과 코너 두께 불균일이 비주얼적으로 거슬리면:
 
 ---
 
-## 9. Module layout (planned)
+## 9. Module layout
 
 ```text
 celllayout_tf/
-  corridor.py              # Stage 1 + Stage 2 + cleanup 메인 entry
-  corridor_astar.py        # A* on region_graph (cost tables 분리)
-  corridor_distance.py     # map_distance + corridor_distance_strict
-  schema.py                # CorridoredLayout 추가
+  corridor.py              # Stage 1 (W2 구현됨); Stage 2/cleanup 들어갈 자리
+  viz.py                   # save_corridor_figure (W2)
 tests/
-  test_corridor.py         # 33 케이스 회귀
+  test_corridor.py         # 33 케이스 회귀 + invariant
 demos/
-  visualize_phase.py       # --phase corridor 추가
+  visualize_phase.py       # --phase corridor (auto-seed 고정)
 ```
+
+원래 `corridor_astar.py`/`corridor_distance.py` 분리 예정이었으나, W2
+시점에 `corridor.py` 한 파일이 ~470줄로 아직 다룰 만함. Stage 2/cleanup
+들어가면서 파일 키지면 그때 분리.
 
 ---
 
@@ -390,6 +414,10 @@ demos/
 | 8 | A* 실패는 deferred, fail_count 3-strike로 영구 제외 | 다음 carve가 entrance 만들어줄 수 있음 |
 | 9 | Door 위치는 별도 phase | corridor 안정화 후 정교화 |
 | 10 | Atom-level refinement는 옵셔널 future phase | region 단위 결과 보고 결정 |
+| 11 | **Outline = 다른 방 인접 OR 외벽/구멍 접촉** (W2 추가) | spec 의도 "방 외곽선을 따라 흐르고"는 외벽도 포함 — 호텔 같은 내부 corridor 자연스러움. 차별화 없이 동일 cost. |
+| 12 | **Disconnection gate = simulation + greedy minimal-cut retry** (W2 추가) | Cut vertex 단일 제거 사전 차단은 multi-region carve를 over-block. Full path simulation으로 실제 위반만 reject + minimal cut으로 무고한 공유 region 보호. |
+| 13 | Stage 1은 단일 module `corridor.py` (W2 구현) | 470줄 수준이라 분리 보류; Stage 2/cleanup 추가로 커지면 그때 split |
+| 14 | Viz는 항상 auto-seed로 강제 (W2) | Manual fixture seed는 `auto_place_seeds_by_cells`와 어긋나 비현실적 partition 생성. 테스트는 manual fixture 그대로 (deterministic). |
 
 ---
 
@@ -405,3 +433,14 @@ Sandbox v6 결과 (12 territory)와 등가 또는 우월:
 - **Detour 적정**: 단순 territory (직사각, L) shortcut 0; 복잡 territory
   (donut, two-hole) 1~3개 shortcut.
 - **각 corridor region 단변 ≥ `min_corridor_width`** (잠정 0.9m).
+
+### W2 측정 결과 (Stage 1만)
+
+| Metric | 결과 |
+|---|---|
+| Auto-seed 33 cases | 0 unreached, 0 split, 0 emptied |
+| Manual seed fixtures (tests) | 41/41 pass |
+| 직접/corridor 경유 hub 연결 | 모든 non-hub 방 ✓ |
+
+§6.1 min_area gate, §6.3 hub aspect/rectness gate, §6.4 corridor 단변
+보장, Stage 2 detour, cleanup — 모두 후속 W에서 측정.

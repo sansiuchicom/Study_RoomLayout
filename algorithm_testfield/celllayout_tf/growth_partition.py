@@ -228,6 +228,7 @@ def _guillotine_partition(
     seeds_in_cell: list[tuple[int, sg.Point]],
     regions_in_cell: list[tuple[int, sg.Point]],
     region_local_bboxes: dict[int, tuple[float, float, float, float]] | None = None,
+    seed_max_aspect: dict[int, float] | None = None,
 ) -> dict[int, list[int]]:
     """Recursive aspect-minimizing guillotine partition of a rect cell.
 
@@ -271,6 +272,19 @@ def _guillotine_partition(
         right_w = x_R - cut
         left_aspect = max(left_w, cell_h) / min(left_w, cell_h)
         right_aspect = max(right_w, cell_h) / min(right_w, cell_h)
+        # W12: aspect gate at leaf sub-rect (1-seed sub-rect must satisfy
+        # its room's max aspect). Multi-seed sub-rects recurse; checked there.
+        if seed_max_aspect is not None:
+            left_seeds_x = seeds_x[: i + 1]
+            right_seeds_x = seeds_x[i + 1 :]
+            if len(left_seeds_x) == 1:
+                mx = seed_max_aspect.get(left_seeds_x[0][0], float("inf"))
+                if left_aspect > mx:
+                    continue
+            if len(right_seeds_x) == 1:
+                mx = seed_max_aspect.get(right_seeds_x[0][0], float("inf"))
+                if right_aspect > mx:
+                    continue
         score = max(left_aspect, right_aspect)
         candidates.append((score, "x", cut, seeds_x[: i + 1], seeds_x[i + 1 :]))
 
@@ -290,6 +304,17 @@ def _guillotine_partition(
         top_h = y_T - cut
         bot_aspect = max(cell_w, bot_h) / min(cell_w, bot_h)
         top_aspect = max(cell_w, top_h) / min(cell_w, top_h)
+        if seed_max_aspect is not None:
+            bot_seeds_y = seeds_y[: i + 1]
+            top_seeds_y = seeds_y[i + 1 :]
+            if len(bot_seeds_y) == 1:
+                mx = seed_max_aspect.get(bot_seeds_y[0][0], float("inf"))
+                if bot_aspect > mx:
+                    continue
+            if len(top_seeds_y) == 1:
+                mx = seed_max_aspect.get(top_seeds_y[0][0], float("inf"))
+                if top_aspect > mx:
+                    continue
         score = max(bot_aspect, top_aspect)
         candidates.append((score, "y", cut, seeds_y[: i + 1], seeds_y[i + 1 :]))
 
@@ -314,8 +339,12 @@ def _guillotine_partition(
         cell_b = (x_L, cut, x_R, y_T)
 
     out: dict[int, list[int]] = {}
-    out.update(_guillotine_partition(cell_a, group_a, regions_a, region_local_bboxes))
-    out.update(_guillotine_partition(cell_b, group_b, regions_b, region_local_bboxes))
+    out.update(_guillotine_partition(
+        cell_a, group_a, regions_a, region_local_bboxes, seed_max_aspect,
+    ))
+    out.update(_guillotine_partition(
+        cell_b, group_b, regions_b, region_local_bboxes, seed_max_aspect,
+    ))
     return out
 
 
@@ -568,6 +597,19 @@ def auto_place_seeds_by_cells(
     return tuple(seeds)
 
 
+def _aspect_ok_for_max(
+    region_ids,
+    regions_by_id: dict,
+    theta: float,
+    max_aspect: float,
+) -> bool:
+    """True if union's local-frame bbox aspect ≤ max_aspect (or degenerate)."""
+    aspect = _local_bbox_aspect(region_ids, regions_by_id, theta)
+    if aspect is None:
+        return True
+    return aspect <= max_aspect
+
+
 # ---------- Post-processing: 3-stage unassigned absorption (W10) ----------
 
 
@@ -606,6 +648,7 @@ def _absorb_remaining(
     region_poly_by_id: dict,
     neighbors_map: dict[int, set[int]],
     hub_room_idx: int | None,
+    room_max_aspect: dict[int, float],
 ) -> None:
     """Mutates ``room_regions``/``region_to_room`` in place. 3 stages:
 
@@ -658,6 +701,14 @@ def _absorb_remaining(
         if pkey not in single_seed_pkeys:
             continue
         target = room_per_piece[pkey]
+        # Aspect gate: skip absorption that would push room aspect over limit
+        theta = regions_by_id[room_regions[target][0]].theta
+        if not _aspect_ok_for_max(
+            tuple(room_regions[target]) + (rid,),
+            regions_by_id, theta,
+            room_max_aspect.get(target, float("inf")),
+        ):
+            continue
         room_regions[target].append(rid)
         region_to_room[rid] = target
 
@@ -712,6 +763,14 @@ def _absorb_remaining(
 
         if chosen is None:
             continue
+        # Aspect gate
+        theta_chosen = regions_by_id[room_regions[chosen][0]].theta
+        combined_chosen = tuple(room_regions[chosen]) + tuple(cell_unassigned)
+        if not _aspect_ok_for_max(
+            combined_chosen, regions_by_id, theta_chosen,
+            room_max_aspect.get(chosen, float("inf")),
+        ):
+            continue  # would violate aspect — leave cell unassigned
         for rid in cell_unassigned:
             room_regions[chosen].append(rid)
             region_to_room[rid] = chosen
@@ -759,6 +818,14 @@ def _absorb_remaining(
 
         if chosen is None:
             continue
+        # Aspect gate
+        theta_chosen = regions_by_id[room_regions[chosen][0]].theta
+        if not _aspect_ok_for_max(
+            tuple(room_regions[chosen]) + (rid,),
+            regions_by_id, theta_chosen,
+            room_max_aspect.get(chosen, float("inf")),
+        ):
+            continue  # would violate aspect — leave region unassigned
         room_regions[chosen].append(rid)
         region_to_room[rid] = chosen
 
@@ -819,6 +886,12 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
             seeds_by_room[room_idx] = found
 
     seed_to_room = {sid: ridx for ridx, sid in seeds_by_room.items()}
+
+    # --- Per-room max aspect (W12: hard aspect gate, per RoomSpec) ---
+    room_max_aspect: dict[int, float] = {}
+    for i, spec in enumerate(fixture.rooms):
+        rng = fixture.resolved_aspect_range(spec)
+        room_max_aspect[i] = rng[1] if rng is not None else float("inf")
 
     # --- Partition: per piece, per cell ---
     room_regions: dict[int, list[int]] = {i: [] for i in range(K)}
@@ -928,9 +1001,16 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                         ).bounds
                         for rid in cell_regions
                     }
+                    seed_max_aspect_local = {
+                        sid: room_max_aspect.get(
+                            seed_to_room[sid], float("inf"),
+                        )
+                        for sid in cell_seeds
+                    }
                     assignment = _guillotine_partition(
                         cell_bbox_local, seeds_local, regions_local,
                         region_local_bboxes,
+                        seed_max_aspect_local,
                     )
                     for seed_id, region_ids in assignment.items():
                         room_idx = seed_to_room[seed_id]
@@ -950,6 +1030,7 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
         region_poly_by_id=region_poly_by_id,
         neighbors_map=neighbors_map,
         hub_room_idx=fixture.hub_room_index,
+        room_max_aspect=room_max_aspect,
     )
 
     # --- Build result ---

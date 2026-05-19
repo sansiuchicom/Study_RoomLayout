@@ -30,10 +30,10 @@ DEFAULT_ROLE_MIN_AREAS: dict[str, float] = {
 
 
 DEFAULT_ROLE_ASPECT_RANGES: dict[str, tuple[float, float]] = {
-    "public": (1.0, 2.5),
-    "private": (1.0, 2.0),
-    "wet": (1.0, 2.0),
-    "service": (1.0, 4.0),
+    "public":  (1.0, 5.0),   # W12: lenient 1:5 across all roles
+    "private": (1.0, 5.0),
+    "wet":     (1.0, 5.0),
+    "service": (1.0, 5.0),
 }
 
 

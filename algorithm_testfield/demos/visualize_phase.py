@@ -16,18 +16,24 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from celllayout_tf.cases import case_slug, selected_cases
+from celllayout_tf.layout_fixtures import selected_fixtures
 from celllayout_tf.viz import (
     save_atom_figure,
     save_atom_graph_figure,
     save_dimension_examples_figure,
     save_input_figure,
+    save_layout_figure,
     save_region_graph_figure,
     save_region_figure,
+    save_seed_figure,
     save_territory_figure,
 )
 
 
-PER_CASE_PHASES = ("input", "territory", "atom", "graph", "region", "region_graph")
+PER_CASE_PHASES = (
+    "input", "territory", "atom", "graph", "region", "region_graph",
+    "seed", "layout",
+)
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -37,6 +43,12 @@ def parse_args(argv):
     parser.add_argument("case_indices", nargs="*", type=int)
     parser.add_argument("--phase", choices=IMPLEMENTED_PHASES, default="input")
     parser.add_argument("--out-root", default=str(ROOT / "outputs"))
+    parser.add_argument(
+        "--auto-seed",
+        action="store_true",
+        help="For --phase layout: override fixture seed_position with None "
+             "(triggers auto_place_seeds_by_cells in the algorithm).",
+    )
     return parser.parse_args(argv)
 
 
@@ -96,6 +108,48 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: region graph",
+        )
+    if phase == "layout":
+        fixtures = selected_fixtures([idx])
+        if not fixtures:
+            raise ValueError(f"no fixture for case index {idx}")
+        fixture = fixtures[0]
+        if args.auto_seed:
+            from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+            auto_rooms = tuple(
+                RoomSpec(
+                    name=r.name, role=r.role, seed_position=None,
+                    target_aspect_range=r.target_aspect_range,
+                )
+                for r in fixture.rooms
+            )
+            fixture = LayoutFixture(
+                case_index=fixture.case_index,
+                case_name=fixture.case_name,
+                footprint_area_m2=fixture.footprint_area_m2,
+                rooms=auto_rooms,
+                role_min_areas=fixture.role_min_areas,
+                role_aspect_ranges=fixture.role_aspect_ranges,
+                max_l_rooms=fixture.max_l_rooms,
+            )
+        mode = "auto" if args.auto_seed else "manual"
+        return save_layout_figure(
+            shape,
+            fixture,
+            out,
+            title=f"{idx}. {name}: layout (partition, {mode} seeds)",
+        )
+    if phase == "seed":
+        fixtures = selected_fixtures([idx])
+        if not fixtures:
+            raise ValueError(f"no fixture for case index {idx}")
+        fx = fixtures[0]
+        return save_seed_figure(
+            shape,
+            out,
+            K=fx.K,
+            has_public=fx.hub_room_index is not None,
+            title=f"{idx}. {name}: auto seed placement",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

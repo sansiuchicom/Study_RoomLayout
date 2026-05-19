@@ -28,7 +28,11 @@ from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
+from .growth_partition import region_partition_growth
+from .growth_priority import region_priority_growth
+from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
 from .schema import ShapeInput, ShapePart, part_theta
+from .seed_placement import auto_place_seeds, territory_of_region
 from .territory import Territory, resolve_territories
 
 
@@ -42,6 +46,14 @@ PART_COLORS = [
     "#fdd087",
     "#b3cde3",
 ]
+
+
+ROLE_COLORS: dict[str, str] = {
+    "public":  "#ff9a4c",   # warm amber — 거실/공용
+    "private": "#5b9bd5",   # blue — 침실
+    "wet":     "#70ad47",   # green — 욕실
+    "service": "#9467bd",   # purple — 주방·다용도실
+}
 
 
 def configure_fonts():
@@ -612,6 +624,364 @@ def save_dimension_examples_figure(
         f"quantum = {policy.module_quantum}m"
     )
     ax.set_title(f"Phase 2: split_interval examples\n{legend}", fontsize=9)
+
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+_LAYOUT_ALGORITHMS = {
+    "region_unit_greedy": region_unit_greedy,
+    "region_priority_growth": region_priority_growth,
+    "region_partition_growth": region_partition_growth,
+}
+
+
+def save_layout_figure(
+    shape: ShapeInput,
+    fixture: LayoutFixture,
+    path,
+    *,
+    result: GrowthResult | None = None,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+    algorithm: str = "region_partition_growth",
+) -> Path:
+    """Render the Phase 7 seeded-growth result.
+
+    Layers (bottom-up):
+
+    1. faint region outlines (gray)
+    2. unassigned regions (hatched gray) — corridor / access candidates
+    3. grown rooms (role-colored, hub edge thicker)
+    4. region-id labels on unassigned, room-name labels on grown rooms
+    5. seed markers (white dot for normal rooms, star for hub)
+    6. footprint outline
+
+    ``algorithm`` selects which growth function runs when ``result`` is
+    None. ``"region_unit_greedy"`` is the Round 4 v1 baseline (kept for
+    comparison); ``"region_priority_growth"`` (default) is the Round 4 v2
+    Voronoi-priority algorithm.
+    """
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if result is None:
+        if algorithm not in _LAYOUT_ALGORITHMS:
+            raise ValueError(
+                f"unknown algorithm {algorithm!r}; "
+                f"expected one of {sorted(_LAYOUT_ALGORITHMS)}"
+            )
+        result = _LAYOUT_ALGORITHMS[algorithm](shape, fixture, policy=policy)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint region outlines (background reference)
+    for r in regions:
+        poly = region_poly_by_id[r.region_id]
+        xs, ys = poly.exterior.xy
+        ax.plot(xs, ys, color="#cccccc", linewidth=0.4, zorder=1)
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.plot(hx, hy, color="#cccccc", linewidth=0.4, zorder=1)
+
+    # 2. unassigned regions (gray hatched — corridor candidate area)
+    for region_id in result.unassigned_region_ids:
+        poly = region_poly_by_id[region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor="#dddddd", edgecolor="#888888",
+            alpha=0.55, linewidth=0.6, hatch="///", zorder=2,
+        )
+        rp = poly.representative_point()
+        ax.text(
+            rp.x, rp.y, f"R{region_id}",
+            ha="center", va="center", fontsize=6, color="#555555",
+            zorder=10,
+        )
+
+    # 3. grown rooms (colored by role, hub edge thicker)
+    hub_idx = fixture.hub_room_index
+    for room_idx, grown in enumerate(result.rooms):
+        is_hub = room_idx == hub_idx
+        color = ROLE_COLORS.get(grown.role, "#888888")
+        alpha = 0.72 if is_hub else 0.55
+        edge_color = "#111111" if is_hub else "#333333"
+        edge_w = 1.8 if is_hub else 1.0
+
+        room_poly = unary_union(
+            [region_poly_by_id[rid] for rid in grown.region_ids]
+        )
+        for poly in _polygon_parts(room_poly):
+            xs, ys = poly.exterior.xy
+            ax.fill(
+                xs, ys,
+                facecolor=color, edgecolor=edge_color,
+                alpha=alpha, linewidth=edge_w, zorder=4,
+            )
+            for ring in poly.interiors:
+                hx, hy = ring.xy
+                ax.fill(
+                    hx, hy,
+                    facecolor="#444444", edgecolor="#111111",
+                    alpha=1.0, linewidth=0.7, zorder=5,
+                )
+
+        if not room_poly.is_empty:
+            rp = room_poly.representative_point()
+            hub_mark = "★ " if is_hub else ""
+            ax.text(
+                rp.x, rp.y,
+                f"{hub_mark}{grown.name}\n{grown.role}\n{grown.area_m2:.1f}㎡",
+                ha="center", va="center", fontsize=7,
+                bbox={
+                    "boxstyle": "round,pad=0.22",
+                    "facecolor": "white",
+                    "edgecolor": "#555555",
+                    "linewidth": 0.5,
+                    "alpha": 0.92,
+                },
+                zorder=12,
+            )
+
+    # 4. seed markers (use fixture seed_position if set, else first region centroid)
+    for room_idx, spec in enumerate(fixture.rooms):
+        if spec.seed_position is not None:
+            x, y = spec.seed_position
+        else:
+            grown = result.rooms[room_idx]
+            if not grown.region_ids:
+                continue
+            seed_region_id = grown.region_ids[0]
+            poly = region_poly_by_id.get(seed_region_id)
+            if poly is None or poly.is_empty:
+                continue
+            c = poly.centroid
+            x, y = c.x, c.y
+        is_hub = room_idx == hub_idx
+        ax.scatter(
+            x, y,
+            s=120 if is_hub else 55,
+            marker="*" if is_hub else "o",
+            facecolor="#ffffff",
+            edgecolor="#000000",
+            linewidth=1.0,
+            zorder=15,
+        )
+
+    # 5. footprint outline + axis
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+
+    # title summary
+    parts = [
+        f"K={fixture.K}",
+        f"iter={result.diagnostics.get('total_iterations', 0)}",
+        f"unassigned={len(result.unassigned_region_ids)}",
+    ]
+    below_min = result.diagnostics.get("below_min_area", ())
+    if below_min:
+        parts.append(f"below_min={list(below_min)}")
+    ax.set_title(
+        title or f"{fixture.case_name}  |  " + ", ".join(parts),
+        fontsize=10,
+    )
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+SEED_PHASE_COLORS: dict[str, str] = {
+    "hub":      "#d62728",  # red
+    "coverage": "#ff8c00",  # orange
+    "fps":      "#1f77b4",  # blue
+}
+
+SEED_PHASE_MARKERS: dict[str, str] = {
+    "hub":      "*",
+    "coverage": "s",
+    "fps":      "o",
+}
+
+SEED_PHASE_SIZES: dict[str, int] = {
+    "hub":      240,
+    "coverage": 110,
+    "fps":      80,
+}
+
+
+def save_seed_figure(
+    shape: ShapeInput,
+    path,
+    *,
+    K: int,
+    has_public: bool,
+    title: str | None = None,
+    policy: DimensionPolicy | None = None,
+    show_outward: bool = True,
+) -> Path:
+    """Render auto-placed seeds for Phase 7 Round 4 W2.
+
+    Layers (bottom-up):
+      1. faint atom backdrop
+      2. region tint by territory (so multi-part footprints are legible)
+      3. seed markers — phase-colored (hub=red star, coverage=orange square,
+         fps=blue circle), annotated with region_id
+      4. (if show_outward) anchor dot + arrow from anchor → seed
+         (= outward direction, the dominant_out side for that seed)
+      5. footprint outline
+    """
+    from math import cos, radians, sin
+    from matplotlib.lines import Line2D
+
+    from .growth_priority import compute_seed_anchors
+
+    configure_fonts()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    atoms = atomize(shape, policy)
+    regions = regionize(shape, atoms=atoms, policy=policy)
+    region_graph = build_region_graph(
+        shape, atoms=atoms, regions=regions, policy=policy,
+    )
+    territories = resolve_territories(shape)
+    seeds = auto_place_seeds(
+        region_graph, territories, K=K, has_public=has_public,
+    )
+
+    region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+
+    # Outward / anchor computation (optional layer)
+    anchors_by_room: dict = {}
+    if show_outward:
+        regions_by_id = {r.region_id: r for r in regions}
+        seeds_by_room = {i: s.region.region_id for i, s in enumerate(seeds)}
+        anchors_by_room = compute_seed_anchors(
+            seeds_by_room, region_graph, territories, regions_by_id,
+        )
+
+    fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
+
+    # 1. faint atom backdrop
+    for atom in atoms:
+        xs, ys = zip(*atom.shape.exterior)
+        ax.fill(
+            list(xs) + [xs[0]], list(ys) + [ys[0]],
+            facecolor="#f5f5f5", edgecolor="#cccccc",
+            alpha=0.6, linewidth=0.2, zorder=1,
+        )
+
+    # 2. region tint by territory
+    for r in regions:
+        terr = territory_of_region(r, territories)
+        color = (
+            PART_COLORS[terr.part_id % len(PART_COLORS)]
+            if terr is not None else "#dddddd"
+        )
+        poly = region_poly_by_id[r.region_id]
+        xs, ys = poly.exterior.xy
+        ax.fill(
+            xs, ys,
+            facecolor=color, edgecolor="#999999",
+            alpha=0.28, linewidth=0.5, zorder=2,
+        )
+        for ring in poly.interiors:
+            hx, hy = ring.xy
+            ax.fill(
+                hx, hy,
+                facecolor="#444444", edgecolor="#111111",
+                alpha=1.0, linewidth=0.7, zorder=3,
+            )
+
+    # 3. seed markers + region_id labels
+    seed_global_positions: dict[int, tuple[float, float]] = {}
+    for i, s in enumerate(seeds):
+        poly = region_poly_by_id[s.region.region_id]
+        rp = poly.representative_point()
+        seed_global_positions[i] = (rp.x, rp.y)
+        ax.scatter(
+            rp.x, rp.y,
+            s=SEED_PHASE_SIZES[s.phase],
+            marker=SEED_PHASE_MARKERS[s.phase],
+            facecolor=SEED_PHASE_COLORS[s.phase],
+            edgecolor="#000000",
+            linewidth=1.0,
+            zorder=15,
+        )
+        ax.text(
+            rp.x, rp.y,
+            f"R{s.region.region_id}",
+            ha="center", va="center", fontsize=6,
+            color="white",
+            zorder=16,
+        )
+
+    # 3.5 anchor + outward vector (debug)
+    if show_outward and anchors_by_room:
+        for room_idx, sa in anchors_by_room.items():
+            seed_x, seed_y = seed_global_positions[room_idx]
+            # anchor is in local frame; rotate back to global by +theta
+            theta = regions[0].theta if not regions else next(
+                r.theta for r in regions if r.region_id == sa.seed_region_id
+            )
+            ax_local, ay_local = sa.anchor_point
+            c, s_ = cos(theta), sin(theta)
+            anchor_x = ax_local * c - ay_local * s_
+            anchor_y = ax_local * s_ + ay_local * c
+            # Anchor dot
+            ax.scatter(
+                anchor_x, anchor_y,
+                s=30, marker="x", color="#000000",
+                linewidth=1.5, zorder=17,
+            )
+            # Arrow from anchor to seed (= outward direction in global frame)
+            dx, dy = seed_x - anchor_x, seed_y - anchor_y
+            if dx * dx + dy * dy > 1e-9:
+                ax.annotate(
+                    "", xy=(seed_x, seed_y), xytext=(anchor_x, anchor_y),
+                    arrowprops=dict(
+                        arrowstyle="->", color="#000000",
+                        linewidth=1.2, alpha=0.85,
+                    ),
+                    zorder=14,
+                )
+
+    # 4. footprint outline + axis
+    _draw_footprint_outline(ax, shape)
+    _finish_axis(ax, shape)
+
+    # legend (phase → marker/color)
+    legend_handles = [
+        Line2D(
+            [], [], marker=SEED_PHASE_MARKERS[p], color="w",
+            markerfacecolor=SEED_PHASE_COLORS[p], markeredgecolor="black",
+            markersize=10 if p == "hub" else 8,
+            label=p,
+        )
+        for p in ("hub", "coverage", "fps")
+    ]
+    ax.legend(
+        handles=legend_handles, loc="upper right",
+        fontsize=7, frameon=True, framealpha=0.85,
+    )
+
+    # title summary (always appended so caller's title remains informative)
+    phase_counts = {"hub": 0, "coverage": 0, "fps": 0}
+    for s in seeds:
+        phase_counts[s.phase] += 1
+    summary = (
+        f"K={K} · territories={len(territories)} · "
+        + " ".join(f"{k}={v}" for k, v in phase_counts.items())
+    )
+    base_title = title or shape.name
+    ax.set_title(f"{base_title}  |  {summary}", fontsize=10)
 
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)

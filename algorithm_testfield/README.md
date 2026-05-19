@@ -951,7 +951,29 @@ Phase 5 region들의 outer edge가 좌표적으로 들쭉날쭉이면 strip이
 clean rect 만들기 어려움 → 변 막힘 → unassigned 늘어남. atom-level
 격상은 결과 보고 W6e 이후 결정.
 
-### Phase 8: Visualization + Metrics
+### Phase 8: Corridor Carving
+
+Room placement이 끝난 layout 위에서, hub에서 모든 방으로 닿는 복도를
+깎아내는 단계. 두 단계 + cleanup:
+
+- **Stage 1 — Base corridor (hub-radial)**: hub 인접 체크 → A* on
+  region_graph로 hub→target path 탐색 (boundary 우선, 작은 방 회피) →
+  path 위 region carve.
+- **Stage 2 — Detour shortcut**: 모든 페어의 `corridor_strict /
+  map_dist` ratio 계산 → threshold (building type별 단일값, 거주=2.5)
+  이상 페어 중 가장 큰 거 선택 → entrance에서 entrance로 strict A*
+  (hub/corridor 통과 hard block으로 새 carve 강제) → loop/cycle 형성
+  → 반복.
+- **Cleanup**: 남은 unassigned region을 corridor → 인접 방 (aspect 정사각형
+  우선) 순으로 흡수, 그래도 남으면 leftover로 표시.
+
+입자 단위는 **region** (atom 0.3m 단위는 너무 좁아 thickness 로직 별도
+필요; region 단변 0.4~2.0m가 자연스러운 복도 폭). Door 위치는 별도
+phase로 미룸. 상세 스펙은 [PHASE8_Corridor.md](PHASE8_Corridor.md).
+
+브랜치: `phase-8-corridor-carving`.
+
+### Phase 9: Visualization + Metrics
 
 Every phase should save debug figures:
 
@@ -979,11 +1001,11 @@ graph_connectivity
 
 ## Current Status
 
-Phases 1–6 stable on `main`. Phase 7 Rounds 1–3 (schema + fixtures +
-`region_unit_greedy` v1 + layout visualization) on branch
-`phase-7-region-unit-greedy`, not yet merged. Phase 7 Round 4
-(rect-preserving growth) in progress on branch `phase-7-rect-growth`
-— see §Phase 7 / Round 4 above.
+Phases 1–7 merged to `master`. Phase 7 Round 4 v2 (partition growth
++ 3-stage absorption + aspect gate) shipped on branch
+`phase-7-rect-growth` (merged) — see §Phase 7 / Round 4 v2 above.
+Phase 8 (Corridor Carving) spec written, implementation pending on
+branch `phase-8-corridor-carving` — see [PHASE8_Corridor.md](PHASE8_Corridor.md).
 
 Implemented modules:
 
@@ -996,8 +1018,12 @@ celllayout_tf/atom_graph.py
 celllayout_tf/regionize.py
 celllayout_tf/region_graph.py
 celllayout_tf/territory.py
-celllayout_tf/layout_fixtures.py     # Round 1
+celllayout_tf/layout_fixtures.py
 celllayout_tf/room_growth.py         # Round 2 (v1), Round 4 (v2)
+celllayout_tf/growth_partition.py    # Round 4 v2 W7+
+celllayout_tf/growth_priority.py     # Round 4 v2 W6 (priority experiment)
+celllayout_tf/seed_placement.py      # Round 4 v2 W6/W8+
+celllayout_tf/shape_gate.py
 celllayout_tf/viz.py
 ```
 

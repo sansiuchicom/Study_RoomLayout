@@ -428,18 +428,20 @@ def auto_place_seeds_by_cells(
     if not all_cells:
         raise ValueError("no vertex cells could be enumerated")
 
-    cells_by_territory: dict[int, list[int]] = defaultdict(list)
-    territory_areas: dict[int, float] = defaultdict(float)
+    # Logical territory = (part_id, piece_idx) — disconnected pieces of the
+    # same part treated separately so case 13's two cross arms are distinct.
+    cells_by_piece: dict[tuple[int, int], list[int]] = defaultdict(list)
+    piece_areas: dict[tuple[int, int], float] = defaultdict(float)
     for idx, cell in enumerate(all_cells):
-        pid = cell["territory"].part_id
-        cells_by_territory[pid].append(idx)
-        territory_areas[pid] += cell["area"]
+        pkey = (cell["territory"].part_id, cell["piece_idx"])
+        cells_by_piece[pkey].append(idx)
+        piece_areas[pkey] += cell["area"]
 
     seeds: list[SeedPlacement] = []
     used: set[int] = set()
     hub_cell_idx: int | None = None
     cell_seed_count: dict[int, int] = {i: 0 for i in range(len(all_cells))}
-    territory_seed_count: dict[int, int] = defaultdict(int)
+    piece_seed_count: dict[tuple[int, int], int] = defaultdict(int)
 
     # Phase A — Hub
     if has_public:
@@ -451,21 +453,23 @@ def auto_place_seeds_by_cells(
             if hub.region_id in cell["regions"]:
                 hub_cell_idx = idx
                 cell_seed_count[idx] += 1
-                territory_seed_count[cell["territory"].part_id] += 1
+                piece_seed_count[
+                    (cell["territory"].part_id, cell["piece_idx"])
+                ] += 1
                 break
 
-    # Phase B — Territory coverage (1 seed per uncovered surviving territory)
-    uncovered_pids = sorted(
-        [pid for pid in cells_by_territory if territory_seed_count[pid] == 0],
-        key=lambda pid: -territory_areas[pid],
+    # Phase B — Piece coverage (1 seed per uncovered surviving piece)
+    uncovered_pkeys = sorted(
+        [pk for pk in cells_by_piece if piece_seed_count[pk] == 0],
+        key=lambda pk: -piece_areas[pk],
     )
-    for pid in uncovered_pids:
+    for pkey in uncovered_pkeys:
         if len(seeds) >= K:
             break
-        territory_cells_idx = sorted(
-            cells_by_territory[pid], key=lambda i: -all_cells[i]["area"],
+        piece_cells_idx = sorted(
+            cells_by_piece[pkey], key=lambda i: -all_cells[i]["area"],
         )
-        for biggest_idx in territory_cells_idx:
+        for biggest_idx in piece_cells_idx:
             cell = all_cells[biggest_idx]
             candidates = [
                 regions_by_id[rid] for rid in cell["regions"] if rid not in used
@@ -476,14 +480,13 @@ def auto_place_seeds_by_cells(
             seeds.append(SeedPlacement(region=picked, phase="coverage"))
             used.add(picked.region_id)
             cell_seed_count[biggest_idx] += 1
-            territory_seed_count[pid] += 1
-            break  # next uncovered territory
+            piece_seed_count[pkey] += 1
+            break  # next uncovered piece
 
-    # Phase C — Load-balanced extras
+    # Phase C — Load-balanced extras (per piece)
     while len(seeds) < K:
-        # Candidate territories: have at least one non-hub cell with unused regions
-        candidate_pids: list[int] = []
-        for pid, t_cells in cells_by_territory.items():
+        candidate_pkeys: list[tuple[int, int]] = []
+        for pkey, t_cells in cells_by_piece.items():
             non_hub = [i for i in t_cells if i != hub_cell_idx]
             if not non_hub:
                 continue
@@ -491,20 +494,20 @@ def auto_place_seeds_by_cells(
                 any(rid not in used for rid in all_cells[i]["regions"])
                 for i in non_hub
             ):
-                candidate_pids.append(pid)
+                candidate_pkeys.append(pkey)
 
         target_cell_idx: int
-        target_pid: int
-        if candidate_pids:
-            target_pid = max(
-                candidate_pids,
-                key=lambda pid: (
-                    territory_areas[pid] / max(1, territory_seed_count[pid]),
-                    territory_areas[pid],
+        target_pkey: tuple[int, int]
+        if candidate_pkeys:
+            target_pkey = max(
+                candidate_pkeys,
+                key=lambda pk: (
+                    piece_areas[pk] / max(1, piece_seed_count[pk]),
+                    piece_areas[pk],
                 ),
             )
             target_cells = [
-                i for i in cells_by_territory[target_pid]
+                i for i in cells_by_piece[target_pkey]
                 if i != hub_cell_idx
                 and any(rid not in used for rid in all_cells[i]["regions"])
             ]
@@ -522,7 +525,10 @@ def auto_place_seeds_by_cells(
             ):
                 break
             target_cell_idx = hub_cell_idx
-            target_pid = all_cells[hub_cell_idx]["territory"].part_id
+            target_pkey = (
+                all_cells[hub_cell_idx]["territory"].part_id,
+                all_cells[hub_cell_idx]["piece_idx"],
+            )
 
         cell = all_cells[target_cell_idx]
         candidate_regions = [
@@ -557,7 +563,7 @@ def auto_place_seeds_by_cells(
         seeds.append(SeedPlacement(region=picked, phase=phase_label))
         used.add(picked.region_id)
         cell_seed_count[target_cell_idx] += 1
-        territory_seed_count[target_pid] += 1
+        piece_seed_count[target_pkey] += 1
 
     return tuple(seeds)
 
@@ -624,27 +630,34 @@ def _absorb_remaining(
 
     K = len(room_regions)
 
-    # ----- Stage 1 -----
-    territory_room_count: dict[int, int] = defaultdict(int)
-    room_per_territory: dict[int, int] = {}
+    # ----- Stage 1 — per-piece single-seed bulk absorb -----
+    # A "piece" is (part_id, piece_id). Disconnected pieces of the same part
+    # (e.g., case 13 cross's two arms) are treated as separate logical units
+    # so a single seed in one arm does NOT absorb the other arm.
+    piece_room_count: dict[tuple[int, int], int] = defaultdict(int)
+    room_per_piece: dict[tuple[int, int], int] = {}
     for room_idx, rids in room_regions.items():
         if not rids:
             continue
-        part_id = regions_by_id[rids[0]].part_id
-        territory_room_count[part_id] += 1
-        # When >1 room shares a part_id, this overwrites — but we only use it for single-seed territories.
-        room_per_territory[part_id] = room_idx
-    single_seed_part_ids = {
-        pid for pid, c in territory_room_count.items() if c == 1
+        # All assigned regions of one room come from one piece (cross-theta
+        # forbidden + Phase B assigns within one piece). For robustness use
+        # the seed (first region) as canonical.
+        r0 = regions_by_id[rids[0]]
+        pkey = (r0.part_id, r0.piece_id)
+        piece_room_count[pkey] += 1
+        room_per_piece[pkey] = room_idx
+    single_seed_pkeys = {
+        pk for pk, c in piece_room_count.items() if c == 1
     }
 
     for rid in list(regions_by_id.keys()):
         if rid in region_to_room:
             continue
-        part_id = regions_by_id[rid].part_id
-        if part_id not in single_seed_part_ids:
+        r = regions_by_id[rid]
+        pkey = (r.part_id, r.piece_id)
+        if pkey not in single_seed_pkeys:
             continue
-        target = room_per_territory[part_id]
+        target = room_per_piece[pkey]
         room_regions[target].append(rid)
         region_to_room[rid] = target
 

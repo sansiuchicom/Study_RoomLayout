@@ -1,6 +1,8 @@
-# RoomLayoutCell Algorithm Testfield
+# RoomLayoutCell Algorithm
 
-Fresh testfield for the scan-to-BIM room-layout data generator.
+Algorithm pipeline for the scan-to-BIM room-layout data generator (promoted
+from the original `algorithm_testfield/` after Phase 8 — see the historical
+context in §"Key Shift from the Previous Iteration" below).
 
 ```text
 labeled footprint parts (ShapeInput)
@@ -114,7 +116,7 @@ Example:
 ## Planned Modules
 
 ```text
-algorithm_testfield/
+algorithm/
 ├── celllayout_tf/
 │   ├── schema.py          # ShapePart, ShapeInput
 │   ├── cases.py           # 33 showcase ShapeInput builders
@@ -1034,7 +1036,7 @@ Implemented phases of `demos/visualize_phase.py`:
 Run:
 
 ```text
-cd /workspace/Study_RoomLayout_Cell/algorithm_testfield
+cd /workspace/Study_RoomLayout_Cell/algorithm
 PYTHONPATH=. pytest -q tests
 PYTHONPATH=. python demos/visualize_phase.py --phase region
 PYTHONPATH=. python demos/visualize_phase.py --phase region_graph 13 17 24

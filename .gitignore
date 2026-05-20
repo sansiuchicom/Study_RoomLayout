@@ -10,5 +10,5 @@ __pycache__/
 .venv/
 venv/
 
-# Generated testfield figures
-algorithm_testfield/outputs/
+# Generated phase figures
+algorithm/outputs/

@@ -16,17 +16,25 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from celllayout_tf.cases import case_slug, selected_cases
+from celllayout_tf.layout_fixtures import selected_fixtures
 from celllayout_tf.viz import (
     save_atom_figure,
     save_atom_graph_figure,
+    save_corridor_figure,
     save_dimension_examples_figure,
     save_input_figure,
+    save_layout_figure,
+    save_region_graph_figure,
     save_region_figure,
+    save_seed_figure,
     save_territory_figure,
 )
 
 
-PER_CASE_PHASES = ("input", "territory", "atom", "graph", "region")
+PER_CASE_PHASES = (
+    "input", "territory", "atom", "graph", "region", "region_graph",
+    "seed", "layout", "corridor",
+)
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
 
@@ -55,6 +63,38 @@ def main(argv=None):
             failures.append((idx, name, str(exc)))
             print(f"ERROR {idx}. {name}: {exc}")
     return 1 if failures else 0
+
+
+def _auto_seed_fixture(idx):
+    """Look up the case-N fixture and null out every ``seed_position``.
+
+    Phase 7 / Phase 8 visualization always uses auto-placed seeds — manual
+    fixture seeds drift away from where ``auto_place_seeds_by_cells`` would
+    put them and produce unrealistic-looking partitions in viz figures.
+    The fixtures themselves keep manual seeds for deterministic tests.
+    """
+    fixtures = selected_fixtures([idx])
+    if not fixtures:
+        raise ValueError(f"no fixture for case index {idx}")
+    fixture = fixtures[0]
+    from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+    auto_rooms = tuple(
+        RoomSpec(
+            name=r.name, role=r.role, seed_position=None,
+            target_aspect_range=r.target_aspect_range,
+        )
+        for r in fixture.rooms
+    )
+    return LayoutFixture(
+        case_index=fixture.case_index,
+        case_name=fixture.case_name,
+        footprint_area_m2=fixture.footprint_area_m2,
+        rooms=auto_rooms,
+        role_min_areas=fixture.role_min_areas,
+        role_aspect_ranges=fixture.role_aspect_ranges,
+        max_l_rooms=fixture.max_l_rooms,
+        detour_threshold=fixture.detour_threshold,
+    )
 
 
 def _render_case(phase, idx, name, shape, args):
@@ -89,6 +129,40 @@ def _render_case(phase, idx, name, shape, args):
             shape,
             out,
             title=f"{idx}. {name}: regions",
+        )
+    if phase == "region_graph":
+        return save_region_graph_figure(
+            shape,
+            out,
+            title=f"{idx}. {name}: region graph",
+        )
+    if phase == "layout":
+        fixture = _auto_seed_fixture(idx)
+        return save_layout_figure(
+            shape,
+            fixture,
+            out,
+            title=f"{idx}. {name}: layout",
+        )
+    if phase == "corridor":
+        fixture = _auto_seed_fixture(idx)
+        return save_corridor_figure(
+            shape,
+            fixture,
+            out,
+            title=f"{idx}. {name}: corridor (base + detour shortcut)",
+        )
+    if phase == "seed":
+        fixtures = selected_fixtures([idx])
+        if not fixtures:
+            raise ValueError(f"no fixture for case index {idx}")
+        fx = fixtures[0]
+        return save_seed_figure(
+            shape,
+            out,
+            K=fx.K,
+            has_public=fx.hub_room_index is not None,
+            title=f"{idx}. {name}: auto seed placement",
         )
     raise ValueError(f"unsupported phase: {phase}")
 

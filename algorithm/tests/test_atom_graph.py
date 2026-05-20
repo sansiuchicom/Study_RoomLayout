@@ -99,6 +99,14 @@ def test_case_13_disjoint_pieces_of_same_part_are_not_connected():
             )
 
 
+def test_rotated_same_theta_parts_keep_cross_part_edges():
+    case = selected_cases([20])[0][2]  # ㄱ자 rotated 30°
+    graph = build_atom_graph(case)
+    cross = [e for e in graph.edges if not e.same_part]
+    assert cross
+    assert all(e.shared_boundary_length > 0.05 for e in cross)
+
+
 def test_exterior_contact_flag_set_for_atoms_on_outer_wall():
     case = selected_cases([1])[0][2]
     graph = build_atom_graph(case)

@@ -304,18 +304,29 @@ Disconnection 검사 (Stage 1과 동일).
 
 남은 unassigned region 처리. **우선순위 순서**:
 
-1. **Corridor/hub 흡수**: corridor 또는 hub에 4-인접한 unassigned region →
-   corridor에 흡수 (`base_corridor_region_ids`에 추가; 그냥 보조).
-2. **인접 방 흡수**: 어떤 방에도 직접 인접하지만 corridor에는 인접 안 함.
-   인접 후보 방들 중 **carve 후 aspect가 가장 정사각형에 가까운** 방
-   (`abs(aspect - 1)` 최소) 의 `region_ids`에 추가.
+1. **Corridor/hub 흡수 (iterative)**: corridor 또는 hub에 4-인접한
+   unassigned region → `base_corridor_region_ids`에 추가. 새로 흡수된
+   region이 target_set을 확장시켜 다음 sweep에서 추가 흡수 → fixed
+   point까지 반복. Corridor 옆 leftover cluster가 통째로 흡수됨.
+2. **인접 방 흡수 (single pass)**: 어떤 방에도 직접 인접하지만 corridor에는
+   인접 안 함. 인접 후보 방들 중 **흡수 후 OBB aspect가 가장 정사각형에
+   가까운** 방 (`abs(aspect - 1)` 최소) 의 `region_ids`에 추가.
    - tie-break: 더 작은 방 우선 (작은 방의 area 보전).
+   - **Hard gate (§6.3)**: 흡수 후 aspect가 `fixture.role_aspect_ranges[role].max`
+     초과면 그 후보 skip. 모든 후보가 gated면 leftover로 남김 (priority 3).
 3. **외딴 region**: 위 둘 다 안 됨. `leftover_region_ids`로 남김
    (★ 추가 공간으로 간주, 별도 ID 부여 안 함).
+
+**Aspect 측정**: shapely `geom.minimum_rotated_rectangle` (OBB). 회전된
+방 (case 18~22 등) 에서 axis-aligned bbox는 부풀려져 부정확.
 
 ★ Sandbox 대비: sandbox는 "residual ★ room"을 carve의 cost 후보로
 미리 만들었음. 우리는 **사전 처리 없이 cost 0.01**로 두고 corridor가
 자연스럽게 흡수하게 함. cleanup이 사후 처리.
+
+★ min_area gate는 W4에서 비고려: 흡수는 방을 더 *키우는* 동작이라
+§6.1 lower bound와 무관. 흡수가 aspect를 *악화*시키는 경우만 §6.3
+gate로 제어.
 
 ---
 
@@ -390,7 +401,7 @@ Region carve 결과 코너 두께 불균일이 비주얼적으로 거슬리면:
 
 ```text
 celllayout_tf/
-  corridor.py              # Stage 1 (W2 구현됨); Stage 2/cleanup 들어갈 자리
+  corridor.py              # Stage 1 (W2) + Stage 2 (W3) + cleanup (W4)
   viz.py                   # save_corridor_figure (W2)
 tests/
   test_corridor.py         # 33 케이스 회귀 + invariant
@@ -398,9 +409,9 @@ demos/
   visualize_phase.py       # --phase corridor (auto-seed 고정)
 ```
 
-원래 `corridor_astar.py`/`corridor_distance.py` 분리 예정이었으나, W2
-시점에 `corridor.py` 한 파일이 ~470줄로 아직 다룰 만함. Stage 2/cleanup
-들어가면서 파일 키지면 그때 분리.
+원래 `corridor_astar.py`/`corridor_distance.py` 분리 예정이었으나,
+W4 종료 시점에 `corridor.py` 한 파일이 ~990줄로 아직 다룰 만함.
+Door 등 후속 단계에서 파일 더 커지면 그때 split.
 
 ---
 
@@ -427,6 +438,9 @@ demos/
 | 17 | Stage 2 retry mechanism = Stage 1과 동일 (W3) | Spec 초기의 deferred + 3-strike 매커니즘 → simulation + minimal-cut retry로 통일. 코드 단순. |
 | 18 | Stage 2 pair pre-filter: `dm > 1` (W3) | 두 방이 이미 4-인접하면 detour 없음. Trivial path가 trivially "carved"라 마킹되는 false log 방지. |
 | 19 | Case 17 fixture K=4 → K=5 (W3) | K=4 partition에서 한 방이 36㎡ wrap-around로 비현실적. 5번째 private 추가로 균형 잡힘. (방 분포 spec PHASE7_Fixtures.md과 일관) |
+| 20 | **Cleanup aspect 측정 = OBB** (`minimum_rotated_rectangle`, W4) | Axis-aligned bbox는 회전된 방 (case 18~22)에서 부정확. OBB는 회전 무관 정확. 약간 느리지만 cleanup 호출 횟수 적어 무시 가능. |
+| 21 | **Cleanup aspect hard gate** (§6.3, W4) | Priority 2 흡수가 방을 1:4 초과로 stretch시킬 위험. 위반 시 그 후보 skip, 모두 skip이면 priority 3로 강등. min_area는 흡수가 키우는 동작이라 무관. |
+| 22 | Cleanup hub-adjacent → corridor (spec §5 따라, W4) | Spec 의도대로. Floating corridor island 위험은 있으나 functionally OK (사람이 hub→그 region 자유 이동). Hub 모양 보존이 더 중요. |
 
 ---
 
@@ -465,5 +479,16 @@ Sandbox v6 결과 (12 territory)와 등가 또는 우월:
 - 2.00 (정확): case 10, 28 (L-shape — strict `>` 로 제외)
 - 2.33: case 17 (donut — 유일하게 발동)
 
+### W4 측정 결과 (Stage 1 + 2 + cleanup)
+
+| Metric | 결과 |
+|---|---|
+| Auto-seed 33 cases | 0 unreached, 0 split, 0 emptied, **0 leftover** |
+| Cleanup 발동 | 6 cases (14, 17, 23, 31, 32, 33) |
+| Priority 1 흡수 | 8 regions total (corridor 흡수) |
+| Priority 2 흡수 | 2 regions (case 33만, room 흡수) |
+| Priority 3 (★) | 0 |
+| Tests | 41/41 pass |
+
 §6.1 min_area gate, §6.3 hub aspect/rectness gate, §6.4 corridor 단변
-보장, cleanup — 모두 후속 W에서 측정.
+보장 — 후속 polish 단계에서 측정.

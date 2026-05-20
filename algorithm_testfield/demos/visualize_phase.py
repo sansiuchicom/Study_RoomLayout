@@ -20,6 +20,7 @@ from celllayout_tf.layout_fixtures import selected_fixtures
 from celllayout_tf.viz import (
     save_atom_figure,
     save_atom_graph_figure,
+    save_corridor_figure,
     save_dimension_examples_figure,
     save_input_figure,
     save_layout_figure,
@@ -32,7 +33,7 @@ from celllayout_tf.viz import (
 
 PER_CASE_PHASES = (
     "input", "territory", "atom", "graph", "region", "region_graph",
-    "seed", "layout",
+    "seed", "layout", "corridor",
 )
 SINGLETON_PHASES = ("dimensions",)
 IMPLEMENTED_PHASES = PER_CASE_PHASES + SINGLETON_PHASES
@@ -43,12 +44,6 @@ def parse_args(argv):
     parser.add_argument("case_indices", nargs="*", type=int)
     parser.add_argument("--phase", choices=IMPLEMENTED_PHASES, default="input")
     parser.add_argument("--out-root", default=str(ROOT / "outputs"))
-    parser.add_argument(
-        "--auto-seed",
-        action="store_true",
-        help="For --phase layout: override fixture seed_position with None "
-             "(triggers auto_place_seeds_by_cells in the algorithm).",
-    )
     return parser.parse_args(argv)
 
 
@@ -68,6 +63,38 @@ def main(argv=None):
             failures.append((idx, name, str(exc)))
             print(f"ERROR {idx}. {name}: {exc}")
     return 1 if failures else 0
+
+
+def _auto_seed_fixture(idx):
+    """Look up the case-N fixture and null out every ``seed_position``.
+
+    Phase 7 / Phase 8 visualization always uses auto-placed seeds — manual
+    fixture seeds drift away from where ``auto_place_seeds_by_cells`` would
+    put them and produce unrealistic-looking partitions in viz figures.
+    The fixtures themselves keep manual seeds for deterministic tests.
+    """
+    fixtures = selected_fixtures([idx])
+    if not fixtures:
+        raise ValueError(f"no fixture for case index {idx}")
+    fixture = fixtures[0]
+    from celllayout_tf.room_growth import LayoutFixture, RoomSpec
+    auto_rooms = tuple(
+        RoomSpec(
+            name=r.name, role=r.role, seed_position=None,
+            target_aspect_range=r.target_aspect_range,
+        )
+        for r in fixture.rooms
+    )
+    return LayoutFixture(
+        case_index=fixture.case_index,
+        case_name=fixture.case_name,
+        footprint_area_m2=fixture.footprint_area_m2,
+        rooms=auto_rooms,
+        role_min_areas=fixture.role_min_areas,
+        role_aspect_ranges=fixture.role_aspect_ranges,
+        max_l_rooms=fixture.max_l_rooms,
+        detour_threshold=fixture.detour_threshold,
+    )
 
 
 def _render_case(phase, idx, name, shape, args):
@@ -110,34 +137,20 @@ def _render_case(phase, idx, name, shape, args):
             title=f"{idx}. {name}: region graph",
         )
     if phase == "layout":
-        fixtures = selected_fixtures([idx])
-        if not fixtures:
-            raise ValueError(f"no fixture for case index {idx}")
-        fixture = fixtures[0]
-        if args.auto_seed:
-            from celllayout_tf.room_growth import LayoutFixture, RoomSpec
-            auto_rooms = tuple(
-                RoomSpec(
-                    name=r.name, role=r.role, seed_position=None,
-                    target_aspect_range=r.target_aspect_range,
-                )
-                for r in fixture.rooms
-            )
-            fixture = LayoutFixture(
-                case_index=fixture.case_index,
-                case_name=fixture.case_name,
-                footprint_area_m2=fixture.footprint_area_m2,
-                rooms=auto_rooms,
-                role_min_areas=fixture.role_min_areas,
-                role_aspect_ranges=fixture.role_aspect_ranges,
-                max_l_rooms=fixture.max_l_rooms,
-            )
-        mode = "auto" if args.auto_seed else "manual"
+        fixture = _auto_seed_fixture(idx)
         return save_layout_figure(
             shape,
             fixture,
             out,
-            title=f"{idx}. {name}: layout (partition, {mode} seeds)",
+            title=f"{idx}. {name}: layout",
+        )
+    if phase == "corridor":
+        fixture = _auto_seed_fixture(idx)
+        return save_corridor_figure(
+            shape,
+            fixture,
+            out,
+            title=f"{idx}. {name}: corridor (base + detour shortcut)",
         )
     if phase == "seed":
         fixtures = selected_fixtures([idx])

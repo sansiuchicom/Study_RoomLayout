@@ -813,7 +813,115 @@ def _stage2_detour_shortcut(
 
 
 # ---------- Cleanup ----------------------------------------------------
-# Implemented in W4. See PHASE8_Corridor.md §5.
+
+
+def _obb_aspect(geom) -> float:
+    """Aspect ratio (long-side / short-side) of the geometry's
+    minimum-area rotated rectangle. Works for rotated rooms where
+    axis-aligned bbox would over-estimate aspect.
+    """
+    obb = geom.minimum_rotated_rectangle
+    coords = list(obb.exterior.coords)[:4]
+    side_lens = []
+    for i in range(4):
+        ax, ay = coords[i]
+        bx, by = coords[(i + 1) % 4]
+        side_lens.append(math.hypot(bx - ax, by - ay))
+    long_side = max(side_lens)
+    short_side = min(side_lens)
+    return long_side / max(short_side, 1e-9)
+
+
+def _cleanup_leftover(
+    *,
+    fixture: LayoutFixture,
+    room_meta: tuple[GrownRoom, ...],
+    room_region_ids: dict[int, set[int]],
+    base_corridor: set[int],
+    shortcut_corridor: set[int],
+    leftover: set[int],
+    hub_regions: set[int],
+    region_poly: dict,
+    region_area: dict[int, float],
+    region_adj: dict[int, set[int]],
+) -> dict:
+    """PHASE8_Corridor.md §5 cleanup. Mutates ``room_region_ids``,
+    ``base_corridor``, and ``leftover`` in place.
+
+    Priority 1 (iterative): any leftover 4-adjacent to corridor/hub →
+    absorb into base_corridor. Newly absorbed regions extend the target
+    set, so a cluster of adjacent leftovers all bordering corridor gets
+    swallowed in a few sweeps.
+
+    Priority 2 (single pass): any remaining leftover 4-adjacent to some
+    room → absorb into the room whose OBB aspect after absorption is
+    closest to 1.0 (most-square). Tie-break: smaller room area first.
+    Hard gate: skip a candidate if absorbing would push aspect above
+    ``fixture.role_aspect_ranges[role].max`` (§6.3). If every candidate
+    is gated, leftover stays for Priority 3.
+
+    Priority 3: silent — region remains in ``leftover`` (★ extra space).
+    """
+    log: dict = {
+        "priority1_absorbed": [],
+        "priority2_absorbed": [],
+        "priority3_kept": [],
+    }
+
+    # ----- Priority 1 -----
+    target_set: set[int] = base_corridor | shortcut_corridor | hub_regions
+    changed = True
+    while changed:
+        changed = False
+        for rid in sorted(leftover):
+            if any(nbr in target_set for nbr in region_adj[rid]):
+                leftover.discard(rid)
+                base_corridor.add(rid)
+                target_set.add(rid)
+                log["priority1_absorbed"].append(rid)
+                changed = True
+
+    # ----- Priority 2 -----
+    for rid in sorted(leftover):
+        candidate_rooms: set[int] = set()
+        for nbr in region_adj[rid]:
+            for room_idx, regs in room_region_ids.items():
+                if nbr in regs:
+                    candidate_rooms.add(room_idx)
+                    break
+        if not candidate_rooms:
+            continue
+
+        best_key: tuple[float, float, int] | None = None
+        best_room: int | None = None
+        rid_poly = region_poly[rid]
+        for room_idx in candidate_rooms:
+            room_regs = room_region_ids[room_idx]
+            if not room_regs:
+                continue
+            polys = [region_poly[r] for r in room_regs] + [rid_poly]
+            union = unary_union(polys)
+            aspect = _obb_aspect(union)
+            role = room_meta[room_idx].role
+            max_aspect = fixture.role_aspect_ranges[role][1]
+            if aspect > max_aspect:
+                continue
+            room_area_pre = sum(region_area[r] for r in room_regs)
+            key = (abs(aspect - 1.0), room_area_pre, room_idx)
+            if best_key is None or key < best_key:
+                best_key = key
+                best_room = room_idx
+
+        if best_room is None:
+            continue
+
+        leftover.discard(rid)
+        room_region_ids[best_room].add(rid)
+        log["priority2_absorbed"].append((rid, best_room))
+
+    # ----- Priority 3 -----
+    log["priority3_kept"] = sorted(leftover)
+    return log
 
 
 # ---------- Public entry -----------------------------------------------
@@ -832,7 +940,7 @@ def carve_corridors(
     deferred to W4.
     """
     (
-        _regions, _region_poly, region_area, region_adj, on_footprint_edge,
+        _regions, region_poly, region_area, region_adj, on_footprint_edge,
     ) = _build_region_index(shape, policy)
 
     room_region_ids, base_corridor, leftover, stage1_diag = _stage1_base_corridor(
@@ -848,6 +956,23 @@ def carve_corridors(
         region_adj=region_adj,
         on_footprint_edge=on_footprint_edge,
         threshold=growth_result.fixture.detour_threshold,
+    )
+
+    hub_idx = growth_result.fixture.hub_room_index
+    hub_regions_set = (
+        room_region_ids.get(hub_idx, set()) if hub_idx is not None else set()
+    )
+    cleanup_diag = _cleanup_leftover(
+        fixture=growth_result.fixture,
+        room_meta=growth_result.rooms,
+        room_region_ids=room_region_ids,
+        base_corridor=base_corridor,
+        shortcut_corridor=shortcut_corridor,
+        leftover=leftover,
+        hub_regions=hub_regions_set,
+        region_poly=region_poly,
+        region_area=region_area,
+        region_adj=region_adj,
     )
 
     disconnected: list[int] = []
@@ -871,9 +996,10 @@ def carve_corridors(
     )
 
     diagnostics = {
-        "phase": "w3-stage1+stage2",
+        "phase": "w4-stage1+stage2+cleanup",
         "stage1": stage1_diag,
         "stage2": stage2_diag,
+        "cleanup": cleanup_diag,
         "base_corridor_count": len(base_corridor),
         "shortcut_corridor_count": len(shortcut_corridor),
         "disconnected_rooms": tuple(disconnected),

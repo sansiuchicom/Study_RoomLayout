@@ -30,8 +30,7 @@ from .region_graph import build_region_graph
 from .regionize import Region, regionize
 from .corridor import CorridoredLayout, carve_corridors
 from .growth_partition import region_partition_growth
-from .growth_priority import region_priority_growth
-from .room_growth import GrowthResult, LayoutFixture, region_unit_greedy
+from .room_growth import GrowthResult, LayoutFixture
 from .schema import ShapeInput, ShapePart, part_theta
 from .seed_placement import auto_place_seeds, territory_of_region
 from .territory import Territory, resolve_territories
@@ -631,13 +630,6 @@ def save_dimension_examples_figure(
     return path
 
 
-_LAYOUT_ALGORITHMS = {
-    "region_unit_greedy": region_unit_greedy,
-    "region_priority_growth": region_priority_growth,
-    "region_partition_growth": region_partition_growth,
-}
-
-
 # Phase 8 corridor palette — base = warm yellow, shortcut = magenta.
 # Shortcut must be visually distinct from hub (public role = warm amber),
 # so we pick a hue far from amber/yellow.
@@ -655,7 +647,6 @@ def save_layout_figure(
     result: GrowthResult | None = None,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
-    algorithm: str = "region_partition_growth",
 ) -> Path:
     """Render the Phase 7 seeded-growth result.
 
@@ -667,23 +658,13 @@ def save_layout_figure(
     4. region-id labels on unassigned, room-name labels on grown rooms
     5. seed markers (white dot for normal rooms, star for hub)
     6. footprint outline
-
-    ``algorithm`` selects which growth function runs when ``result`` is
-    None. ``"region_unit_greedy"`` is the Round 4 v1 baseline (kept for
-    comparison); ``"region_priority_growth"`` (default) is the Round 4 v2
-    Voronoi-priority algorithm.
     """
     configure_fonts()
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if result is None:
-        if algorithm not in _LAYOUT_ALGORITHMS:
-            raise ValueError(
-                f"unknown algorithm {algorithm!r}; "
-                f"expected one of {sorted(_LAYOUT_ALGORITHMS)}"
-            )
-        result = _LAYOUT_ALGORITHMS[algorithm](shape, fixture, policy=policy)
+        result = region_partition_growth(shape, fixture, policy=policy)
 
     atoms = atomize(shape, policy)
     regions = regionize(shape, atoms=atoms, policy=policy)
@@ -815,7 +796,6 @@ def save_corridor_figure(
     layout: CorridoredLayout | None = None,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
-    algorithm: str = "region_partition_growth",
 ) -> Path:
     """Render the Phase 8 corridor carving result.
 
@@ -824,7 +804,7 @@ def save_corridor_figure(
     1. faint region outlines (gray reference)
     2. leftover (hatched gray) — unassigned regions that survived cleanup
     3. base corridor regions (yellow fill, dark amber edge)
-    4. shortcut corridor regions (orange fill, dark orange edge) — W3+
+    4. shortcut corridor regions (magenta fill, dark edge)
     5. grown rooms (role-colored, hub edge thicker)
     6. room labels (name / role / area)
     7. footprint outline
@@ -834,12 +814,7 @@ def save_corridor_figure(
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if layout is None:
-        if algorithm not in _LAYOUT_ALGORITHMS:
-            raise ValueError(
-                f"unknown algorithm {algorithm!r}; "
-                f"expected one of {sorted(_LAYOUT_ALGORITHMS)}"
-            )
-        growth = _LAYOUT_ALGORITHMS[algorithm](shape, fixture, policy=policy)
+        growth = region_partition_growth(shape, fixture, policy=policy)
         layout = carve_corridors(shape, growth, policy=policy)
 
     atoms = atomize(shape, policy)
@@ -983,7 +958,6 @@ def save_seed_figure(
     has_public: bool,
     title: str | None = None,
     policy: DimensionPolicy | None = None,
-    show_outward: bool = True,
 ) -> Path:
     """Render auto-placed seeds for Phase 7 Round 4 W2.
 
@@ -992,14 +966,9 @@ def save_seed_figure(
       2. region tint by territory (so multi-part footprints are legible)
       3. seed markers — phase-colored (hub=red star, coverage=orange square,
          fps=blue circle), annotated with region_id
-      4. (if show_outward) anchor dot + arrow from anchor → seed
-         (= outward direction, the dominant_out side for that seed)
-      5. footprint outline
+      4. footprint outline
     """
-    from math import cos, radians, sin
     from matplotlib.lines import Line2D
-
-    from .growth_priority import compute_seed_anchors
 
     configure_fonts()
     path = Path(path)
@@ -1016,15 +985,6 @@ def save_seed_figure(
     )
 
     region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
-
-    # Outward / anchor computation (optional layer)
-    anchors_by_room: dict = {}
-    if show_outward:
-        regions_by_id = {r.region_id: r for r in regions}
-        seeds_by_room = {i: s.region.region_id for i, s in enumerate(seeds)}
-        anchors_by_room = compute_seed_anchors(
-            seeds_by_room, region_graph, territories, regions_by_id,
-        )
 
     fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
 
@@ -1081,36 +1041,6 @@ def save_seed_figure(
             color="white",
             zorder=16,
         )
-
-    # 3.5 anchor + outward vector (debug)
-    if show_outward and anchors_by_room:
-        for room_idx, sa in anchors_by_room.items():
-            seed_x, seed_y = seed_global_positions[room_idx]
-            # anchor is in local frame; rotate back to global by +theta
-            theta = regions[0].theta if not regions else next(
-                r.theta for r in regions if r.region_id == sa.seed_region_id
-            )
-            ax_local, ay_local = sa.anchor_point
-            c, s_ = cos(theta), sin(theta)
-            anchor_x = ax_local * c - ay_local * s_
-            anchor_y = ax_local * s_ + ay_local * c
-            # Anchor dot
-            ax.scatter(
-                anchor_x, anchor_y,
-                s=30, marker="x", color="#000000",
-                linewidth=1.5, zorder=17,
-            )
-            # Arrow from anchor to seed (= outward direction in global frame)
-            dx, dy = seed_x - anchor_x, seed_y - anchor_y
-            if dx * dx + dy * dy > 1e-9:
-                ax.annotate(
-                    "", xy=(seed_x, seed_y), xytext=(anchor_x, anchor_y),
-                    arrowprops=dict(
-                        arrowstyle="->", color="#000000",
-                        linewidth=1.2, alpha=0.85,
-                    ),
-                    zorder=14,
-                )
 
     # 4. footprint outline + axis
     _draw_footprint_outline(ax, shape)

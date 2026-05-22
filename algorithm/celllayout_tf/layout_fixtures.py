@@ -161,8 +161,8 @@ def make_fixtures() -> list[LayoutFixture]:
             RoomSpec("space_1", "public",  (1.5, 5.0)),
             RoomSpec("space_2", "private", (7.0, 1.5)),
             RoomSpec("space_3", "private", (12.5, 2.0)),
-            RoomSpec("space_4", "wet",     (7.0, 8.5)),
-            RoomSpec("space_5", "private", (12.5, 8.0)),
+            RoomSpec("space_4", "private", (12.5, 8.0)),
+            RoomSpec("space_5", "wet",     (7.0, 8.5)),
         )),
         _make_fixture(18, "Rect rotated 30°", 96.0, (
             RoomSpec("space_1", "public",  (4.5, 3.0)),

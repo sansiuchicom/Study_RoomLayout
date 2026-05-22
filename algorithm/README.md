@@ -138,6 +138,7 @@ algorithm/
 │   ├── corridor_params.py    # Corridor routing cost/retry constants
 │   ├── corridor_index.py     # Corridor region index/connectivity helpers
 │   ├── corridor_path.py      # Corridor pathfinding/damage helpers
+│   ├── corridor_stage1.py    # Corridor Stage 1 base routing
 │   ├── corridor.py           # Phase 8 corridor carving
 │   └── viz.py                # testfield-only stage-by-stage diagnostics
 ├── demos/
@@ -177,6 +178,7 @@ growth_partition.py
 corridor_params.py
 corridor_index.py
 corridor_path.py
+corridor_stage1.py
 corridor.py
 ```
 

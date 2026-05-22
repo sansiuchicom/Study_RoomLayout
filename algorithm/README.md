@@ -131,7 +131,8 @@ algorithm/
 │   ├── room_growth.py        # Phase 7+ fixture/result data models
 │   ├── seed_placement.py     # Region-level seed placement helpers
 │   ├── shape_gate.py         # Reflex/L-slot shape gate helpers
-│   ├── growth_partition.py   # Current room partition growth
+│   ├── growth_cells.py       # Cell construction + guillotine helpers
+│   ├── growth_partition.py   # Room partition growth orchestration
 │   ├── corridor.py           # Phase 8 corridor carving
 │   └── viz.py                # testfield-only stage-by-stage diagnostics
 ├── demos/
@@ -164,6 +165,7 @@ regionize.py
 region_graph.py
 seed_placement.py
 shape_gate.py
+growth_cells.py
 growth_partition.py
 corridor.py
 ```
@@ -1061,8 +1063,8 @@ The current room-growth entrypoint is `region_partition_growth()` in
 `celllayout_tf/growth_partition.py`. The current corridor entrypoint is
 `carve_corridors()` in `celllayout_tf/corridor.py`.
 
-`growth_partition.py` is the next planned portability refactor target. The
-entrypoint should stay in `growth_partition.py`, while implementation helpers
+`growth_partition.py` is being split into portability-oriented helper modules.
+The entrypoint stays in `growth_partition.py`, while implementation helpers
 move in behavior-preserving slices:
 
 ```text
@@ -1075,9 +1077,9 @@ growth_partition.py   # orchestration: build graph, seed rooms, assign cells,
                       # call absorption, build GrowthResult
 ```
 
-The first implementation slice should be `growth_cells.py`, keeping compatibility
-imports from `growth_partition.py` for tests that currently exercise private
-helpers such as `_guillotine_partition`.
+`growth_cells.py` is the first extracted slice. `growth_partition.py` keeps
+compatibility imports for tests and local callers that currently exercise
+private helpers such as `_guillotine_partition`.
 
 Testfield-only visualization phases in `demos/visualize_phase.py`:
 `input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,

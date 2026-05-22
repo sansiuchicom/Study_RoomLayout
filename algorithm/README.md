@@ -133,6 +133,7 @@ algorithm/
 │   ├── shape_gate.py         # Reflex/L-slot shape gate helpers
 │   ├── growth_cells.py       # Cell construction + guillotine helpers
 │   ├── growth_seed.py        # Cell-aware seed placement helpers
+│   ├── growth_absorb.py      # Leftover absorption helpers
 │   ├── growth_partition.py   # Room partition growth orchestration
 │   ├── corridor.py           # Phase 8 corridor carving
 │   └── viz.py                # testfield-only stage-by-stage diagnostics
@@ -168,6 +169,7 @@ seed_placement.py
 shape_gate.py
 growth_cells.py
 growth_seed.py
+growth_absorb.py
 growth_partition.py
 corridor.py
 ```
@@ -1079,9 +1081,9 @@ growth_partition.py   # orchestration: build graph, seed rooms, assign cells,
                       # call absorption, build GrowthResult
 ```
 
-`growth_cells.py` and `growth_seed.py` are extracted slices.
-`growth_partition.py` keeps compatibility imports for tests and local callers
-that currently exercise private helpers such as `_guillotine_partition`.
+`growth_cells.py`, `growth_seed.py`, and `growth_absorb.py` are extracted
+slices. `growth_partition.py` keeps compatibility imports for tests and local
+callers that currently exercise private helpers such as `_guillotine_partition`.
 
 Testfield-only visualization phases in `demos/visualize_phase.py`:
 `input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,

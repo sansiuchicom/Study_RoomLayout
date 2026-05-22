@@ -1,13 +1,8 @@
 """Phase 8: Corridor Carving — base corridor + detour shortcut + cleanup.
 
-See ``PHASE8_Corridor.md`` for the full spec. W2 implements Stage 1
-(hub-radial base corridor) in the simplest possible form: one A* call
-per target, no retries, no fallbacks, no cut-vertex protection.
-Stage 2 (detour shortcut) lands in W3 and cleanup in W4.
-
-The baseline is intentionally bare so we can see, on the 33 fixtures,
-exactly which cases the §3 cost table alone can solve and which need
-additional mechanisms. Patches go on top of this, not into it.
+See ``PHASE8_Corridor.md`` for the full spec. The implementation routes a
+hub-radial base corridor, adds detour shortcuts for high-ratio room pairs,
+then absorbs leftover regions into corridor or adjacent rooms.
 """
 
 from __future__ import annotations
@@ -23,7 +18,7 @@ from shapely.ops import unary_union
 from .atomize import atomize
 from .dimensions import DimensionPolicy
 from .region_graph import build_region_graph
-from .regionize import Region, regionize
+from .regionize import regionize
 from .room_growth import GrownRoom, GrowthResult, LayoutFixture
 from .schema import ShapeInput, ShapePart
 
@@ -328,7 +323,7 @@ def _stage1_base_corridor(
     region_adj: dict[int, set[int]],
     on_footprint_edge: dict[int, bool],
 ) -> tuple[dict[int, set[int]], set[int], set[int], dict]:
-    """Phase 8 Stage 1 — hub-radial base corridor (baseline).
+    """Phase 8 Stage 1 — hub-radial base corridor.
 
     See PHASE8_Corridor.md §3. Targets are processed in ascending area
     order. For each target: hub-direct → corridor-direct → A* once.
@@ -933,12 +928,7 @@ def carve_corridors(
     *,
     policy: DimensionPolicy | None = None,
 ) -> CorridoredLayout:
-    """Phase 8 entry — see ``PHASE8_Corridor.md``.
-
-    W2 baseline: Stage 1 only, single-shot A* per target. Diagnostics
-    record disconnected and emptied rooms for inspection; cleanup is
-    deferred to W4.
-    """
+    """Phase 8 entry — see ``PHASE8_Corridor.md``."""
     (
         _regions, region_poly, region_area, region_adj, on_footprint_edge,
     ) = _build_region_index(shape, policy)

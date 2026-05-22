@@ -1,8 +1,7 @@
 """Common phase visualization CLI for the 33 showcase cases.
 
-Only the ``input`` phase is implemented in Phase 1. Future phases (atomizer,
-regionizer, layout) add new renderers here so every phase uses the same case
-indexing and output layout.
+Renders input, territory, atom, graph, region, seed, layout, corridor, and
+dimension-policy diagnostics with common case indexing and output layout.
 """
 
 from __future__ import annotations

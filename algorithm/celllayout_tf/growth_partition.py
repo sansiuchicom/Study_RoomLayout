@@ -21,7 +21,7 @@ Curved pieces: no reflex (smooth curve) → 1 cell = whole piece.
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
+from collections import defaultdict
 from math import degrees
 
 import shapely.affinity
@@ -38,7 +38,6 @@ from .regionize import regionize
 from .seed_placement import (
     SeedPlacement,
     _bfs_all_distances,
-    auto_place_seeds,
     pick_top_centrality,
     region_area,
 )
@@ -729,8 +728,6 @@ def _absorb_remaining(
         - no rect-keeper among multi-adjacent → skip (stays unassigned)
     """
     from .shape_gate import _reflex_of_union
-
-    K = len(room_regions)
 
     # ----- Stage 1 — per-piece single-seed bulk absorb -----
     # A "piece" is (part_id, piece_id). Disconnected pieces of the same part

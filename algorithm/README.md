@@ -113,32 +113,34 @@ Example:
    Every phase should have a diagnostic drawing before the next phase depends
    on it.
 
-## Planned Modules
+## Current Module Layout
 
 ```text
 algorithm/
 ├── celllayout_tf/
-│   ├── schema.py          # ShapePart, ShapeInput
-│   ├── cases.py           # 33 showcase ShapeInput builders
-│   ├── dimensions.py      # DimensionPolicy and interval splitting
-│   ├── territory.py       # Overlap resolution + shape-contact helpers
-│   ├── atomize.py         # Per-part vertex-aware atomizer
-│   ├── atom_graph.py      # Atom adjacency graph
-│   ├── regionize.py       # Atom grouping into small regions
-│   ├── region_graph.py    # Region adjacency graph
-│   ├── layout.py          # Room/corridor layout pipeline (planned, Phase 7)
-│   ├── metrics.py         # Dataset and geometry quality metrics (planned)
-│   └── viz.py             # Stage-by-stage diagnostics
+│   ├── schema.py             # ShapePart, ShapeInput, part_theta
+│   ├── cases.py              # 33 showcase ShapeInput builders
+│   ├── dimensions.py         # DimensionPolicy and interval splitting
+│   ├── territory.py          # Overlap resolution + shape-contact helpers
+│   ├── atomize.py            # Per-part vertex-aware atomizer
+│   ├── atom_graph.py         # Atom adjacency graph
+│   ├── regionize.py          # Atom grouping into small regions
+│   ├── region_graph.py       # Region adjacency graph
+│   ├── layout_fixtures.py    # 33 room-growth fixtures
+│   ├── room_growth.py        # Phase 7+ fixture/result data models
+│   ├── seed_placement.py     # Region-level seed placement helpers
+│   ├── shape_gate.py         # Reflex/L-slot shape gate helpers
+│   ├── growth_partition.py   # Current room partition growth
+│   ├── corridor.py           # Phase 8 corridor carving
+│   └── viz.py                # Stage-by-stage diagnostics
 ├── demos/
 │   └── visualize_phase.py
-├── outputs/
 ├── tests/
 └── README.md
 ```
 
-Note: no `orientation.py`. Per-part theta is a one-liner (atan2 of any edge);
-it lives as a small helper in `schema.py` or `atomize.py`, not as its own
-phase or module.
+Note: no `orientation.py`. Per-part theta is a one-liner in `schema.py`,
+not a separate phase or module.
 
 ## Phase Plan
 
@@ -1003,35 +1005,26 @@ graph_connectivity
 
 ## Current Status
 
-Phases 1–7 merged to `master`. Phase 7 Round 4 v2 (partition growth
-+ 3-stage absorption + aspect gate) shipped on branch
-`phase-7-rect-growth` (merged) — see §Phase 7 / Round 4 v2 above.
-Phase 8 (Corridor Carving) spec written, implementation pending on
-branch `phase-8-corridor-carving` — see [PHASE8_Corridor.md](PHASE8_Corridor.md).
-
-Implemented modules:
+Phases 1-8 are implemented in `celllayout_tf/`:
 
 ```text
-celllayout_tf/schema.py
-celllayout_tf/cases.py
-celllayout_tf/dimensions.py
-celllayout_tf/atomize.py
-celllayout_tf/atom_graph.py
-celllayout_tf/regionize.py
-celllayout_tf/region_graph.py
-celllayout_tf/territory.py
-celllayout_tf/layout_fixtures.py
-celllayout_tf/room_growth.py         # Round 2 (v1), Round 4 (v2)
-celllayout_tf/growth_partition.py    # Round 4 v2 W7+
-celllayout_tf/growth_priority.py     # Round 4 v2 W6 (priority experiment)
-celllayout_tf/seed_placement.py      # Round 4 v2 W6/W8+
-celllayout_tf/shape_gate.py
-celllayout_tf/viz.py
+ShapeInput
+-> territory resolution
+-> atomize
+-> atom graph
+-> regionize
+-> region graph
+-> room partition growth
+-> corridor carving
 ```
 
-Implemented phases of `demos/visualize_phase.py`:
-`input`, `territory`, `atom`, `graph`, `region`, `region_graph`,
-`dimensions`, `layout`.
+The current room-growth entrypoint is `region_partition_growth()` in
+`celllayout_tf/growth_partition.py`. The current corridor entrypoint is
+`carve_corridors()` in `celllayout_tf/corridor.py`.
+
+Implemented visualization phases in `demos/visualize_phase.py`:
+`input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,
+`layout`, `corridor`, `dimensions`.
 
 Run:
 
@@ -1039,5 +1032,5 @@ Run:
 cd /workspace/Study_RoomLayout_Cell/algorithm
 PYTHONPATH=. pytest -q tests
 PYTHONPATH=. python demos/visualize_phase.py --phase region
-PYTHONPATH=. python demos/visualize_phase.py --phase region_graph 13 17 24
+PYTHONPATH=. python demos/visualize_phase.py --phase corridor 13 17 24
 ```

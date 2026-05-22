@@ -139,6 +139,7 @@ algorithm/
 │   ├── corridor_index.py     # Corridor region index/connectivity helpers
 │   ├── corridor_path.py      # Corridor pathfinding/damage helpers
 │   ├── corridor_stage1.py    # Corridor Stage 1 base routing
+│   ├── corridor_stage2.py    # Corridor Stage 2 detour shortcuts
 │   ├── corridor.py           # Phase 8 corridor carving
 │   └── viz.py                # testfield-only stage-by-stage diagnostics
 ├── demos/
@@ -179,6 +180,7 @@ corridor_params.py
 corridor_index.py
 corridor_path.py
 corridor_stage1.py
+corridor_stage2.py
 corridor.py
 ```
 

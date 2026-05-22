@@ -7,20 +7,24 @@ then absorbs leftover regions into corridor or adjacent rooms.
 
 from __future__ import annotations
 
-import heapq
 import math
 from collections import defaultdict, deque
-from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import shapely.geometry as sg
 from shapely.ops import unary_union
 
-from .atomize import atomize
+from .corridor_index import (
+    _build_region_index,
+    _room_is_connected,
+    _set_adjacent_to_set,
+)
+from .corridor_path import (
+    _minimize_offending,
+    _path_damages_any_room,
+    _shortest_region_path,
+)
 from .dimensions import DimensionPolicy
-from .geometry import to_shapely as _to_shapely
-from .region_graph import build_region_graph
-from .regionize import regionize
 from .room_growth import GrownRoom, GrowthResult, LayoutFixture
 from .schema import ShapeInput
 
@@ -65,209 +69,6 @@ class CorridoredLayout:
     def corridor_region_ids(self) -> tuple[int, ...]:
         """All corridor regions — base + shortcut."""
         return self.base_corridor_region_ids + self.shortcut_corridor_region_ids
-
-
-# ---------- Region index helpers ---------------------------------------
-
-
-
-def _build_region_index(
-    shape: ShapeInput,
-    policy: DimensionPolicy | None,
-) -> tuple[
-    tuple[Region, ...],
-    dict[int, sg.Polygon],
-    dict[int, float],
-    dict[int, set[int]],
-    dict[int, bool],
-]:
-    """Return ``(regions, region_poly, region_area, region_adj, on_footprint_edge)``.
-
-    ``on_footprint_edge[rid]`` is True iff the region's polygon shares a
-    positive-length stretch with the footprint outer/hole boundary. Such
-    a region is on the *outside* of whatever it belongs to — its other
-    side is not another region but the wall/exterior. For the corridor
-    cost it is just as much a "room edge" as a region next to another
-    room (PHASE8_Corridor.md §3 — spec intent "방 외곽선을 따라 흐르고"
-    is about a room's outer outline regardless of what is on the other
-    side).
-    """
-    atoms = atomize(shape, policy)
-    regions = regionize(shape, atoms=atoms, policy=policy)
-    rg = build_region_graph(shape, atoms=atoms, regions=regions, policy=policy)
-
-    region_poly: dict[int, sg.Polygon] = {
-        r.region_id: _to_shapely(r.shape) for r in regions
-    }
-    region_area: dict[int, float] = {
-        rid: poly.area for rid, poly in region_poly.items()
-    }
-    region_adj: dict[int, set[int]] = defaultdict(set)
-    for e in rg.edges:
-        region_adj[e.region_a].add(e.region_b)
-        region_adj[e.region_b].add(e.region_a)
-    for r in regions:
-        region_adj.setdefault(r.region_id, set())
-
-    footprint = unary_union([_to_shapely(p) for p in shape.parts])
-    footprint_boundary = footprint.boundary  # outer ring + holes
-    on_footprint_edge: dict[int, bool] = {}
-    for rid, poly in region_poly.items():
-        contact = poly.boundary.intersection(footprint_boundary)
-        on_footprint_edge[rid] = (
-            not contact.is_empty and contact.length > 1e-6
-        )
-
-    return regions, region_poly, region_area, region_adj, on_footprint_edge
-
-
-def _set_adjacent_to_set(
-    set_a: set[int],
-    set_b: set[int],
-    region_adj: dict[int, set[int]],
-) -> bool:
-    """True iff any region in A is 4-adjacent to any region in B."""
-    if not set_a or not set_b:
-        return False
-    for rid in set_a:
-        for nbr in region_adj[rid]:
-            if nbr in set_b:
-                return True
-    return False
-
-
-def _room_is_connected(
-    region_ids: set[int],
-    region_adj: dict[int, set[int]],
-) -> bool:
-    """Single-component check via BFS on region adjacency."""
-    if not region_ids:
-        return True
-    start = next(iter(region_ids))
-    seen = {start}
-    queue = deque([start])
-    while queue:
-        cur = queue.popleft()
-        for nbr in region_adj[cur]:
-            if nbr in region_ids and nbr not in seen:
-                seen.add(nbr)
-                queue.append(nbr)
-    return len(seen) == len(region_ids)
-
-
-def _shortest_region_path(
-    *,
-    start_set: set[int],
-    goal_set: set[int],
-    region_adj: dict[int, set[int]],
-    cost_fn: Callable[[int], float],
-) -> list[int] | None:
-    """Multi-source/multi-goal shortest path over the region graph."""
-    if not start_set or not goal_set:
-        return None
-
-    pq: list[tuple[float, int]] = []
-    g_score: dict[int, float] = {}
-    came_from: dict[int, int] = {}
-    for rid in start_set:
-        g_score[rid] = 0.0
-        heapq.heappush(pq, (0.0, rid))
-
-    goal_reached: int | None = None
-    while pq:
-        cur_g, cur = heapq.heappop(pq)
-        if cur_g > g_score[cur] + 1e-9:
-            continue
-        if cur in goal_set:
-            goal_reached = cur
-            break
-        for nbr in region_adj[cur]:
-            step = cost_fn(nbr)
-            if math.isinf(step):
-                continue
-            new_g = cur_g + step
-            if new_g < g_score.get(nbr, math.inf) - 1e-9:
-                g_score[nbr] = new_g
-                came_from[nbr] = cur
-                heapq.heappush(pq, (new_g, nbr))
-
-    if goal_reached is None:
-        return None
-    path = [goal_reached]
-    while path[-1] in came_from:
-        path.append(came_from[path[-1]])
-    path.reverse()
-    return path
-
-
-# ---------- Stage 1: base corridor (hub-radial) ------------------------
-
-
-def _path_damages_any_room(
-    path: list[int],
-    *,
-    excluded: set[int],
-    room_region_ids: dict[int, set[int]],
-    region_adj: dict[int, set[int]],
-) -> tuple[set[int], int] | None:
-    """Simulate carving ``path`` and return ``(offending, room_idx)`` for
-    the first room that would be emptied or split — else None.
-
-    ``excluded`` is the set of path regions that are NOT carved (Stage 1:
-    hub + target endpoints; Stage 2: hub + src + tgt + existing corridor).
-    Only path regions outside ``excluded`` count toward each owning room's
-    carve simulation.
-    """
-    owner_carve: dict[int, set[int]] = defaultdict(set)
-    for rid in path:
-        if rid in excluded:
-            continue
-        for room_idx, regions in room_region_ids.items():
-            if rid in regions:
-                owner_carve[room_idx].add(rid)
-                break
-    for room_idx, carved in owner_carve.items():
-        remaining = room_region_ids[room_idx] - carved
-        if not remaining or not _room_is_connected(remaining, region_adj):
-            return carved, room_idx
-    return None
-
-
-def _minimize_offending(
-    offending: set[int],
-    damaged_room_idx: int,
-    room_region_ids: dict[int, set[int]],
-    region_adj: dict[int, set[int]],
-) -> set[int]:
-    """Greedy minimal cut: drop any region whose removal leaves the rest
-    still damaging.
-
-    A whole carved path may include "innocent" regions whose removal alone
-    doesn't disconnect the room — they only happened to be on the path
-    that, *combined* with the genuinely critical regions, caused the split.
-    Forbidding only the minimal critical subset lets the next A* attempt
-    re-use those innocent regions in a different combination (e.g. case 10:
-    the right-column path shares R5 with the slicing path, but R5 is not
-    itself essential to the split).
-
-    Greedy single pass: O(N) iterations × O(N) connectivity check, where N
-    is the offending path's region count in the damaged room (typically ≤ 5).
-    """
-    candidate = set(offending)
-    room_regions = room_region_ids[damaged_room_idx]
-    for rid in list(offending):
-        if rid not in candidate:
-            continue
-        test = candidate - {rid}
-        if not test:
-            break
-        remaining = room_regions - test
-        still_damages = (
-            not remaining or not _room_is_connected(remaining, region_adj)
-        )
-        if still_damages:
-            candidate = test
-    return candidate
 
 
 def _astar_base_corridor(

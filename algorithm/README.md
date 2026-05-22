@@ -121,6 +121,7 @@ algorithm/
 │   ├── schema.py             # ShapePart, ShapeInput, part_theta
 │   ├── cases.py              # testfield-only 33 showcase ShapeInput builders
 │   ├── dimensions.py         # DimensionPolicy and interval splitting
+│   ├── geometry.py           # Shared ShapePart/Shapely geometry helpers
 │   ├── territory.py          # Overlap resolution + shape-contact helpers
 │   ├── atomize.py            # Per-part vertex-aware atomizer
 │   ├── atom_graph.py         # Atom adjacency graph
@@ -146,8 +147,8 @@ not a separate phase or module.
 
 This repository is a testfield, but the algorithm is being kept portable for a
 later RoomLayout integration. The package root (`import celllayout_tf`) exports
-only the algorithm core and intentionally does not import showcase cases, local
-fixtures, visualization, or demos.
+a lightweight subset of algorithm-core symbols and intentionally does not import
+showcase cases, local fixtures, visualization, or demos.
 
 Portable algorithm core:
 
@@ -1059,6 +1060,24 @@ ShapeInput
 The current room-growth entrypoint is `region_partition_growth()` in
 `celllayout_tf/growth_partition.py`. The current corridor entrypoint is
 `carve_corridors()` in `celllayout_tf/corridor.py`.
+
+`growth_partition.py` is the next planned portability refactor target. The
+entrypoint should stay in `growth_partition.py`, while implementation helpers
+move in behavior-preserving slices:
+
+```text
+growth_cells.py       # reflex vertices, vertex cells, point-to-cell mapping,
+                      # snap-to-region-edge, guillotine cell partition
+growth_seed.py        # cell enumeration, cell-aware seed placement,
+                      # farthest/centrality seed selection
+growth_absorb.py      # room aspect checks, local bbox aspect, leftover absorb
+growth_partition.py   # orchestration: build graph, seed rooms, assign cells,
+                      # call absorption, build GrowthResult
+```
+
+The first implementation slice should be `growth_cells.py`, keeping compatibility
+imports from `growth_partition.py` for tests that currently exercise private
+helpers such as `_guillotine_partition`.
 
 Testfield-only visualization phases in `demos/visualize_phase.py`:
 `input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,

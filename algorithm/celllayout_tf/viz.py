@@ -26,6 +26,7 @@ from matplotlib.collections import LineCollection
 from .atom_graph import AtomGraph, build_atom_graph
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy, is_quantum_aligned, split_interval
+from .geometry import polygon_parts as _polygon_parts, to_shapely as _to_shapely
 from .region_graph import build_region_graph
 from .regionize import Region, regionize
 from .corridor import CorridoredLayout, carve_corridors
@@ -1075,22 +1076,3 @@ def save_seed_figure(
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
     return path
-
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _polygon_parts(geom) -> list:
-    if geom.is_empty:
-        return []
-    if isinstance(geom, sg.Polygon):
-        return [geom]
-    if isinstance(geom, sg.MultiPolygon):
-        return list(geom.geoms)
-    if hasattr(geom, "geoms"):
-        out = []
-        for part in geom.geoms:
-            out.extend(_polygon_parts(part))
-        return out
-    return []

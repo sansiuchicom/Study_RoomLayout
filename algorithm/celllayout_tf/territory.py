@@ -14,13 +14,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from math import atan2, cos, degrees, hypot, pi, sin
+from math import atan2, degrees, hypot, pi
 
 import shapely.affinity as sa
 import shapely.geometry as sg
-from shapely.geometry.polygon import orient as _orient
-from shapely.ops import unary_union
 
+from .geometry import (
+    from_shapely as _from_shapely,
+    polygon_parts as _polygon_parts,
+    to_shapely as _to_shapely,
+)
 from .schema import ShapeInput, ShapePart, part_theta
 
 
@@ -235,32 +238,3 @@ def _count_exterior_vertices_inside(part: ShapePart, host_polygon) -> int:
 def _angle_diff_mod_half_pi(a: float, b: float) -> float:
     d = abs((a - b) % (pi / 2))
     return min(d, pi / 2 - d)
-
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _from_shapely(poly) -> ShapePart:
-    poly = _orient(poly, sign=1.0)
-    ext = tuple(tuple(map(float, p)) for p in list(poly.exterior.coords)[:-1])
-    holes = tuple(
-        tuple(tuple(map(float, p)) for p in list(ring.coords)[:-1])
-        for ring in poly.interiors
-    )
-    return ShapePart(exterior=ext, holes=holes)
-
-
-def _polygon_parts(geom) -> list:
-    if geom.is_empty:
-        return []
-    if isinstance(geom, sg.Polygon):
-        return [geom]
-    if isinstance(geom, sg.MultiPolygon):
-        return [p for p in geom.geoms if isinstance(p, sg.Polygon) and not p.is_empty]
-    if hasattr(geom, "geoms"):
-        out = []
-        for part in geom.geoms:
-            out.extend(_polygon_parts(part))
-        return out
-    return []

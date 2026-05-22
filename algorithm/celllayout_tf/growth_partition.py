@@ -22,9 +22,7 @@ Curved pieces: no reflex (smooth curve) → 1 cell = whole piece.
 from __future__ import annotations
 
 from collections import defaultdict
-from math import degrees
 
-import shapely.affinity
 import shapely.geometry as sg
 import shapely.geometry.polygon
 import shapely.ops
@@ -33,6 +31,7 @@ from math import hypot
 
 from .atomize import atomize
 from .dimensions import DimensionPolicy
+from .geometry import rotate_radians as _rotate, to_shapely as _to_shapely
 from .region_graph import RegionGraph, build_region_graph
 from .regionize import regionize
 from .seed_placement import (
@@ -48,15 +47,6 @@ from .territory import (
     resolve_territories,
 )
 
-
-def _to_shapely(part) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _rotate(geom, theta: float, sign: int = -1):
-    if theta == 0.0:
-        return geom
-    return shapely.affinity.rotate(geom, sign * degrees(theta), origin=(0, 0))
 
 
 def reflex_vertices_local(piece, theta: float) -> list[tuple[float, float]]:
@@ -347,11 +337,6 @@ def _guillotine_partition(
     ))
     return out
 
-
-def _rotate_point(point: sg.Point, theta: float, sign: int) -> sg.Point:
-    if theta == 0.0:
-        return point
-    return shapely.affinity.rotate(point, sign * degrees(theta), origin=(0, 0))
 
 
 # ---------- Cell-aware seed placement (W8) ----------
@@ -682,7 +667,7 @@ def _local_bbox_aspect(
         r = regions_by_id[rid]
         p = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
         if theta != 0.0:
-            p = shapely.affinity.rotate(p, -degrees(theta), origin=(0, 0))
+            p = _rotate(p, theta, sign=-1)
         polys.append(p)
     union = shapely.ops.unary_union(polys)
     if union.is_empty:
@@ -1052,14 +1037,14 @@ def region_partition_growth(shape, fixture, *, policy: DimensionPolicy | None = 
                     cell_local = _rotate(cell_global, territory.theta, sign=-1)
                     cell_bbox_local = cell_local.bounds
                     seeds_local = [
-                        (sid, _rotate_point(
+                        (sid, _rotate(
                             region_poly_by_id[sid].centroid,
                             territory.theta, sign=-1,
                         ))
                         for sid in cell_seeds
                     ]
                     regions_local = [
-                        (rid, _rotate_point(
+                        (rid, _rotate(
                             region_poly_by_id[rid].centroid,
                             territory.theta, sign=-1,
                         ))

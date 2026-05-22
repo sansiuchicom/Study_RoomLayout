@@ -13,9 +13,9 @@ import unicodedata
 
 import shapely.affinity as sa
 import shapely.geometry as sg
-from shapely.geometry.polygon import orient as _orient
 from shapely.ops import unary_union
 
+from .geometry import from_shapely as _from_shapely
 from .schema import ShapeInput, ShapePart
 
 
@@ -85,16 +85,6 @@ def selected_cases(
 
 def _rect_part(x0: float, y0: float, x1: float, y1: float) -> ShapePart:
     return ShapePart(exterior=((x0, y0), (x1, y0), (x1, y1), (x0, y1)))
-
-
-def _from_shapely(poly: sg.Polygon) -> ShapePart:
-    poly = _orient(poly, sign=1.0)
-    ext = tuple(tuple(map(float, p)) for p in list(poly.exterior.coords)[:-1])
-    holes = tuple(
-        tuple(tuple(map(float, p)) for p in list(ring.coords)[:-1])
-        for ring in poly.interiors
-    )
-    return ShapePart(exterior=ext, holes=holes)
 
 
 def _rotated_rect(

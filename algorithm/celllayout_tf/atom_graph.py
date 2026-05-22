@@ -27,7 +27,12 @@ from shapely.strtree import STRtree
 
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy
-from .schema import ShapeInput, ShapePart
+from .geometry import (
+    line_length as _line_length,
+    polygon_parts as _polygon_parts,
+    to_shapely as _to_shapely,
+)
+from .schema import ShapeInput
 
 
 CONTACT_TOL = 1e-6
@@ -165,20 +170,6 @@ def _outline_lines(footprint, *, ring: str) -> list[sg.LineString]:
     return out
 
 
-def _line_length(geom) -> float:
-    if geom.is_empty:
-        return 0.0
-    if geom.geom_type == "LineString":
-        return float(geom.length)
-    if geom.geom_type == "MultiLineString":
-        return sum(float(g.length) for g in geom.geoms)
-    if geom.geom_type == "GeometryCollection":
-        total = 0.0
-        for g in geom.geoms:
-            total += _line_length(g)
-        return total
-    return 0.0
-
 
 def _line_endpoints(geom) -> list[sg.Point]:
     if geom.is_empty:
@@ -214,22 +205,3 @@ def _any_endpoint_on_lines(endpoints, lines, tol: float = 1e-6) -> bool:
 def _angle_diff_mod_half_pi(a: float, b: float) -> float:
     d = abs((a - b) % (pi / 2))
     return min(d, pi / 2 - d)
-
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _polygon_parts(geom) -> list:
-    if geom.is_empty:
-        return []
-    if isinstance(geom, sg.Polygon):
-        return [geom]
-    if isinstance(geom, sg.MultiPolygon):
-        return list(geom.geoms)
-    if hasattr(geom, "geoms"):
-        out = []
-        for part in geom.geoms:
-            out.extend(_polygon_parts(part))
-        return out
-    return []

@@ -19,11 +19,16 @@ from math import degrees
 
 import shapely.affinity as sa
 import shapely.geometry as sg
-from shapely.geometry.polygon import orient as _orient
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
 from .dimensions import DimensionPolicy, snap_length, split_interval
+from .geometry import (
+    from_shapely as _from_shapely,
+    line_length as _line_length,
+    polygon_parts as _polygon_parts,
+    to_shapely as _to_shapely,
+)
 from .schema import ShapeInput, ShapePart
 from .territory import (
     KIND_CURVED,
@@ -224,20 +229,6 @@ def _absorb_slivers(atoms: list[Atom], policy: DimensionPolicy) -> list[Atom]:
     return list(atom_map.values())
 
 
-def _line_length(geom) -> float:
-    if geom.is_empty:
-        return 0.0
-    if geom.geom_type == "LineString":
-        return float(geom.length)
-    if geom.geom_type == "MultiLineString":
-        return sum(float(g.length) for g in geom.geoms)
-    if geom.geom_type == "GeometryCollection":
-        total = 0.0
-        for g in geom.geoms:
-            total += _line_length(g)
-        return total
-    return 0.0
-
 
 def _atomize_with_shared_grid(
     local_poly: sg.Polygon,
@@ -350,32 +341,3 @@ def _expand_anchors(anchors: list[float], policy: DimensionPolicy) -> list[float
         if b > out[-1] + 1e-9:
             out.append(b)
     return out
-
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _from_shapely(poly: sg.Polygon) -> ShapePart:
-    poly = _orient(poly, sign=1.0)
-    ext = tuple(tuple(map(float, p)) for p in list(poly.exterior.coords)[:-1])
-    holes = tuple(
-        tuple(tuple(map(float, p)) for p in list(ring.coords)[:-1])
-        for ring in poly.interiors
-    )
-    return ShapePart(exterior=ext, holes=holes)
-
-
-def _polygon_parts(geom) -> list:
-    if geom.is_empty:
-        return []
-    if isinstance(geom, sg.Polygon):
-        return [geom]
-    if isinstance(geom, sg.MultiPolygon):
-        return [p for p in geom.geoms if isinstance(p, sg.Polygon) and not p.is_empty]
-    if hasattr(geom, "geoms"):
-        out = []
-        for part in geom.geoms:
-            out.extend(_polygon_parts(part))
-        return out
-    return []

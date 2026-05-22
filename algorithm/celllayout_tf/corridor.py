@@ -17,10 +17,11 @@ from shapely.ops import unary_union
 
 from .atomize import atomize
 from .dimensions import DimensionPolicy
+from .geometry import to_shapely as _to_shapely
 from .region_graph import build_region_graph
 from .regionize import regionize
 from .room_growth import GrownRoom, GrowthResult, LayoutFixture
-from .schema import ShapeInput, ShapePart
+from .schema import ShapeInput
 
 
 # ---------- Stage 1 cost constants -------------------------------------
@@ -67,11 +68,6 @@ class CorridoredLayout:
 
 # ---------- Region index helpers ---------------------------------------
 
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    if part.holes:
-        return sg.Polygon(part.exterior, holes=part.holes)
-    return sg.Polygon(part.exterior)
 
 
 def _build_region_index(

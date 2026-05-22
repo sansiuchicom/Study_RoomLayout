@@ -26,15 +26,18 @@ from __future__ import annotations
 import bisect
 from collections import defaultdict
 from dataclasses import dataclass
-from math import ceil, degrees
+from math import ceil
 
-import shapely.affinity as sa
 import shapely.geometry as sg
-from shapely.geometry.polygon import orient as _orient
 from shapely.ops import unary_union
 
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy
+from .geometry import (
+    from_shapely,
+    rotate_radians as _rotate_geom,
+    to_shapely as _to_shapely,
+)
 from .schema import ShapeInput, ShapePart
 from .territory import (
     KIND_CURVED,
@@ -554,15 +557,6 @@ def _allocate_k_areas(areas, k_total):
 # Geometry helpers ------------------------------------------------------------
 
 
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])
-
-
-def _rotate_geom(geom, theta_rad):
-    if abs(theta_rad) < 1e-12:
-        return geom
-    return sa.rotate(geom, degrees(theta_rad), origin=(0, 0))
-
 
 def _union_atoms_to_shape_part(atoms) -> ShapePart | None:
     polys = [_to_shapely(a.shape) for a in atoms]
@@ -575,10 +569,4 @@ def _union_atoms_to_shape_part(atoms) -> ShapePart | None:
         merged = max(merged.geoms, key=lambda p: p.area)
     if not isinstance(merged, sg.Polygon):
         return None
-    merged = _orient(merged, sign=1.0)
-    ext = tuple(tuple(map(float, p)) for p in list(merged.exterior.coords)[:-1])
-    holes = tuple(
-        tuple(tuple(map(float, p)) for p in list(r.coords)[:-1])
-        for r in merged.interiors
-    )
-    return ShapePart(exterior=ext, holes=holes)
+    return from_shapely(merged)

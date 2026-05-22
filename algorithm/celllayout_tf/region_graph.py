@@ -16,8 +16,9 @@ import shapely.geometry as sg
 from .atom_graph import _shared_boundary_geom, build_atom_graph
 from .atomize import Atom, atomize
 from .dimensions import DimensionPolicy
+from .geometry import to_shapely as _to_shapely
 from .regionize import Region, regionize
-from .schema import ShapeInput, ShapePart
+from .schema import ShapeInput
 
 
 ANGLE_TOL = pi / 180.0
@@ -201,7 +202,3 @@ def _line_segments(geom) -> list[sg.LineString]:
             out.extend(_line_segments(g))
         return out
     return []
-
-
-def _to_shapely(part: ShapePart) -> sg.Polygon:
-    return sg.Polygon(part.exterior, [list(h) for h in part.holes])

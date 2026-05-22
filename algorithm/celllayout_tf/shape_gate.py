@@ -19,14 +19,13 @@ frees its slot at the next gate query.
 
 from __future__ import annotations
 
-from math import degrees
 from typing import Callable
 
-import shapely.affinity
 import shapely.geometry as sg
 import shapely.geometry.polygon
 import shapely.ops
 
+from .geometry import rotate_radians as _rotate, to_shapely as _to_shapely
 from .regionize import Region
 from .territory import Territory
 
@@ -64,11 +63,9 @@ def count_reflex_vertices(poly: sg.Polygon) -> int:
 
 
 def _to_local_polygon(region: Region) -> sg.Polygon:
-    poly = sg.Polygon(
-        region.shape.exterior, [list(h) for h in region.shape.holes]
-    )
+    poly = _to_shapely(region.shape)
     if region.theta != 0.0:
-        poly = shapely.affinity.rotate(poly, -degrees(region.theta), origin=(0, 0))
+        poly = _rotate(poly, region.theta, sign=-1)
     return poly
 
 
@@ -88,9 +85,9 @@ def _reflex_of_union(
     polys: list[sg.Polygon] = []
     for rid in region_ids:
         r = regions_by_id[rid]
-        p = sg.Polygon(r.shape.exterior, [list(h) for h in r.shape.holes])
+        p = _to_shapely(r.shape)
         if theta != 0.0:
-            p = shapely.affinity.rotate(p, -degrees(theta), origin=(0, 0))
+            p = _rotate(p, theta, sign=-1)
         polys.append(p)
     union = shapely.ops.unary_union(polys)
     if union.is_empty or union.geom_type != "Polygon":

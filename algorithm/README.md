@@ -119,20 +119,20 @@ Example:
 algorithm/
 ├── celllayout_tf/
 │   ├── schema.py             # ShapePart, ShapeInput, part_theta
-│   ├── cases.py              # 33 showcase ShapeInput builders
+│   ├── cases.py              # testfield-only 33 showcase ShapeInput builders
 │   ├── dimensions.py         # DimensionPolicy and interval splitting
 │   ├── territory.py          # Overlap resolution + shape-contact helpers
 │   ├── atomize.py            # Per-part vertex-aware atomizer
 │   ├── atom_graph.py         # Atom adjacency graph
 │   ├── regionize.py          # Atom grouping into small regions
 │   ├── region_graph.py       # Region adjacency graph
-│   ├── layout_fixtures.py    # 33 room-growth fixtures
+│   ├── layout_fixtures.py    # testfield-only 33 room-growth fixtures
 │   ├── room_growth.py        # Phase 7+ fixture/result data models
 │   ├── seed_placement.py     # Region-level seed placement helpers
 │   ├── shape_gate.py         # Reflex/L-slot shape gate helpers
 │   ├── growth_partition.py   # Current room partition growth
 │   ├── corridor.py           # Phase 8 corridor carving
-│   └── viz.py                # Stage-by-stage diagnostics
+│   └── viz.py                # testfield-only stage-by-stage diagnostics
 ├── demos/
 │   └── visualize_phase.py
 ├── tests/
@@ -141,6 +141,44 @@ algorithm/
 
 Note: no `orientation.py`. Per-part theta is a one-liner in `schema.py`,
 not a separate phase or module.
+
+### Portable Core Boundary
+
+This repository is a testfield, but the algorithm is being kept portable for a
+later RoomLayout integration. The package root (`import celllayout_tf`) exports
+only the algorithm core and intentionally does not import showcase cases, local
+fixtures, visualization, or demos.
+
+Portable algorithm core:
+
+```text
+schema.py
+dimensions.py
+geometry.py
+room_growth.py
+territory.py
+atomize.py
+atom_graph.py
+regionize.py
+region_graph.py
+seed_placement.py
+shape_gate.py
+growth_partition.py
+corridor.py
+```
+
+Testfield-only support modules:
+
+```text
+cases.py              # synthetic showcase footprints
+layout_fixtures.py    # room programs for the showcase footprints
+viz.py                # matplotlib diagnostics
+demos/                # local rendering CLI
+```
+
+RoomLayout integration should copy or adapt the portable core and provide its
+own `ShapeInput` and `LayoutFixture` data instead of depending on the testfield
+case catalog.
 
 ## Phase Plan
 
@@ -1022,7 +1060,7 @@ The current room-growth entrypoint is `region_partition_growth()` in
 `celllayout_tf/growth_partition.py`. The current corridor entrypoint is
 `carve_corridors()` in `celllayout_tf/corridor.py`.
 
-Implemented visualization phases in `demos/visualize_phase.py`:
+Testfield-only visualization phases in `demos/visualize_phase.py`:
 `input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,
 `layout`, `corridor`, `dimensions`.
 

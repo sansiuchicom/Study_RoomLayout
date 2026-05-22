@@ -1,7 +1,11 @@
-"""Layout fixtures for the 33 testfield cases — Phase 7 input data.
+"""Testfield-only ``LayoutFixture`` data for the 33 showcase cases.
 
-Each case in ``cases.py`` has one matching ``LayoutFixture`` here,
-declaring:
+Each case in ``cases.py`` has one matching ``LayoutFixture`` here. These room
+programs support diagnostics, docs, and regression tests; they are not part of
+the portable RoomLayout algorithm core. Production callers should create their
+own ``LayoutFixture``/``RoomSpec`` inputs.
+
+The fixture data declares:
 
   - K (room count) — derived from footprint area (see PHASE7_Fixtures.md)
   - per-room role + seed_position

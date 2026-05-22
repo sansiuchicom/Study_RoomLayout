@@ -1,6 +1,10 @@
-"""Showcase ShapeInput cases for the testfield.
+"""Testfield-only showcase ``ShapeInput`` cases.
 
-The 33 cases match the previous testfield iteration by index, name, and union
+These 33 synthetic footprints support diagnostics, docs, and regression tests.
+They are not part of the portable RoomLayout algorithm core; production callers
+should provide ``ShapeInput`` values directly.
+
+The cases match the previous testfield iteration by index, name, and union
 geometry. The difference: each case is expressed as a ``ShapeInput`` with parts
 preserved (not unioned). Rotated wings, filleted shapes, and ㅁ-with-hole keep
 their constituent primitives as separate ``ShapePart`` entries.

@@ -1,7 +1,8 @@
-"""Common phase visualization CLI for the 33 showcase cases.
+"""Testfield-only phase visualization CLI for the 33 showcase cases.
 
 Renders input, territory, atom, graph, region, seed, layout, corridor, and
-dimension-policy diagnostics with common case indexing and output layout.
+dimension-policy diagnostics with common case indexing and output layout. This
+script is for local inspection and is not part of the portable algorithm core.
 """
 
 from __future__ import annotations

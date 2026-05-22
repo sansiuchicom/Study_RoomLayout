@@ -1,10 +1,11 @@
-"""Phase 1/2 diagnostic visualization.
+"""Testfield-only diagnostic visualization helpers.
 
-Phase 1 renders a ``ShapeInput`` with each part in a distinct translucent
-color so that overlapping parts (e.g. wing protrusions) remain visible.
+This module intentionally depends on matplotlib and can run the full layout
+pipeline to produce inspection figures. It is not imported from the package
+root so portable algorithm imports stay lightweight.
 
-Phase 2 renders a panel of sample interval splits showing how
-``split_interval`` decomposes various lengths under the dimension policy.
+The helpers render ``ShapeInput`` geometry, territory/atom/region graphs, seed
+placement, room layouts, corridors, and dimension-policy diagnostics.
 """
 
 from __future__ import annotations

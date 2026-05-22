@@ -10,6 +10,7 @@ from __future__ import annotations
 import heapq
 import math
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import shapely.geometry as sg
@@ -154,6 +155,51 @@ def _room_is_connected(
     return len(seen) == len(region_ids)
 
 
+def _shortest_region_path(
+    *,
+    start_set: set[int],
+    goal_set: set[int],
+    region_adj: dict[int, set[int]],
+    cost_fn: Callable[[int], float],
+) -> list[int] | None:
+    """Multi-source/multi-goal shortest path over the region graph."""
+    if not start_set or not goal_set:
+        return None
+
+    pq: list[tuple[float, int]] = []
+    g_score: dict[int, float] = {}
+    came_from: dict[int, int] = {}
+    for rid in start_set:
+        g_score[rid] = 0.0
+        heapq.heappush(pq, (0.0, rid))
+
+    goal_reached: int | None = None
+    while pq:
+        cur_g, cur = heapq.heappop(pq)
+        if cur_g > g_score[cur] + 1e-9:
+            continue
+        if cur in goal_set:
+            goal_reached = cur
+            break
+        for nbr in region_adj[cur]:
+            step = cost_fn(nbr)
+            if math.isinf(step):
+                continue
+            new_g = cur_g + step
+            if new_g < g_score.get(nbr, math.inf) - 1e-9:
+                g_score[nbr] = new_g
+                came_from[nbr] = cur
+                heapq.heappush(pq, (new_g, nbr))
+
+    if goal_reached is None:
+        return None
+    path = [goal_reached]
+    while path[-1] in came_from:
+        path.append(came_from[path[-1]])
+    path.reverse()
+    return path
+
+
 # ---------- Stage 1: base corridor (hub-radial) ------------------------
 
 
@@ -279,38 +325,12 @@ def _astar_base_corridor(
         base = _STAGE1_BOUNDARY_BASE if is_boundary else _STAGE1_INTERIOR_BASE
         return base * (_STAGE1_SIZE_REF / max(owner_area, _STAGE1_SIZE_FLOOR))
 
-    pq: list[tuple[float, int]] = []
-    g_score: dict[int, float] = {}
-    came_from: dict[int, int] = {}
-    for rid in start_set:
-        g_score[rid] = 0.0
-        heapq.heappush(pq, (0.0, rid))
-
-    goal_reached: int | None = None
-    while pq:
-        cur_g, cur = heapq.heappop(pq)
-        if cur_g > g_score[cur] + 1e-9:
-            continue
-        if cur in goal_set:
-            goal_reached = cur
-            break
-        for nbr in region_adj[cur]:
-            step = cost(nbr)
-            if math.isinf(step):
-                continue
-            new_g = cur_g + step
-            if new_g < g_score.get(nbr, math.inf) - 1e-9:
-                g_score[nbr] = new_g
-                came_from[nbr] = cur
-                heapq.heappush(pq, (new_g, nbr))
-
-    if goal_reached is None:
-        return None
-    path = [goal_reached]
-    while path[-1] in came_from:
-        path.append(came_from[path[-1]])
-    path.reverse()
-    return path
+    return _shortest_region_path(
+        start_set=start_set,
+        goal_set=goal_set,
+        region_adj=region_adj,
+        cost_fn=cost,
+    )
 
 
 def _stage1_base_corridor(
@@ -580,9 +600,11 @@ def _astar_shortcut(
     on_footprint_edge: dict[int, bool],
     forbidden: frozenset[int] = frozenset(),
 ) -> list[int] | None:
-    """§4.4 strict A*. Hub/corridor regions outside the start/goal entrances
-    are hard-blocked so the resulting path is forced to carve through other
-    rooms — the whole point of a "detour shortcut".
+    """§4.4 strict shortcut path search.
+
+    Hub/corridor regions outside the start/goal entrances are hard-blocked so
+    the resulting path is forced to carve through other rooms — the whole point
+    of a "detour shortcut".
     """
     if not start_set or not goal_set:
         return None
@@ -620,38 +642,12 @@ def _astar_shortcut(
         base = _STAGE2_BOUNDARY_BASE if is_outline else _STAGE2_INTERIOR_BASE
         return base * (_STAGE1_SIZE_REF / max(owner_area, _STAGE1_SIZE_FLOOR))
 
-    pq: list[tuple[float, int]] = []
-    g_score: dict[int, float] = {}
-    came_from: dict[int, int] = {}
-    for rid in start_set:
-        g_score[rid] = 0.0
-        heapq.heappush(pq, (0.0, rid))
-
-    goal_reached: int | None = None
-    while pq:
-        cur_g, cur = heapq.heappop(pq)
-        if cur_g > g_score[cur] + 1e-9:
-            continue
-        if cur in goal_set:
-            goal_reached = cur
-            break
-        for nbr in region_adj[cur]:
-            step = cost(nbr)
-            if math.isinf(step):
-                continue
-            new_g = cur_g + step
-            if new_g < g_score.get(nbr, math.inf) - 1e-9:
-                g_score[nbr] = new_g
-                came_from[nbr] = cur
-                heapq.heappush(pq, (new_g, nbr))
-
-    if goal_reached is None:
-        return None
-    path = [goal_reached]
-    while path[-1] in came_from:
-        path.append(came_from[path[-1]])
-    path.reverse()
-    return path
+    return _shortest_region_path(
+        start_set=start_set,
+        goal_set=goal_set,
+        region_adj=region_adj,
+        cost_fn=cost,
+    )
 
 
 def _stage2_detour_shortcut(

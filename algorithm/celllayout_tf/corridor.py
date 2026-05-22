@@ -24,24 +24,25 @@ from .corridor_path import (
     _path_damages_any_room,
     _shortest_region_path,
 )
+from .corridor_params import (
+    CORRIDOR_MAX_RETRY as _CORRIDOR_MAX_RETRY,
+    CORRIDOR_SIZE_FLOOR as _CORRIDOR_SIZE_FLOOR,
+    CORRIDOR_SIZE_REF as _CORRIDOR_SIZE_REF,
+    HUB_SUPERNODE as _HUB_SUPERNODE,
+    STAGE1_BOUNDARY_BASE as _STAGE1_BOUNDARY_BASE,
+    STAGE1_ENDPOINT_COST as _STAGE1_ENDPOINT_COST,
+    STAGE1_FREE_COST as _STAGE1_FREE_COST,
+    STAGE1_INTERIOR_BASE as _STAGE1_INTERIOR_BASE,
+    STAGE2_BOUNDARY_BASE as _STAGE2_BOUNDARY_BASE,
+    STAGE2_ENDPOINT_COST as _STAGE2_ENDPOINT_COST,
+    STAGE2_FREE_COST as _STAGE2_FREE_COST,
+    STAGE2_INTERIOR_BASE as _STAGE2_INTERIOR_BASE,
+    STAGE2_MAX_OUTER_ITER as _STAGE2_MAX_OUTER_ITER,
+    STAGE2_SRC_TGT_AVOID as _STAGE2_SRC_TGT_AVOID,
+)
 from .dimensions import DimensionPolicy
 from .room_growth import GrownRoom, GrowthResult, LayoutFixture
 from .schema import ShapeInput
-
-
-# ---------- Stage 1 cost constants -------------------------------------
-
-# PHASE8_Corridor.md §3 cost table. Sandbox used numbers in cell-count
-# units; we translate to m² with `_STAGE1_SIZE_REF` ≈ a typical Korean
-# apartment room area and `_STAGE1_SIZE_FLOOR` keeping tiny rooms from
-# blowing up the cost.
-_STAGE1_ENDPOINT_COST = 0.01     # hub / target room regions
-_STAGE1_FREE_COST     = 0.01     # unassigned or already-carved corridor
-_STAGE1_BOUNDARY_BASE = 1.0      # other-room boundary region (any kind)
-_STAGE1_INTERIOR_BASE = 8.0      # other-room interior region
-_STAGE1_SIZE_REF      = 20.0     # m² reference for `× 20 / room_size`
-_STAGE1_SIZE_FLOOR    = 4.0      # m² lower bound on room_size in cost
-_STAGE1_MAX_RETRY     = 30       # simulation-retry budget per target
 
 
 # ---------- Output type ------------------------------------------------
@@ -124,7 +125,7 @@ def _astar_base_corridor(
             )
         )
         base = _STAGE1_BOUNDARY_BASE if is_boundary else _STAGE1_INTERIOR_BASE
-        return base * (_STAGE1_SIZE_REF / max(owner_area, _STAGE1_SIZE_FLOOR))
+        return base * (_CORRIDOR_SIZE_REF / max(owner_area, _CORRIDOR_SIZE_FLOOR))
 
     return _shortest_region_path(
         start_set=start_set,
@@ -193,7 +194,7 @@ def _stage1_base_corridor(
         forbidden: set[int] = set()
         path: list[int] | None = None
         attempts = 0
-        for attempts_counter in range(1, _STAGE1_MAX_RETRY + 1):
+        for attempts_counter in range(1, _CORRIDOR_MAX_RETRY + 1):
             attempts = attempts_counter
             candidate = _astar_base_corridor(
                 start_set=hub_regions, goal_set=tgt_regions,
@@ -247,17 +248,6 @@ def _stage1_base_corridor(
 
 
 # ---------- Stage 2: detour shortcut -----------------------------------
-
-_STAGE2_ENDPOINT_COST = 0.01     # entrance regions (start/end)
-_STAGE2_FREE_COST     = 0.01     # unassigned
-_STAGE2_SRC_TGT_AVOID = 5.0      # non-entrance regions of the pair's rooms
-_STAGE2_BOUNDARY_BASE = 1.0      # other-room outline (shared with §3 spec)
-_STAGE2_INTERIOR_BASE = 8.0      # other-room interior
-_STAGE2_MAX_OUTER_ITER = 30      # outer ratio-greedy iteration cap
-
-
-_HUB_SUPERNODE = -1   # sentinel for hub collapse in BFS hop counting
-
 
 def _bfs_hop_collapse_hub(
     src_ids: set[int],
@@ -441,7 +431,7 @@ def _astar_shortcut(
             )
         )
         base = _STAGE2_BOUNDARY_BASE if is_outline else _STAGE2_INTERIOR_BASE
-        return base * (_STAGE1_SIZE_REF / max(owner_area, _STAGE1_SIZE_FLOOR))
+        return base * (_CORRIDOR_SIZE_REF / max(owner_area, _CORRIDOR_SIZE_FLOOR))
 
     return _shortest_region_path(
         start_set=start_set,
@@ -540,7 +530,7 @@ def _stage2_detour_shortcut(
             room_region_ids[a] | room_region_ids[b]
             | hub_regions_set | all_corridor
         )
-        for attempts in range(1, _STAGE1_MAX_RETRY + 1):
+        for attempts in range(1, _CORRIDOR_MAX_RETRY + 1):
             candidate = _astar_shortcut(
                 start_set=entr_a, goal_set=entr_b,
                 src_room_idx=a, tgt_room_idx=b, hub_idx=hub_idx,

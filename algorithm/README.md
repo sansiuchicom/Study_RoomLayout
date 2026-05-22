@@ -135,6 +135,7 @@ algorithm/
 │   ├── growth_seed.py        # Cell-aware seed placement helpers
 │   ├── growth_absorb.py      # Leftover absorption helpers
 │   ├── growth_partition.py   # Room partition growth orchestration
+│   ├── corridor_params.py    # Corridor routing cost/retry constants
 │   ├── corridor_index.py     # Corridor region index/connectivity helpers
 │   ├── corridor_path.py      # Corridor pathfinding/damage helpers
 │   ├── corridor.py           # Phase 8 corridor carving
@@ -173,6 +174,7 @@ growth_cells.py
 growth_seed.py
 growth_absorb.py
 growth_partition.py
+corridor_params.py
 corridor_index.py
 corridor_path.py
 corridor.py

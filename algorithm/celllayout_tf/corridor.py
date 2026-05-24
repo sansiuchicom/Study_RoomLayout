@@ -16,18 +16,8 @@ from .corridor_index import (
     _build_region_index,
     _room_is_connected,
 )
-from .corridor_stage1 import (
-    _astar_base_corridor,
-    _stage1_base_corridor,
-)
-from .corridor_stage2 import (
-    _astar_shortcut,
-    _bfs_hop_collapse_hub,
-    _corridor_distance_hop,
-    _find_entrances,
-    _map_distance_hop,
-    _stage2_detour_shortcut,
-)
+from .corridor_stage1 import _stage1_base_corridor
+from .corridor_stage2 import _stage2_detour_shortcut
 from .dimensions import DimensionPolicy
 from .room_growth import GrownRoom, GrowthResult, LayoutFixture
 from .schema import ShapeInput

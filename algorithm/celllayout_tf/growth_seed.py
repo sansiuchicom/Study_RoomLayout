@@ -12,6 +12,7 @@ from .growth_cells import vertex_cells_of_piece
 from .region_graph import RegionGraph
 from .seed_placement import (
     SeedPlacement,
+    _INF_HOP,
     _bfs_all_distances,
     pick_top_centrality,
     region_area,
@@ -277,9 +278,6 @@ def auto_place_seeds_by_cells(
         piece_seed_count[target_pkey] += 1
 
     return tuple(seeds)
-
-
-_INF_HOP = 10**9
 
 
 def _farthest_or_centrality(

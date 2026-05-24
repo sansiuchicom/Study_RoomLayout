@@ -41,7 +41,6 @@ from .growth_cells import (
     vertex_cells_of_piece,
 )
 from .growth_seed import (
-    _INF_HOP,
     _enumerate_cells_with_regions,
     _farthest_or_centrality,
     auto_place_seeds_by_cells,

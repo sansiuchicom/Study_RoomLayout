@@ -6,7 +6,7 @@ context in §"Key Shift from the Previous Iteration" below).
 
 ```text
 labeled footprint parts (ShapeInput)
--> fine atoms
+-> internal grid-aligned cells (Atom in code)
 -> small regions
 -> rooms + corridor/access
 -> scan-to-BIM training layout data
@@ -24,21 +24,20 @@ ShapeInput parts
   Design-time primitives with raw vertex coordinates.
   Each part already carries its own orientation by construction.
 
-Atom
-  Fine geometry/control unit, generated per part.
-  Used for precise footprint coverage and as the substrate for region/contact
-  construction.
+Internal lattice cell (`Atom` in code)
+  Implementation detail generated per part for precise footprint coverage,
+  grid alignment, and region/contact construction.
 
 Region
-  Coarse block made from multiple atoms.
+  Public room-building unit produced from one or more internal cells.
   Several regions can form one room.
 
 Room
   Final room group produced from regions.
 
 Corridor / Access
-  Currently carved on the region graph. Atoms remain the fine geometric
-  substrate for region construction, contact metrics, and future width checks.
+  Carved on the region graph. Corridor decisions use region-level geometry and
+  adjacency; the lower-level cell lattice stays internal.
 ```
 
 `zone` is no longer the central concept. If used, it should only mean a debug or
@@ -69,8 +68,8 @@ Initial policy:
 ```text
 geometry_snap      = 0.01m
 module_quantum     = 0.05m
-target_atom_size   = 0.30m
-normal_atom_widths = 0.25m / 0.30m / 0.35m
+target_atom_size   = 0.30m   (internal cell target)
+normal_cell_widths = 0.25m / 0.30m / 0.35m
 edge_exceptions    = 0.20m / 0.40m when needed
 ```
 
@@ -78,9 +77,9 @@ Meaning:
 
 ```text
 0.30m is the target, not a hard cell size.
-Atom intervals should be multiples of 0.05m where possible.
+Internal cell intervals should be multiples of 0.05m where possible.
 Final coordinates should remain clean for dataset labels.
-Corridor widths are checked metrically, not only by atom count.
+Corridor widths are checked metrically, not by internal cell count.
 ```
 
 Example:
@@ -93,10 +92,11 @@ Example:
 ## Design Principles
 
 1. Do not drop small geometry.
-   Small pieces may be inconvenient, but they should remain assignable atoms.
+   Small pieces may be inconvenient, but they should remain assignable through
+   the internal cell/region pipeline.
 
 2. Prefer assignment over repair.
-   Avoid gap/tail cleanup by polygon surgery. Assign atoms/regions instead.
+   Avoid gap/tail cleanup by polygon surgery. Assign cells/regions instead.
 
 3. Construction info is ground truth.
    Parts carry their own orientation by virtue of their vertex coordinates.
@@ -104,11 +104,11 @@ Example:
    clusters, or fits.
 
 4. Vertex alignment matters.
-   Part vertices, reflex vertices, and hole vertices should become atom-line
+   Part vertices, reflex vertices, and hole vertices should become lattice-line
    anchors.
 
-5. Atoms and regions have different jobs.
-   Atoms preserve fine geometry and contact structure. Regions are coarse enough
+5. Internal cells and regions have different jobs.
+   Cells preserve fine geometry and contact structure. Regions are coarse enough
    for room grouping and current corridor carving.
 
 6. Visualization is mandatory.
@@ -120,14 +120,15 @@ Example:
 ```text
 algorithm/
 ├── celllayout_tf/
+│   ├── api.py                # Stable public facade for integration
 │   ├── schema.py             # ShapePart, ShapeInput, part_theta
 │   ├── cases.py              # testfield-only 33 showcase ShapeInput builders
 │   ├── dimensions.py         # DimensionPolicy and interval splitting
 │   ├── geometry.py           # Shared ShapePart/Shapely geometry helpers
 │   ├── territory.py          # Overlap resolution + shape-contact helpers
-│   ├── atomize.py            # Per-part vertex-aware atomizer
-│   ├── atom_graph.py         # Atom adjacency graph
-│   ├── regionize.py          # Atom grouping into small regions
+│   ├── atomize.py            # Internal cell lattice builder (`Atom` impl)
+│   ├── atom_graph.py         # Internal cell adjacency graph
+│   ├── regionize.py          # Internal cell grouping into regions
 │   ├── region_graph.py       # Region adjacency graph
 │   ├── layout_fixtures.py    # testfield-only 33 room-growth fixtures
 │   ├── room_growth.py        # Phase 7+ fixture/result data models
@@ -285,10 +286,12 @@ no avoidable tiny slivers
 average width stays near 0.30m
 ```
 
-### Phase 3: Per-Part Atomizer
+### Phase 3: Per-Part Cell Lattice (`Atom` Implementation)
 
-Generate fine atoms inside each part's own local orientation frame, then
-combine across parts with an overlap-ownership rule.
+Generate fine grid-aligned cells inside each part's own local orientation
+frame, then combine across parts with an overlap-ownership rule. The code keeps
+these cells as `Atom` objects, but they are an internal implementation layer,
+not the integration API.
 
 Per-part inputs:
 
@@ -310,13 +313,13 @@ modular grid lines in the part's local frame
 Overlap ownership rule (initial):
 
 ```text
-Atomize each part independently in its own frame.
+Build cells for each part independently in its own frame.
 For parts that overlap, earlier parts in the list win.
-Later parts only atomize their non-overlapping remainder.
+Later parts only cover their non-overlapping remainder.
 ```
 
 This makes case 22 (main + rotated wing) deterministic: main owns its full
-rect; the wing's atoms cover only the rotated protrusion.
+rect; the wing's cells cover only the rotated protrusion.
 
 Output:
 
@@ -342,9 +345,10 @@ overlap ownership: later-part atoms never invade earlier-part territory
 vertex anchors appear as atom boundaries
 ```
 
-### Phase 4: Atom Graph
+### Phase 4: Cell Graph (`AtomGraph` Implementation)
 
-Build graph connectivity for atom grouping and region adjacency construction.
+Build graph connectivity over the internal cells for region adjacency
+construction.
 
 Edge metadata:
 
@@ -367,8 +371,8 @@ shared boundary lengths are stable
 
 ### Phase 5: Regionizer
 
-Group atoms into room-building regions of roughly `target_area` each. The
-algorithm runs per piece, in the theta-group's local frame, in two passes
+Group internal cells into room-building regions of roughly `target_area` each.
+The algorithm runs per piece, in the theta-group's local frame, in two passes
 over a shared "structural pool" of coordinates.
 
 Defaults:
@@ -474,39 +478,25 @@ cut_history coords are a subset of the theta-group atom-edge pool
 
 ### Phase 6: Region Graph
 
-Build region adjacency from `atom_graph`. Same role as Phase 4 but at the
-region level: drives Phase 7's room grouping and corridor routing.
+Build region adjacency from the internal cell graph. Same role as Phase 4 but
+at the region level: drives Phase 7's room grouping and corridor routing.
 
-Construction (per pair of regions sharing at least one atom-graph edge):
-
-```text
-Walk atom_graph edges. For each edge whose two atoms belong to
-DIFFERENT regions, accumulate the metadata under that (region_a,
-region_b) pair.
-```
-
-`door_capable_length` v1:
+Construction (per pair of regions sharing at least one internal-cell graph edge):
 
 ```text
-Recompute each cross-region atom contact as shared LineString segments.
-Group segments by direction (1° tolerance) and supporting line (1e-6m
-tolerance), then merge endpoint-contiguous intervals (1e-6m tolerance).
-The stored value is the longest merged straight run, clamped to
-shared_boundary_length.
+Walk the internal cell graph. For each edge whose two cells belong to
+DIFFERENT regions, accumulate metadata under that (region_a, region_b) pair.
 ```
 
 Edge metadata:
 
 ```text
-shared_boundary_length    sum of atom-edge shared_boundary_length
-door_capable_length       longest contiguous straight portion of the
-                          shared boundary, used for the ≥0.9m door
-                          gate downstream
+shared_boundary_length    sum of underlying cell-edge shared lengths
 centroid_distance         distance between region centroids
 same_theta_group          both regions share the same eff_theta
-exterior_contact          any underlying atom-edge endpoint lies on
+exterior_contact          any underlying cell-edge endpoint lies on
                           the footprint exterior
-hole_contact              any underlying atom-edge endpoint lies on
+hole_contact              any underlying cell-edge endpoint lies on
                           a hole boundary
 ```
 
@@ -517,7 +507,6 @@ RegionEdge(
     region_a: int,
     region_b: int,
     shared_boundary_length: float,
-    door_capable_length: float,
     centroid_distance: float,
     same_theta_group: bool,
     exterior_contact: bool,
@@ -537,8 +526,7 @@ build_region_graph(shape) is connected on simply-connected footprints
 hole-separated regions are NOT adjacent
 case 13 cross: each arm's regions are mutually adjacent only within arm
 case 17 ㅁ자 hole: regions wrap around the hole, all connected
-door_capable_length(R_a, R_b) ≤ shared_boundary_length(R_a, R_b)
-shared_boundary_length is symmetric (a,b) == (b,a)
+shared_boundary_length is positive on every edge
 ```
 
 ### Phase 7: Seeded Room Growth (algorithm-only sandbox)

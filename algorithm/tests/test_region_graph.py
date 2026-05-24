@@ -50,15 +50,13 @@ def test_region_edges_are_unique_ordered_and_bidirectionally_queryable():
         assert graph.edge_between(edge.region_b, edge.region_a) == edge
 
 
-def test_door_capable_length_is_bounded_by_shared_boundary():
+def test_region_edge_shared_boundaries_are_positive():
     case = selected_cases([1])[0][2]
     graph = build_region_graph(case)
 
     assert graph.edges
     for edge in graph.edges:
         assert edge.shared_boundary_length > 0
-        assert edge.door_capable_length > 0
-        assert edge.door_capable_length <= edge.shared_boundary_length + 1e-6
 
 
 def test_hole_separated_regions_are_not_directly_adjacent():

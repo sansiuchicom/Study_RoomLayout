@@ -1,25 +1,7 @@
-"""Shape gate for Phase 7 Round 4 growth.
-
-Three layered checks decide whether absorbing a candidate region keeps the
-room's shape within policy:
-
-  1. cross-theta — every region in the room must share a theta-group.
-  2. curved exemption — any region in a curved territory bypasses Layer 3.
-  3. reflex count + global L budget:
-       reflex(local-frame union) == 0  → always OK (rectangle)
-       reflex(local-frame union) >= 2  → never OK (T/U/Z/+/...)
-       reflex(local-frame union) == 1  → OK iff this room was already L,
-                                          or fewer than ``max_l_rooms`` other
-                                          rooms currently hold an L slot.
-
-A room that is already L can keep absorbing as long as the result stays
-reflex==1 — no new slot consumed. A room going L→rect (corner filled in)
-frees its slot at the next gate query.
-"""
+"""Reflex-shape helpers for room absorption."""
 
 from __future__ import annotations
 
-from typing import Callable
 
 import shapely.geometry as sg
 import shapely.geometry.polygon
@@ -27,7 +9,6 @@ import shapely.ops
 
 from .geometry import rotate_radians as _rotate, to_shapely as _to_shapely
 from .regionize import Region
-from .territory import Territory
 
 
 # Sentinel returned by ``_reflex_of_union`` when the union is empty or not a
@@ -60,13 +41,6 @@ def count_reflex_vertices(poly: sg.Polygon) -> int:
         if cross < -1e-9:
             count += 1
     return count
-
-
-def _to_local_polygon(region: Region) -> sg.Polygon:
-    poly = _to_shapely(region.shape)
-    if region.theta != 0.0:
-        poly = _rotate(poly, region.theta, sign=-1)
-    return poly
 
 
 def _reflex_of_union(
@@ -102,73 +76,3 @@ def _reflex_of_union(
         return 0
     return count_reflex_vertices(union)
 
-
-ShapeGate = Callable[
-    [int, tuple[int, ...], dict[int, tuple[int, ...]], dict[int, Region]],
-    bool,
-]
-
-
-def make_shape_gate(
-    territories: tuple[Territory, ...],
-    max_l_rooms: int,
-) -> ShapeGate:
-    """Build a stateless gate function bound to territory kinds + L budget.
-
-    The returned callable is pure — it queries ``rooms_state_before`` to
-    determine the current global L count, so the caller doesn't manage
-    slot state itself.
-    """
-    kind_by_part: dict[int, str] = {t.part_id: t.kind for t in territories}
-
-    def gate(
-        room_idx: int,
-        room_region_ids_after: tuple[int, ...],
-        rooms_state_before: dict[int, tuple[int, ...]],
-        regions_by_id: dict[int, Region],
-    ) -> bool:
-        if not room_region_ids_after:
-            return False
-
-        # Layer 1 — cross-theta
-        rs_after = [regions_by_id[rid] for rid in room_region_ids_after]
-        thetas = {round(r.theta, 9) for r in rs_after}
-        if len(thetas) > 1:
-            return False
-        theta = next(iter(thetas))
-
-        # Layer 2 — curved exemption
-        kinds = {kind_by_part.get(r.part_id, "axis_aligned") for r in rs_after}
-        if "curved" in kinds:
-            return True
-
-        # Layer 3 — reflex + L budget
-        new_reflex = _reflex_of_union(
-            room_region_ids_after, regions_by_id, theta
-        )
-        if new_reflex == 0:
-            return True
-        if new_reflex >= 2:
-            return False
-        # new_reflex == 1 (L shape)
-        before_ids = rooms_state_before.get(room_idx, ())
-        if before_ids:
-            before_theta = regions_by_id[before_ids[0]].theta
-            before_reflex = _reflex_of_union(
-                before_ids, regions_by_id, before_theta
-            )
-        else:
-            before_reflex = 0
-        if before_reflex == 1:
-            return True  # already L, no new slot consumed
-        # Going rect (or invalid) → L: count other rooms currently L.
-        other_l_count = 0
-        for idx, ids in rooms_state_before.items():
-            if idx == room_idx or not ids:
-                continue
-            other_theta = regions_by_id[ids[0]].theta
-            if _reflex_of_union(ids, regions_by_id, other_theta) == 1:
-                other_l_count += 1
-        return other_l_count < max_l_rooms
-
-    return gate

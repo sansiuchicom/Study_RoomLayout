@@ -32,9 +32,9 @@ from .region_graph import build_region_graph
 from .regionize import Region, regionize
 from .corridor import CorridoredLayout, carve_corridors
 from .growth_partition import region_partition_growth
+from .growth_seed import auto_place_seeds_by_cells
 from .room_growth import GrowthResult, LayoutFixture
 from .schema import ShapeInput, ShapePart, part_theta
-from .seed_placement import auto_place_seeds, territory_of_region
 from .territory import Territory, resolve_territories
 
 
@@ -553,9 +553,8 @@ def save_region_graph_figure(
     _finish_axis(ax, shape)
     n = len(graph.regions)
     m = len(graph.edges)
-    door_ready = sum(1 for e in graph.edges if e.door_capable_length >= 0.9)
     ax.set_title(
-        title or f"{shape.name}: {n} regions, {m} edges ({door_ready} door-ready)",
+        title or f"{shape.name}: {n} regions, {m} edges",
         fontsize=10,
     )
     fig.savefig(path, dpi=130, bbox_inches="tight")
@@ -982,11 +981,12 @@ def save_seed_figure(
         shape, atoms=atoms, regions=regions, policy=policy,
     )
     territories = resolve_territories(shape)
-    seeds = auto_place_seeds(
-        region_graph, territories, K=K, has_public=has_public,
+    seeds = auto_place_seeds_by_cells(
+        shape, region_graph, territories, K=K, has_public=has_public,
     )
 
     region_poly_by_id = {r.region_id: _to_shapely(r.shape) for r in regions}
+    territory_by_part = {t.part_id: t for t in territories}
 
     fig, ax = plt.subplots(figsize=(7, 6), constrained_layout=True)
 
@@ -1001,7 +1001,7 @@ def save_seed_figure(
 
     # 2. region tint by territory
     for r in regions:
-        terr = territory_of_region(r, territories)
+        terr = territory_by_part.get(r.part_id)
         color = (
             PART_COLORS[terr.part_id % len(PART_COLORS)]
             if terr is not None else "#dddddd"

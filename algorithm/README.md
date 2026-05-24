@@ -26,7 +26,8 @@ ShapeInput parts
 
 Atom
   Fine geometry/control unit, generated per part.
-  Used for corridor width, access routing, and precise footprint coverage.
+  Used for precise footprint coverage and as the substrate for region/contact
+  construction.
 
 Region
   Coarse block made from multiple atoms.
@@ -36,7 +37,8 @@ Room
   Final room group produced from regions.
 
 Corridor / Access
-  Routed primarily on the atom graph, because corridor width needs fine control.
+  Currently carved on the region graph. Atoms remain the fine geometric
+  substrate for region construction, contact metrics, and future width checks.
 ```
 
 `zone` is no longer the central concept. If used, it should only mean a debug or
@@ -106,8 +108,8 @@ Example:
    anchors.
 
 5. Atoms and regions have different jobs.
-   Atoms are fine enough for corridor/access. Regions are coarse enough to make
-   room grouping plausible.
+   Atoms preserve fine geometry and contact structure. Regions are coarse enough
+   for room grouping and current corridor carving.
 
 6. Visualization is mandatory.
    Every phase should have a diagnostic drawing before the next phase depends
@@ -329,7 +331,7 @@ vertex anchors appear as atom boundaries
 
 ### Phase 4: Atom Graph
 
-Build graph connectivity for atom grouping and corridor routing.
+Build graph connectivity for atom grouping and region adjacency construction.
 
 Edge metadata:
 
@@ -530,8 +532,8 @@ shared_boundary_length is symmetric (a,b) == (b,a)
 
 **Scope.** Given per-room seeds + role-based size/aspect constraints as
 external input, test how well an algorithm grows regions into "그럴듯한"
-room shapes. Layout, seed positioning, atom-level corridor carving —
-**all deferred to later phases**.
+room shapes. Layout, seed positioning, and corridor carving are **all deferred
+to later phases**.
 
 This phase is a sandbox for the **growth algorithm itself**, isolated
 from layout decisions. Domain knowledge does not enter the algorithm; it
@@ -543,7 +545,7 @@ Out of scope for Phase 7 (deferred):
 ```text
 hub designation               — fixture에서 implicit (public role 첫 방)
 seed positioning              — separate phase (manual / FPS / voronoi)
-corridor carving (atom 단위)  — Phase 8+ (atom-level fine geometry)
+corridor carving              — Phase 8 region-graph routing/carving
 door-capable boundary check   — validation phase
 repair / rectangularization   — proto3 Stage 12 격, 별도 phase
 ```
@@ -600,11 +602,9 @@ When a hub exists, growth must preserve **weak hub-connectivity**:
 > Every assigned room remains path-connected to the hub in the
 > region-graph induced subgraph over the rooms' assigned regions.
 
-This implements proto3 D011 (access-preserving atom growth) at the
-**region layer** — "moving through another room" is acceptable because
-this phase doesn't draw corridors. Atom-level **strong** hub-adjacency
-(each room walls-shares with hub directly or via corridor) is deferred
-to Phase 8+.
+This implements proto3 D011-style access preservation at the **region layer**
+— "moving through another room" is acceptable because this phase doesn't draw
+corridors. Strong hub/corridor adjacency is deferred to Phase 8.
 
 #### Public API (planned)
 
@@ -1077,9 +1077,9 @@ The current room-growth entrypoint is `region_partition_growth()` in
 `celllayout_tf/growth_partition.py`. The current corridor entrypoint is
 `carve_corridors()` in `celllayout_tf/corridor.py`.
 
-`growth_partition.py` is being split into portability-oriented helper modules.
+`growth_partition.py` has been split into portability-oriented helper modules.
 The entrypoint stays in `growth_partition.py`, while implementation helpers
-move in behavior-preserving slices:
+live in behavior-preserving slices:
 
 ```text
 growth_cells.py       # reflex vertices, vertex cells, point-to-cell mapping,
@@ -1094,6 +1094,18 @@ growth_partition.py   # orchestration: build graph, seed rooms, assign cells,
 `growth_cells.py`, `growth_seed.py`, and `growth_absorb.py` are extracted
 slices. `growth_partition.py` keeps compatibility imports for tests and local
 callers that currently exercise private helpers such as `_guillotine_partition`.
+
+`corridor.py` is now the Phase 8 entrypoint/orchestration module. Routing and
+supporting helpers live in focused modules:
+
+```text
+corridor_params.py    # routing cost/retry constants
+corridor_index.py     # region index/connectivity helpers
+corridor_path.py      # shortest path + room-damage simulation helpers
+corridor_stage1.py    # hub-radial base corridor routing
+corridor_stage2.py    # detour shortcut routing
+corridor.py           # CorridoredLayout, cleanup, carve_corridors
+```
 
 Testfield-only visualization phases in `demos/visualize_phase.py`:
 `input`, `territory`, `atom`, `graph`, `region`, `region_graph`, `seed`,

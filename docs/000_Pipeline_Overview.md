@@ -347,3 +347,74 @@ namespace, restarted at D001. Predecessor proto3 decisions are
 referenced as `proto3:DXXX` throughout this repo. The two are not the
 same numbering. See `000_Architecture_Decisions.md` §4 for the
 inherited-decision audit.
+
+---
+
+# 5. Step map
+
+Steps are *implementation roadmap units* per §4.1 — the order in which
+the repo is built. v1 ships at Step 07 completion (single-floor
+apartment with `run()` end-to-end + SVG viz). Steps 08–09 are explicitly
+post-v1.
+
+Workflow conventions follow `proto3:D015` (per-Step branch + per-work-
+item commit + no-squash merge) and `proto3:D016` (per-Step Plan +
+Tracker companion docs).
+
+## 5.1 Active Steps (v1)
+
+| # | Step | Core artifact | Definition of Done |
+|---|---|---|---|
+| **01** | Project skeleton | `pyproject.toml` + `src/<pkg>/__init__.py` + `tests/` scaffold + minimal CI | `pip install -e .` works; empty `pytest` run passes |
+| **02** | Core schema port | New contract types from D001 (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` / `ProgramRequest` / `SpaceUnitSpec` / `LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Role` / `FailureRecord`). Cell schema is **refactored in-place** to use the new types (no internal-vs-public schema split). | All types importable; instantiation + strict `Literal` validation tests pass (`proto3:D017` carry); Cell algorithm modules still compile against the unified schema |
+| **03** | Geometry pipeline port | Cell Phase 3–8 ported as one bundle: `atomize` / `atom_graph` / `regionize` / `region_graph` / `region_partition_growth` / `carve_corridors`. Phase modules become internal stage functions of the new pipeline. Vertical-anchor handling wired in (forbidden region during atomize). | 6 apartment fixtures from `archive/celllayout/` produce **byte-identical** stage outputs as golden regression tests; `target_atom_size = 0.3 m` defaults preserved |
+| **04** | Program layer port | proto3 `stages/stage01_program.py` + `stages/stage02_gate.py` ported. The 4 gates (`check_min_area` / `check_min_dim` / `check_access_schema` / `check_multi_floor_feasibility`) live in `constraints/gates.py`. `proto3:D020` / `D023` carry. | Program gate unit tests pass; `ProgramInstantiationFailure` + `DomainGateFailure` hierarchy round-trips through `FailureRecord` |
+| **05** | Target rules system | `TargetRules` dataclass + `target_rules/apartment.json` + `target_rules/README.md` + `target/rules_loader.py` + `TargetAdapter` (`proto3:D021` / `D022` carry) + `expand_program()` caller helper. Role↔usage mapping table lands here per D001 sub-choice. | `expand_program({"public": 1, "private": 3, ...}, "apartment")` returns a valid `ProgramRequest`; `apartment.json` validates against the loader; anchor `host_role` slot wired |
+| **06** | Entry point + labeling | `run(shape, program, *, seed) -> LabeledRoomLayout` assembled per D001. Per-floor outer loop, labeling stage (3.8) assigns final `Role` + carries `usage` + computes `area_m2` + runs gates. Failure path produces `valid=False` with non-empty `failure_records` (`proto3:D018` enforcement). | `run()` on each of 6 apartment fixtures returns `valid=True` matching golden `LabeledRoomLayout`; failure injection (e.g., infeasible program) returns `valid=False` with the right `FailureRecord` codes |
+| **07** | SVG visualization | proto3 `viz/svg.py` ported. Each stage (3.2–3.7) can emit an SVG overlay; final renderer composes the 12-layer stack from `proto3:D013`. Cell's matplotlib viz retained only as a development helper, not the canonical path. | All 6 fixtures produce 12-layer SVG output that lines up with golden; debug overlay opt-in via `RunConfig.debug_artifacts` flag |
+
+**v1 ship gate**: Step 07 complete = `run()` works on single-floor
+apartments end-to-end with SVG debug viz. No remote / external pipeline
+integration required for v1.
+
+## 5.2 Deferred Steps (post-v1)
+
+| # | Step | Activation trigger |
+|---|---|---|
+| **08** | ResearchBIM adapter (`adapters/researchbim.py`) | Activated when integrating with the `ResearchBIM_synthetic-bim` Stage 4 — drop-in replacement for `run_s04_core_bsp(...)` via `Building` / `Storey` mutation translation |
+| **09** | Multi-floor orchestrator | Activated when the first multi-floor target (house / hotel) is scoped. Wraps per-floor `run()` with vertical-anchor alignment + per-floor program allocation + cross-floor validation (D001 / D004) |
+
+## 5.3 Dependencies
+
+```text
+Step 01 (skeleton)
+  └─ Step 02 (schema) ←── blocks everything below
+      ├─ Step 03 (geometry pipeline)  ─┐
+      ├─ Step 04 (program layer)       ├── parallelizable across branches
+      │   └─ Step 05 (target rules)    │
+      │                                │
+      └─ Step 06 (entry point + labeling) ←── joins 03 / 04 / 05
+          └─ Step 07 (SVG viz)
+              └─ v1 ship ╳
+                  ├─ Step 08 (ResearchBIM adapter)   ── post-v1, independent
+                  └─ Step 09 (multi-floor orchestrator) ── post-v1, independent
+```
+
+Steps 03, 04, 05 may proceed on parallel branches once Step 02 lands;
+Step 06 is the join point. Steps 08–09 are independent of each other
+and can land in either order post-v1.
+
+## 5.4 Why not more granular Steps?
+
+`archive/celllayout/` Phase 1–8 already covers the full atomize →
+corridor-carve algorithm. The new repo's Step list does not need a Step
+per Phase — the port is mostly *file move + import rewrite + golden
+test*, and splitting per-Phase would multiply the Plan / Tracker
+overhead without producing meaningfully separable PRs. Step 03 bundles
+the six Phase ports behind a single golden-regression gate; if the
+gate breaks during a Phase port, the broken Phase is identifiable from
+test output, not from Step granularity.
+
+`proto3`'s 001–014 Step roadmap was sized for a *from-scratch* spine-
+first pipeline. Inheriting a validated algorithm collapses much of that
+scope.

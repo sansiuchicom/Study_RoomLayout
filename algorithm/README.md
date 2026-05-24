@@ -131,8 +131,8 @@ algorithm/
 │   ├── region_graph.py       # Region adjacency graph
 │   ├── layout_fixtures.py    # testfield-only 33 room-growth fixtures
 │   ├── room_growth.py        # Phase 7+ fixture/result data models
-│   ├── seed_placement.py     # Region-level seed placement helpers
-│   ├── shape_gate.py         # Reflex/L-slot shape gate helpers
+│   ├── seed_placement.py     # Shared seed placement helpers
+│   ├── shape_gate.py         # Reflex-shape helpers
 │   ├── growth_cells.py       # Cell construction + guillotine helpers
 │   ├── growth_seed.py        # Cell-aware seed placement helpers
 │   ├── growth_absorb.py      # Leftover absorption helpers
@@ -156,13 +156,26 @@ not a separate phase or module.
 ### Portable Core Boundary
 
 This repository is a testfield, but the algorithm is being kept portable for a
-later RoomLayout integration. The package root (`import celllayout_tf`) exports
-a lightweight subset of algorithm-core symbols and intentionally does not import
-showcase cases, local fixtures, visualization, or demos.
+later RoomLayout integration. The package root (`import celllayout_tf`) and
+`celllayout_tf.api` expose the same stable facade: high-level input/output data
+types plus the room-growth and corridor entry points. Lower-level atom, region
+graph, seed, and corridor-stage modules remain importable by exact module path
+for diagnostics/tests, but they are not part of the integration API.
 
-Portable algorithm core:
+Public import surface:
+
+```python
+from celllayout_tf import (
+    ShapeInput, ShapePart, DimensionPolicy,
+    RoomSpec, LayoutFixture, GrowthResult, CorridoredLayout,
+    region_partition_growth, carve_corridors,
+)
+```
+
+Portable implementation modules:
 
 ```text
+api.py
 schema.py
 dimensions.py
 geometry.py

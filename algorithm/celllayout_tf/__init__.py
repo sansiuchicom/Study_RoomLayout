@@ -1,39 +1,31 @@
-"""Portable RoomLayoutCell algorithm core exports."""
+"""Public RoomLayoutCell algorithm API."""
 
-from .atom_graph import AtomEdge, AtomGraph, build_atom_graph
-from .atomize import Atom, atomize
-from .dimensions import (
+from .api import (
+    CorridoredLayout,
     DimensionPolicy,
-    interval_positions,
-    is_quantum_aligned,
-    snap_length,
-    split_interval,
+    GrownRoom,
+    GrowthResult,
+    LayoutFixture,
+    Role,
+    RoomSpec,
+    ShapeInput,
+    ShapePart,
+    carve_corridors,
+    part_theta,
+    region_partition_growth,
 )
-from .region_graph import RegionEdge, RegionGraph, build_region_graph
-from .regionize import Region, regionize
-from .schema import ShapeInput, ShapePart, part_theta
-from .territory import Territory, part_kind, resolve_territories
 
 __all__ = [
     "ShapeInput",
     "ShapePart",
     "part_theta",
     "DimensionPolicy",
-    "split_interval",
-    "interval_positions",
-    "is_quantum_aligned",
-    "snap_length",
-    "Territory",
-    "part_kind",
-    "resolve_territories",
-    "Atom",
-    "atomize",
-    "AtomEdge",
-    "AtomGraph",
-    "build_atom_graph",
-    "Region",
-    "regionize",
-    "RegionEdge",
-    "RegionGraph",
-    "build_region_graph",
+    "Role",
+    "RoomSpec",
+    "LayoutFixture",
+    "GrownRoom",
+    "GrowthResult",
+    "CorridoredLayout",
+    "region_partition_growth",
+    "carve_corridors",
 ]

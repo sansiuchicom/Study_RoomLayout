@@ -1,0 +1,31 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+outputs/debug_runs/*
+!outputs/debug_runs/.gitkeep
+
+outputs/notebooks/*
+!outputs/notebooks/.gitkeep
+
+experiments/runs/*
+!experiments/runs/.gitkeep
+
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python build / packaging artifacts
+*.egg-info/
+build/
+dist/
+
+# IDE / tool work dirs
+.claude/
+
+# Notebook scratch
+.ipynb_checkpoints/
+
+.DS_Store

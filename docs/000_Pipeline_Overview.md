@@ -208,27 +208,142 @@ class LabeledRoom:
 
 # 3. Internal pipeline
 
-_To be written._ Inherited from the `archive/celllayout/` Phase 1–8 work:
+Per-stage operational view. Design rationale (why seed-first growth +
+post-hoc carving instead of spine-first) lives in D002. v1 algorithm
+executes this pipeline against **one floor at a time**; the multi-floor
+orchestrator that wraps this loop is a deferred concern (D001).
+
+## 3.1 Pipeline diagram
 
 ```text
-ShapeInput
-  → atomize          (per-territory cells, 50% merge rule)
-  → atom_graph
-  → regionize        (~3 m² atom clusters)
-  → region_graph
-  → region growth    (seed-first room growth)
-  → corridor carving (hub-radial A* + shortcut)
-  → labeling         (role assignment, validation)
-  → LabeledRoomLayout
+FloorShape (one floor) + ProgramRequest.floor_programs[level]
+  → 3.2 atomize            (Cell Phase 3)  → atoms
+  → 3.3 atom_graph         (Cell Phase 4)  → atom_graph
+  → 3.4 regionize          (Cell Phase 5)  → regions
+  → 3.5 region_graph       (Cell Phase 6)  → region_graph
+  → 3.6 region partition growth (Cell Phase 7)  → rooms (pre-carve)
+  → 3.7 corridor carving   (Cell Phase 8)  → rooms + corridor_polygons
+  → 3.8 labeling           → LabeledFloorLayout
+multi-floor outer loop  → assemble LabeledRoomLayout
 ```
 
-The growth-and-carving model replaces the predecessor proto3 spine-first model.
-See `D002`.
+## 3.2 atomize
+
+For each `ShapePart`, generate proportional atom cells targeting
+`target_atom_size ≈ 0.3 m` per side. Boundary cells whose
+intersection-area-fraction with the part is below 0.5 ("50 % rule") merge
+into the longest-shared-boundary neighbor. Inputs: `FloorShape.parts` +
+`DimensionPolicy`. Output: `list[Atom]` (~0.3 m² each).
+
+## 3.3 atom_graph
+
+Build atom adjacency graph with `shared_boundary_length` weighted edges.
+Inputs: atoms. Output: `atom_graph` (NetworkX).
+
+## 3.4 regionize
+
+Hierarchical slab-cut of atoms into ~3 m² regions (Cell tier sequence
+T1a / T1b / T2 / T3). Regions are **purely geometric** per D003 —
+no role hint, no kind field. Inputs: atoms + atom_graph. Output:
+`list[Region]`.
+
+## 3.5 region_graph
+
+Region-level adjacency graph (region–region shared boundary). Used as
+the substrate for seed-first growth. Inputs: regions. Output:
+`region_graph`.
+
+## 3.6 region partition growth
+
+Seed-first room growth across regions. Hub seed → growth fills the
+floor greedily by per-`Role` priority. `vertical_circulation` rooms are
+**not grown** (D004) — their polygon is the linked
+`VerticalAnchor.footprint_polygon` and they participate as fixed
+forbidden regions during growth. Inputs: regions + region_graph +
+`ProgramRequest.floor_programs[level]`. Output: preliminary `rooms`.
+
+## 3.7 corridor carving
+
+Two-stage carving (Cell Phase 8):
+
+- **Stage 1 — hub-radial A***: route paths from each
+  hub-disconnected room cluster back to the `hub` room.
+- **Stage 2 — detour shortcut**: add direct edges between hub-adjacent
+  rooms when the Stage 1 path is materially longer than the shortcut.
+
+Inputs: preliminary rooms + region_graph. Output: final rooms +
+`corridor_polygons`.
+
+## 3.8 labeling
+
+Assign final `Role` (already determined by seed program) + carry
+through `usage` to each room, compute `area_m2`, run `proto3:D020`
+domain feasibility gates (area / dim / access / multi-floor) and
+`proto3:D023` required-only summation. Inputs: rooms +
+`ProgramRequest`. Output: `LabeledFloorLayout` for this floor.
+
+The outer per-floor loop assembles all `LabeledFloorLayout`s into one
+`LabeledRoomLayout` (D001 §2.3).
+
+## 3.9 Cross-cutting concerns
+
+Per `proto3:D001` (carried): provenance, debug artifacts (SVG default
+per `proto3:D013`), `FailureRecord` accumulation, and seed propagation
+thread through every stage but are not stages themselves. They live in
+shared infrastructure modules invoked from each stage.
 
 ---
 
 # 4. Terminology
 
-_To be written._ Carry over the Step / Stage / Search Orchestrator /
-Cross-cutting Infrastructure / Target distinction from proto3 where it still
-applies, after the §4 audit in `000_Architecture_Decisions.md`.
+## 4.1 Process terms
+
+Carried from `proto3:D001` with one status change — Search Orchestrator
+is **deferred** in this repo (no orchestrator code exists yet; the
+audit marked `proto3:D008` / `D009` / `D010` as deferred together).
+
+| Term | Meaning | Status here |
+|---|---|---|
+| **Step** | Development roadmap unit. Order in which the repo is implemented. | Active — Step list to be derived in the next pass. |
+| **Stage** | Runtime pipeline unit. One transformation a single layout candidate undergoes (§3.2–3.8). | Active. |
+| **Search Orchestrator** | Control loop that runs the Stage pipeline repeatedly, manages candidates, retries, no-good records, search budget. | Deferred. |
+| **Cross-cutting Infrastructure** | Systems used across stages — provenance, debug artifacts, viz, RunConfig. | Active. |
+| **Target** | Building / spatial typology adapter (apartment / hotel / house / office / warehouse) — carries the `target_rules/<typology>.json` config (`proto3:D021` / `proto3:D022`). | Active. |
+
+Rules:
+
+- **Step ≠ Stage.** Step is implementation order; Stage is runtime
+  pipeline order. A Step may implement one Stage, several Stages, part
+  of a Stage, cross-cutting infrastructure, or future Search
+  Orchestrator scope.
+- **Candidate Search is not a Stage** (`proto3:D008` deferred carry).
+
+## 4.2 Geometric layers
+
+Triple-layer model per D003:
+
+| Layer | Typical size | Purpose |
+|---|---:|---|
+| `Atom` | ~0.3 m² | Finest geometric primitive. Per-part proportional cells. |
+| `Region` | ~3 m² | Atom cluster, **purely geometric** — no role, no kind. |
+| `Room` | variable | Architectural unit — carries `Role` and `usage`. |
+
+Numerical defaults from Cell `DimensionPolicy`:
+`target_atom_size = 0.3 m`, `geometry_snap = 0.01 m`,
+`module_quantum = 0.05 m`.
+
+## 4.3 Role taxonomy
+
+7-class `Role` per D004 — `public` / `private` / `service` / `wet` /
+`hub` / `corridor` / `vertical_circulation`. See D004 for the full
+table including per-role algorithm behavior, anchor binding rules,
+and the deferred-role registry (`storage` deferred, `outdoor`
+permanently excluded).
+
+## 4.4 Decision namespace
+
+This repo's D-series (`D001`, `D002`, ...) is the new repo's own
+namespace, restarted at D001. Predecessor proto3 decisions are
+referenced as `proto3:DXXX` throughout this repo. The two are not the
+same numbering. See `000_Architecture_Decisions.md` §4 for the
+inherited-decision audit.

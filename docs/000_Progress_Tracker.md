@@ -28,13 +28,16 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Repo scaffold done (2026-05-24). Two predecessor repos absorbed under
-archive/ with full git history (subtree merge). docs/ scaffold landed; no
-src/ tree yet.
+Phase-1 doc lock done (2026-05-24). New D-series D001–D004 accepted
+(external contract, seed-first growth, triple-layer geometry, 7-class
+role). proto3 D001–D023 audited (Carry 14 / Modify 3 / Drop 3 /
+Defer 3). Pipeline Overview now carries the typed contract sketches
+(§2) and per-stage operational narrative (§3) plus terminology (§4).
 
-Next: fill D001 / D002 / D003 (ShapeInput, drop spine-first, Region role
-relocation) in 000_Architecture_Decisions.md §3, then run the §4 audit of
-the inherited proto3 D001–D023.
+Next: derive the Step 01–N list given that archive/celllayout/ Phase
+1–8 already covers atomize → corridor carving. Then scaffold src/ per
+the public API boundary noted in archive/celllayout/PORTABLE_CORE.md
+and open the first Step plan per proto3:D015 / D016 workflow.
 ```
 
 ---
@@ -48,15 +51,23 @@ the inherited proto3 D001–D023.
 | 2026-05-24 | Subtree merge `archive/celllayout/` (history preserved) |
 | 2026-05-24 | GitHub remote `origin` connected, `main` pushed |
 | 2026-05-24 | `docs/000_*` scaffold |
+| 2026-05-24 | proto3 D001–D023 inherited-decision audit |
+| 2026-05-24 | D001–D004 contract lock + Pipeline §2 typed sketches |
+| 2026-05-24 | Pipeline §3 internal flow + §4 terminology |
 
 ---
 
 # 3. Next actions
 
-1. Fill `D001` / `D002` / `D003` in `000_Architecture_Decisions.md` §3.
-2. Run the proto3 D001–D023 audit in §4.
-3. Sketch the external contract types (`ShapeInput`, `ProgramRequest`,
-   `LabeledRoomLayout`) in `000_Pipeline_Overview.md` §2.
+1. Derive the Step 01–N list: given `archive/celllayout/` Phase 1–8
+   covers atomize → corridor carving, decide which Steps the new repo
+   needs (port Cell, port proto3 program / gates / target_rules layer,
+   wire `ShapeInput` / `ProgramRequest` / `LabeledRoomLayout` schema,
+   ResearchBIM adapter scope, etc.).
+2. Scaffold `src/<package>/` aligned with the public-API boundary
+   noted in `archive/celllayout/PORTABLE_CORE.md`.
+3. Open Step 01 plan per `proto3:D015` / `D016` (per-Step branch,
+   Plan + Tracker companion docs).
 
 ---
 

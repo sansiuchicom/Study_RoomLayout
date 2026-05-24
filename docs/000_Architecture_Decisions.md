@@ -453,3 +453,4 @@ scope" from "schema reach":
 |---|---|---|
 | 2026-05-24 | repo init | scaffold only — no decisions yet committed |
 | 2026-05-24 | §4 audit | proto3 D001–D023 audited: Carry 14 · Modify 3 · Drop 3 · Defer 3 |
+| 2026-05-24 | D001–D004 lock | Phase-1 D-series accepted — external contract, seed-first growth + corridor carving, triple-layer geometry, 7-class Role taxonomy |

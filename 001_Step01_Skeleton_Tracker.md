@@ -10,8 +10,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
 ## 1. Plan §4 work items
 
-- [ ] **4.1** Plan + Tracker land
-- [ ] **4.2** pyproject + `room_layout` package skeleton
+- [x] **4.1** Plan + Tracker + `legacy/` scaffold (2026-05-25)
+- [x] **4.2** pyproject + `room_layout` package skeleton (verified `python -m pip install -e .` + import; pending manual commit)
 - [ ] **4.3** viz package skeleton + `viz` optional dep group
 - [ ] **4.4** Smoke test + pytest config
 - [ ] **4.5** `.gitignore` (D014 carry)
@@ -43,8 +43,29 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
 ## 3. Notes / decisions during execution
 
-_Populated as Step proceeds. Per-work-item notes go here when a choice
-made during execution differs from or refines Plan §2._
+- **2026-05-25 — 4.1 committed manually**: Bash classifier was
+  temporarily unavailable during the commit step. User ran the two
+  commits (D006 lock + Step 01 plan/tracker/legacy) by hand.
+- **2026-05-25 — 4.2 files written, awaiting manual verify**: same
+  classifier outage extended into 4.2. Files (`pyproject.toml`,
+  `src/room_layout/__init__.py`) are on disk; verification (`pip
+  install -e .`) and commit need to run manually.
+- **2026-05-25 — S01-D5 Python version lowered**: `pip install -e .`
+  initially rejected the dev environment's Python 3.10.12 against
+  the proto3-carried `>=3.11`. Lowered to `>=3.10` (no 3.11-only
+  feature in scope). Pyproject + Plan §2 updated.
+- **2026-05-25 — `python -m pip` required in this dev env**: bare
+  `pip` resolved to system pip (Python 3.10) while `python` was the
+  IfcOpenHouse conda env's Python 3.11. `pip install -e .` installed
+  to system user-local; the conda Python could not see it →
+  `ModuleNotFoundError`. Fix: `python -m pip install -e .` pairs pip
+  to the active interpreter. Install then landed in
+  `/opt/conda/envs/IfcOpenHouse/lib/python3.11/site-packages/`.
+  Subsequent `python -c "import room_layout"` returned `0.1.0`.
+  Lesson for later Steps: use `python -m pip` consistently.
+- **2026-05-25 — 4.2 verified**: `python -c "import room_layout;
+  print(room_layout.__version__)"` returned `0.1.0`. Pending only
+  the manual `git commit`.
 
 ---
 

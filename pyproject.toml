@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "room_layout"
+version = "0.1.0"
+description = "Room layout generation component for the PlanBIM synthetic-BIM training-data pipeline."
+requires-python = ">=3.10"
+dependencies = [
+    "shapely>=2.0",
+    "numpy>=1.24",
+    "networkx>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+# Work item 4.3 will add a `viz` extra (matplotlib).
+# Work item 4.4 will add [tool.pytest.ini_options].
+# Work item 4.6 will add [tool.ruff].
+
+[tool.setuptools.packages.find]
+where = ["src"]

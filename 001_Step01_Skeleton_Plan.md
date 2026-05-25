@@ -53,7 +53,7 @@ Cross-references:
 | **S01-D2** | Plan / Tracker location | Repo root (`001_Step01_*_Plan.md` + Tracker), per `proto3:D016` convention. `docs/000_*` reserved for canonical global docs. |
 | **S01-D3** | Branch policy | `main` direct, per D005 — none of the four triggers fire (≤ 8 small commits, no regression risk, single-module scope, no design pivot expected). |
 | **S01-D4** | pyproject build backend | `setuptools>=68` — carried from `archive/proto3/pyproject.toml`. No reason to switch. |
-| **S01-D5** | Python version | `>=3.11` (proto3 carry). |
+| **S01-D5** | Python version | `>=3.10`. proto3 carried `>=3.11`; lowered to `>=3.10` (2026-05-25) after `pip install -e .` rejected the dev environment's Python 3.10.12. Nothing in our scope requires 3.11-only features (union `X \| Y`, dataclass, NetworkX, shapely all run on 3.10). Re-tighten to 3.11 only if a concrete 3.11-only feature lands. |
 | **S01-D6** | Linter / formatter | `ruff` (lint + format) — Python standard, single tool. proto3 had no lint config; this fills the gap. |
 | **S01-D7** | CI provider | GitHub Actions, single workflow `.github/workflows/ci.yml`. |
 | **S01-D8** | Runtime deps | `shapely>=2.0`, `numpy>=1.24`, `networkx>=3.0` (Cell's atom_graph / region_graph). `matplotlib` is NOT a runtime dep — moved to `viz` extra (see S01-D9). |

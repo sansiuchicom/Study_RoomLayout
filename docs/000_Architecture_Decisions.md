@@ -343,6 +343,122 @@ Reason:
 
 ---
 
+## D006 — Output directory convention
+
+Status: Accepted
+Type: Cross-cutting / repo convention
+Date: 2026-05-25
+Carries: `proto3:D014` (debug outputs out of version control)
+
+Decision:
+
+Three categories of generated output, each with a dedicated location:
+
+| Category | Location | Committed? | Lifetime |
+|---|---|---|---|
+| Test golden artifacts | `tests/golden/<fixture_name>/` | ✅ Yes | versioned with code (regression contract) |
+| Per-run debug artifacts | `outputs/debug_runs/<run_id>/` | ❌ No (`proto3:D014` carry) | per-run, ephemeral |
+| One-off viz / reports | `outputs/viz/` | ❌ No | ephemeral |
+| Experimental / exploratory | `experiments/notebooks/` (jupyter) or `experiments/runs/` (CLI sandbox) | ❌ No | ephemeral |
+
+The `outputs/`, `experiments/`, and `tests/golden/` parent directories
+exist as `.gitkeep` placeholders from Step 01. Subdirectories within
+them are created at runtime by the producing code.
+
+### Per-stage layout within `outputs/debug_runs/<run_id>/`
+
+Each stage's output is persisted as `NN_<stage_id>.{json,png}`, where
+`NN` is the stage index (two-digit, zero-padded). Lexicographic sort
+then equals pipeline order. The final layout and the composite
+animation land at the run root:
+
+```text
+outputs/debug_runs/seed42_2026-05-25T14-30-00/
+├── manifest.json                  # run metadata (see below)
+├── 00_input.json                  # ShapeInput + ProgramRequest serialized
+├── 01_atomize.json
+├── 01_atomize.png
+├── 02_atom_graph.json
+├── 02_atom_graph.png
+├── 03_regionize.json
+├── 03_regionize.png
+├── 04_region_graph.json
+├── 04_region_graph.png
+├── 05_growth.json
+├── 05_growth.png
+├── 06_corridors.json
+├── 06_corridors.png
+├── 07_labeling.json
+├── 07_labeling.png
+├── final.json                     # LabeledRoomLayout serialized
+├── final.png                      # canonical final viz
+└── pipeline.gif                   # 01–07 PNGs composed as GIF frames
+```
+
+### `manifest.json` schema
+
+```json
+{
+  "seed": 42,
+  "fixture_name": "apt_06_2bed",        // null for arbitrary input
+  "git_commit": "1afc368",              // null when dirty / unknown
+  "config": { /* serialized RunConfig */ },
+  "started_at": "2026-05-25T14:30:00Z",
+  "ended_at":   "2026-05-25T14:30:03Z",
+  "duration_ms": 3142,
+  "package_version": "0.1.0"
+}
+```
+
+The folder name (`<run_id>`) is kept short and sortable; the manifest
+inside carries the full context. Anyone investigating a debug run can
+trace back to the exact commit, seed, and config from `manifest.json`
+without parsing the folder name.
+
+### Run ID format
+
+- **Default**: `seed<N>_<isoformat-utc-no-colons>` — e.g.,
+  `seed42_2026-05-25T14-30-00`. Sorts chronologically; same code +
+  same seed re-run produces a *new* folder (preserves history for
+  diff).
+- **Caller override**: `run_id: str | None = None` keyword on the
+  debug-run CLI helper. When set, replaces the default folder name
+  (useful for presentation snapshots or comparison demos).
+- **Test golden** uses a different naming scheme — golden directories
+  are named by fixture (`tests/golden/<fixture_name>/`) and contain the
+  same stage-file layout, but with a minimal `manifest.json` pinning
+  the expected `package_version` instead of run timing data. Golden
+  files are *part of the spec*, not per-run trace.
+
+### Implementation lands later
+
+- **Step 06 (entry point + labeling)** — implements the `on_stage`
+  callback hook, `StageOutput` dataclass, JSON serializers, and the
+  `manifest.json` writer.
+- **Step 07 (SVG viz)** — canonical PNG/SVG renderer per stage plus
+  `make_gif()` composition helper. Adds `pillow` or `imageio` to the
+  `viz` extra dep.
+- **Step 03 (geometry port)** — brings Cell's matplotlib renderers as
+  the development-bridge viz path until Step 07 ships canonical SVG.
+
+Reason:
+
+- `proto3:D014` says "debug outputs stay out of version control" but
+  does not say *where they go*. This decision fills the gap with an
+  explicit taxonomy so each output-producing Step knows the destination.
+- Separating `tests/golden/` (committed regression contract) from
+  `outputs/` (gitignored trace data) prevents accidental commits of
+  per-run noise and accidental gitignore of golden tests.
+- The `NN_<stage_id>` prefix makes a lexicographic file listing into
+  a pipeline timeline — any debugger or viz tool just sorts files.
+- `manifest.json` keeps folder names short while preserving full
+  reproducibility context (commit, seed, config, timing).
+- Per-stage outputs share their format between regression golden tests
+  and `pipeline.gif` frames — single source of truth for "what each
+  stage produced."
+
+---
+
 # 4. Inherited-decision audit (proto3 D001–D023)
 
 The proto3 D-series is the framework decision record for the `archive/proto3/`
@@ -524,3 +640,4 @@ Reclassified 2026-05-25 from Carry to Modify when D005 landed:
 | 2026-05-24 | §4 audit | proto3 D001–D023 audited: Carry 14 · Modify 3 · Drop 3 · Defer 3 |
 | 2026-05-24 | D001–D004 lock | Phase-1 D-series accepted — external contract, seed-first growth + corridor carving, triple-layer geometry, 7-class Role taxonomy |
 | 2026-05-25 | D005 lock | Solo-mode workflow — default to `main`, branch only on size / risk triggers. `proto3:D015` audit verdict moved Carry → Modify (audit summary now Carry 13 · Modify 4 · Drop 3 · Defer 3). |
+| 2026-05-25 | D006 lock | Output directory convention — 3 categories (test golden / debug runs / experiments), `NN_<stage_id>.{json,png}` per-stage layout, `manifest.json` schema, `seed<N>_<isoformat-utc>` run-id default. Carries `proto3:D014`. |

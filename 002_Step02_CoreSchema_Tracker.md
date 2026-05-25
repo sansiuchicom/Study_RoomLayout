@@ -19,29 +19,29 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`) — committed 2026-05-25; full round-trip green for all 6 input + 4 output dataclasses (via JSON); strict rejection paths (extra key / missing required / bad Literal / bool-as-numeric) verified; 4.3 `LinearRing.area` bug surfaced + fixed via shoelace; `ruff` + `pytest` green
 - [x] **4.7** Cross-reference validators (`validate_input(shape, program)`) — committed 2026-05-25; 4 stable codes (3 errors + 1 warning); happy path + each code's trigger + multi-failure accumulation + WARN-prefix consumer split verified; `ruff` + `pytest` green
 - [x] **4.8** Schema unit tests (6 `test_schema_*.py` files) — committed 2026-05-25; 89 schema tests + 3 carry-over smoke = **92 passed in 0.16s**; covers Plan §1 DoD items 2–11 (frozen / __post_init__ / orientation / kind↔host_role / corridor reject / anchor_id rule / strict Literal / round-trip / cross-ref codes / DomainGateFailure hierarchy); `ruff` + `pytest` green
-- [ ] **4.9** Step close + `git merge --no-ff step02-coreschema` to `main`
+- [ ] **4.9** Step close + `git merge --no-ff step02-coreschema` to `main` (chore commit prepared 2026-05-25; pending `git push` → CI green → merge → CI green on `main`)
 
 ---
 
 ## 2. Definition of Done checklist
 
-- [ ] All schema types importable from `room_layout.schema`
-- [ ] Input dataclasses `frozen=True`; output dataclasses mutable
-- [ ] `__post_init__` structural validation enforced (incl. orientation, kind↔host_role, anchor_id rule)
-- [ ] `ShapePart` exterior CCW + holes CW enforced
-- [ ] `SpaceUnitSpec.__post_init__` raises `ValueError` when `role == "corridor"` (S02-D9 single-Role design)
-- [ ] `VerticalAnchor.kind` ↔ `host_role` consistency enforced
-- [ ] `SpaceUnitSpec.anchor_id` required when `role == "vertical_circulation"`
-- [ ] `from_dict` raises `ValueError` on out-of-range `Literal` (`proto3:D017`)
-- [ ] `to_dict` / `from_dict` round-trip equality verified per dataclass
-- [ ] `validate_input` returns `list[FailureRecord]` with stable `code` per failure mode
-- [ ] `DomainGateFailure` + subclasses match `proto3:D020` pattern
-- [ ] `python -m pytest` green
-- [ ] `ruff check .` + `ruff format --check .` green
-- [ ] CI green on `step02-coreschema` branch
-- [ ] CI green on `main` after no-ff merge
-- [ ] Viz status documented: Step 02 produces no viz output (schema only)
-- [ ] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated to reflect close + Step 03 kickoff
+- [x] All schema types importable from `room_layout.schema` (and from top-level `room_layout`, per Plan §5 re-export default)
+- [x] Input dataclasses `frozen=True`; output dataclasses mutable (test_schema_geometry / _program / _output verify both)
+- [x] `__post_init__` structural validation enforced (incl. orientation, kind↔host_role, anchor_id rule)
+- [x] `ShapePart` exterior CCW + holes CW enforced
+- [x] `SpaceUnitSpec.__post_init__` raises `ValueError` when `role == "corridor"` (S02-D9 single-Role design)
+- [x] `VerticalAnchor.kind` ↔ `host_role` consistency enforced
+- [x] `SpaceUnitSpec.anchor_id` required when `role == "vertical_circulation"`
+- [x] `from_dict` raises `ValueError` on out-of-range `Literal` (`proto3:D017`)
+- [x] `to_dict` / `from_dict` round-trip equality verified per dataclass
+- [x] `validate_input` returns `list[FailureRecord]` with stable `code` per failure mode
+- [x] `DomainGateFailure` + subclasses match `proto3:D020` pattern
+- [x] `python -m pytest` green (92 passed locally)
+- [x] `ruff check .` + `ruff format --check .` green
+- [ ] CI green on `step02-coreschema` branch (pending `git push`)
+- [ ] CI green on `main` after no-ff merge (pending merge)
+- [x] Viz status documented: Step 02 produces no viz output (schema only) — S02-D13 in Plan §2
+- [x] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated to reflect close + Step 03 kickoff
 
 ---
 
@@ -124,6 +124,52 @@ _Per-work-item notes from 4.2 onward go below._
 
 ## 4. Close summary
 
-_Populated at Step close (work item 4.9). One-paragraph retro: what
-was actually built, any surprises, any items pushed forward to a later
-Step._
+**What was built (2026-05-25, single-day Step).** The full D001
+external-contract schema landed in
+`src/room_layout/schema/` across 6 modules — `geometry.py`,
+`program.py`, `output.py`, `failure.py`, `serialize.py`,
+`validators.py` — plus a re-export from top-level `room_layout`
+(Plan §5 default). All 12 input/output dataclasses are typed per
+Pipeline §2: input types `frozen=True`, output types mutable. Six
+`test_schema_*.py` files exercise the schema at 92 tests passing in
+0.16 s. The strict-Literal + extra-key contract on
+`from_dict` (proto3:D017 + 4.6 (a) decision) is exercised at every
+deserialization boundary. Cross-reference validation
+(`validate_input`) emits 4 stable failure codes including one
+warning (`WARN_ANCHOR_UNUSED`); severity is communicated via the
+`WARN_` code prefix rather than a `FailureRecord.severity` field
+(4.7 (1) decision — preserves the schema as locked at 4.5).
+
+**Surprises.** One latent bug from 4.3 was caught in 4.6:
+`shapely.geometry.polygon.LinearRing.area` is always `0` (a
+`LinearRing` is a 1-D curve in shapely's geometry model, not a 2-D
+region), so the original `_validate_ring` degeneracy check fired
+for every input — but the 4.3 verification only ran `import` +
+`pytest`, never instantiated a `ShapePart`, so the bug slept. Fix:
+replaced `LinearRing.area == 0` with hand-rolled shoelace
+`_signed_area(ring)` (which also folds in the orientation sign,
+collapsing two checks into one computation). The lesson for Step 03
+onward: smoke verification per work item must actually instantiate
+the type, not just import it.
+
+**Deferred forward.** (1) The inverse-anchor-id check
+(`SpaceUnitSpec.anchor_id is not None` ⇒ `role ==
+"vertical_circulation"`) is *not* enforced in `__post_init__` — a
+`(role="public", anchor_id="stair_1")` spec passes today's
+validation. Surfaced in §3 4.7 note; Step 03+ may catch via
+algorithm-level checks, or a `__post_init__` line can be added
+later if it becomes a real problem. (2) Bowtie self-intersection
+gets the "zero signed area" rejection message rather than
+"self-intersecting" because a symmetric bowtie's shoelace cancels
+to 0 — functionally still rejected, diagnostic precision is the
+minor cost. (3) Forward-compat `strict=False` flag on `from_dict`
+deliberately not added; gateway when first old saved-data client
+appears.
+
+**Step 03 sets up cleanly.** With schema locked, Step 03 (Geometry
+pipeline port) can move Cell `archive/celllayout/algorithm/
+celllayout_tf/` modules into `src/room_layout/stages/` and
+refactor their internal schema references to
+`from room_layout.schema import ...` (S02-D8 semantic migration).
+The 4.6 strict-Literal contract means Cell fixtures need to be
+coerced through the new path on entry.

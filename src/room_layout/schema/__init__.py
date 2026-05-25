@@ -63,6 +63,10 @@ from room_layout.schema.serialize import (
     to_dict,
     to_json,
 )
+from room_layout.schema.validators import (
+    WARN_PREFIX,
+    validate_input,
+)
 
 __all__ = [
     "AccessSchemaFailure",
@@ -86,10 +90,12 @@ __all__ = [
     "VerticalAnchor",
     "VerticalAnchorHostRole",
     "VerticalAnchorKind",
+    "WARN_PREFIX",
     "coords_to_polygon",
     "from_dict",
     "from_json",
     "polygon_to_coords",
     "to_dict",
     "to_json",
+    "validate_input",
 ]

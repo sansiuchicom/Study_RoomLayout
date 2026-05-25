@@ -17,7 +17,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.4** Program types (`ProgramRequest` / `SpaceUnitSpec` / `Role`) — committed 2026-05-25; 8/8 `__post_init__` paths verified; `ruff` + `pytest` green
 - [x] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy) — committed 2026-05-25; mutability + exception-hierarchy raise/catch verified; `ruff` + `pytest` green
 - [x] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`) — committed 2026-05-25; full round-trip green for all 6 input + 4 output dataclasses (via JSON); strict rejection paths (extra key / missing required / bad Literal / bool-as-numeric) verified; 4.3 `LinearRing.area` bug surfaced + fixed via shoelace; `ruff` + `pytest` green
-- [ ] **4.7** Cross-reference validators (`validate_input(shape, program)`)
+- [x] **4.7** Cross-reference validators (`validate_input(shape, program)`) — committed 2026-05-25; 4 stable codes (3 errors + 1 warning); happy path + each code's trigger + multi-failure accumulation + WARN-prefix consumer split verified; `ruff` + `pytest` green
 - [ ] **4.8** Schema unit tests (6 `test_schema_*.py` files)
 - [ ] **4.9** Step close + `git merge --no-ff step02-coreschema` to `main`
 
@@ -82,6 +82,22 @@ _Per-work-item notes from 4.2 onward go below._
   with hand-rolled shoelace `_signed_area(ring)` (also folds in the
   orientation sign — `area > 0 ⇔ CCW`), so the same computation
   serves both the degeneracy and orientation checks.
+
+- **2026-05-25 — 4.7 decisions + future gap**: (1) Warning vs
+  error distinguished by code prefix (`WARN_`) rather than a
+  `severity` field on `FailureRecord` — chosen to preserve the
+  4.5-locked `FailureRecord` schema and Plan §4.7 `-> list[FailureRecord]`
+  signature. Module-level `WARN_PREFIX = "WARN_"` exported so consumers
+  filter consistently. Migrate to `severity` field if warning categories
+  exceed ~5 (currently 1). (2) **Known gap not in Plan §4.7**: the
+  inverse check "`SpaceUnitSpec.anchor_id is not None` ⇒
+  `role == 'vertical_circulation'`" is *not* enforced (only the
+  forward direction is, in `SpaceUnitSpec.__post_init__`). Means a
+  spec like `(role='public', anchor_id='stair_1')` passes structural
+  + cross-ref validation today even though it's semantically wrong.
+  Surfaced for the record; deferred — Step 03+ may catch via
+  algorithm-level checks, or add a `__post_init__` line in a later
+  Step if it becomes a real problem.
 
 - **2026-05-25 — 4.6 decisions**: (a) `from_dict` rejects unknown
   extra keys (`ValueError`). Reconsidered from initial "ignore"

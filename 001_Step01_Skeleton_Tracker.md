@@ -13,9 +13,9 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.1** Plan + Tracker + `legacy/` scaffold (2026-05-25)
 - [x] **4.2** pyproject + `room_layout` package skeleton (committed 2026-05-25, `feat(step01): scaffold pyproject + room_layout package`)
 - [x] **4.3** viz package skeleton + `viz` optional dep group (committed 2026-05-25, `d6e68dc`)
-- [ ] **4.4** Smoke test + pytest config (files written; pending manual `pytest` + commit)
+- [x] **4.4** Smoke test + pytest config (committed 2026-05-25; 3 tests pass)
 - [x] **4.5** `.gitignore` + output directory scaffold (committed 2026-05-25, `c8aa06b`) — *executed ahead of 4.4*
-- [ ] **4.6** ruff config + initial lint clean
+- [ ] **4.6** ruff config + initial lint clean (files written; pending manual `ruff check . && ruff format --check .` + commit)
 - [ ] **4.7** GitHub Actions CI workflow
 - [ ] **4.8** Step close — update Progress Tracker
 

@@ -23,11 +23,35 @@ viz = [
     # Step 07 will add `pillow` or `imageio` for `make_gif()` here.
 ]
 
-# Work item 4.6 will add [tool.ruff].
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.ruff]
+target-version = "py310"
+src = ["src", "tests"]
+line-length = 100
+# `archive/` is the read-only predecessor-repo snapshot — never lint it.
+# `outputs/` and `experiments/` are gitignored runtime directories.
+# `legacy/` is the Step-archive target (also read-only after archival).
+extend-exclude = [
+    "archive",
+    "outputs",
+    "experiments",
+    "legacy",
+]
+
+[tool.ruff.lint]
+# Built-in defaults already cover E (pycodestyle) + F (pyflakes).
+# Additions:
+extend-select = [
+    "I",   # isort — import sorting
+    "UP",  # pyupgrade — modern Python syntax
+    "W",   # pycodestyle warnings
+]
+
+[tool.ruff.format]
+quote-style = "double"

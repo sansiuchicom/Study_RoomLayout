@@ -26,6 +26,13 @@ References:
 Re-exports are populated in subsequent work items (4.3 onward).
 """
 
+from room_layout.schema.failure import (
+    AccessSchemaFailure,
+    AreaGateFailure,
+    DimGateFailure,
+    DomainGateFailure,
+    FailureRecord,
+)
 from room_layout.schema.geometry import (
     FloorShape,
     Point,
@@ -36,6 +43,13 @@ from room_layout.schema.geometry import (
     VerticalAnchorHostRole,
     VerticalAnchorKind,
 )
+from room_layout.schema.output import (
+    Door,
+    DoorKind,
+    LabeledFloorLayout,
+    LabeledRoom,
+    LabeledRoomLayout,
+)
 from room_layout.schema.program import (
     ProgramRequest,
     Role,
@@ -43,7 +57,17 @@ from room_layout.schema.program import (
 )
 
 __all__ = [
+    "AccessSchemaFailure",
+    "AreaGateFailure",
+    "DimGateFailure",
+    "DomainGateFailure",
+    "Door",
+    "DoorKind",
+    "FailureRecord",
     "FloorShape",
+    "LabeledFloorLayout",
+    "LabeledRoom",
+    "LabeledRoomLayout",
     "Point",
     "ProgramRequest",
     "Ring",

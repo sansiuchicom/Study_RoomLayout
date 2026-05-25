@@ -15,7 +15,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.2** Schema subpackage scaffold (committed 2026-05-25, `22b264b`; `python -c "import room_layout.schema"` verified green)
 - [x] **4.3** Geometry types (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` + `Ring`, `Point`) — committed 2026-05-25; `ruff` + `pytest` green locally
 - [x] **4.4** Program types (`ProgramRequest` / `SpaceUnitSpec` / `Role`) — committed 2026-05-25; 8/8 `__post_init__` paths verified; `ruff` + `pytest` green
-- [ ] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy)
+- [x] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy) — committed 2026-05-25; mutability + exception-hierarchy raise/catch verified; `ruff` + `pytest` green
 - [ ] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`)
 - [ ] **4.7** Cross-reference validators (`validate_input(shape, program)`)
 - [ ] **4.8** Schema unit tests (6 `test_schema_*.py` files)

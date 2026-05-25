@@ -11,10 +11,10 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 ## 1. Plan §4 work items
 
 - [x] **4.1** Plan + Tracker + `legacy/` scaffold (2026-05-25)
-- [x] **4.2** pyproject + `room_layout` package skeleton (verified `python -m pip install -e .` + import; pending manual commit)
-- [ ] **4.3** viz package skeleton + `viz` optional dep group
-- [ ] **4.4** Smoke test + pytest config
-- [ ] **4.5** `.gitignore` (D014 carry)
+- [x] **4.2** pyproject + `room_layout` package skeleton (committed 2026-05-25, `feat(step01): scaffold pyproject + room_layout package`)
+- [x] **4.3** viz package skeleton + `viz` optional dep group (committed 2026-05-25, `d6e68dc`)
+- [ ] **4.4** Smoke test + pytest config — *deferred until after 4.5* (clean tree first so pytest cache stays ignored from the start)
+- [ ] **4.5** `.gitignore` + output directory scaffold (D006 + D014 carry) — *moved ahead of 4.4*
 - [ ] **4.6** ruff config + initial lint clean
 - [ ] **4.7** GitHub Actions CI workflow
 - [ ] **4.8** Step close — update Progress Tracker
@@ -66,6 +66,12 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - **2026-05-25 — 4.2 verified**: `python -c "import room_layout;
   print(room_layout.__version__)"` returned `0.1.0`. Pending only
   the manual `git commit`.
+- **2026-05-25 — 4.5 moved before 4.4**: user noticed `__pycache__/`
+  and `room_layout.egg-info/` in `git status` after `4.3` install.
+  Doing `.gitignore` + output-dir scaffold first keeps the working
+  tree clean before `pytest` adds `.pytest_cache/` in 4.4. Plan §4
+  ordering left as canonical; Tracker §1 reflects the actual
+  execution order.
 
 ---
 

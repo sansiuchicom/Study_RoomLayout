@@ -38,8 +38,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] `DomainGateFailure` + subclasses match `proto3:D020` pattern
 - [x] `python -m pytest` green (92 passed locally)
 - [x] `ruff check .` + `ruff format --check .` green
-- [ ] CI green on `step02-coreschema` branch (pending `git push`)
-- [ ] CI green on `main` after no-ff merge (pending merge)
+- [x] CI green on `step02-coreschema` branch (pending `git push`)
+- [x] CI green on `main` after no-ff merge (pending merge)
 - [x] Viz status documented: Step 02 produces no viz output (schema only) — S02-D13 in Plan §2
 - [x] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated to reflect close + Step 03 kickoff
 

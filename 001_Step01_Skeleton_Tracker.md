@@ -16,27 +16,27 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.4** Smoke test + pytest config (committed 2026-05-25; 3 tests pass)
 - [x] **4.5** `.gitignore` + output directory scaffold (committed 2026-05-25, `c8aa06b`) — *executed ahead of 4.4*
 - [x] **4.6** ruff config + initial lint clean (committed 2026-05-25 after adding `archive/`/`outputs/`/`experiments/`/`legacy/` to `extend-exclude`)
-- [ ] **4.7** GitHub Actions CI workflow (`.github/workflows/ci.yml` written; pending push + CI green)
-- [ ] **4.8** Step close — update Progress Tracker
+- [x] **4.7** GitHub Actions CI workflow (committed 2026-05-25; first CI run `26391806249` green in 16 s on `main`)
+- [x] **4.8** Step close — Progress Tracker §1 / §2 / §3 updated, DoD checklist below complete
 
 ---
 
 ## 2. Definition of Done checklist
 
-- [ ] `pip install -e .` succeeds locally
-- [ ] `python -c "import room_layout"` works
-- [ ] `python -c "import room_layout.viz"` works (placeholder)
-- [ ] `pytest` passes (≥ 1 test)
-- [ ] `ruff check .` passes
-- [ ] `ruff format --check .` passes
-- [ ] GitHub Actions CI green on `main`
-- [ ] `.gitignore` excludes pycache / `.venv` / outputs / caches
-- [ ] Output directory scaffold present (D006) — `outputs/{debug_runs,viz}/`,
+- [x] `pip install -e .` succeeds locally
+- [x] `python -c "import room_layout"` works
+- [x] `python -c "import room_layout.viz"` works (placeholder)
+- [x] `pytest` passes (≥ 1 test)
+- [x] `ruff check .` passes
+- [x] `ruff format --check .` passes
+- [x] GitHub Actions CI green on `main`
+- [x] `.gitignore` excludes pycache / `.venv` / outputs / caches
+- [x] Output directory scaffold present (D006) — `outputs/{debug_runs,viz}/`,
       `experiments/{notebooks,runs}/`, `tests/golden/` each with `.gitkeep`
-- [ ] `legacy/.gitkeep` exists (`proto3:D016` archive target)
-- [ ] `docs/000_Progress_Tracker.md` §1 + §2 updated
-- [ ] All Plan §4 items checked above
-- [ ] Visualization status documented (Step 01: no viz output —
+- [x] `legacy/.gitkeep` exists (`proto3:D016` archive target)
+- [x] `docs/000_Progress_Tracker.md` §1 + §2 updated
+- [x] All Plan §4 items checked above
+- [x] Visualization status documented (Step 01: no viz output —
       scaffold-only; placeholder `room_layout.viz` package created)
 
 ---
@@ -79,11 +79,68 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
   down). Followed up `c8aa06b` (`.gitignore` landed) with `828d40b`:
   `git rm -r --cached` on both build-artifact dirs. gitignore now
   prevents recurrence. Not a Plan §4 item — side-fix commit.
+- **2026-05-25 — ruff scanned `archive/`**: first `ruff check .` ran
+  on `archive/proto3/` + `archive/celllayout/` and reported 291
+  errors in the predecessor codebases (mostly I001 import-sort).
+  Fix: added `extend-exclude = ["archive", "outputs", "experiments",
+  "legacy"]` to `[tool.ruff]`. archive is read-only; we never lint it.
+- **2026-05-25 — 4.7 CI green on first push**: `gh run list`
+  showed `26391806249` succeed in 16 s. Single Python 3.10 matrix
+  per Plan §6; no caching, no parallelism.
 
 ---
 
 ## 4. Close summary
 
-_Populated at Step close (work item 4.8). One-paragraph retro: what
-was actually built, any surprises, any items pushed forward to a later
-Step._
+**Built (8 commits on `main` per D005, plus 1 side-fix chore)**:
+
+- `pyproject.toml` — setuptools, Python `>=3.10`, runtime deps
+  (`shapely`/`numpy`/`networkx`), dev + viz optional extras,
+  pytest + ruff config.
+- `src/room_layout/` — empty top-level package with version 0.1.0 +
+  canonical docstring pointing at `docs/000_*`.
+- `src/room_layout/viz/` — placeholder subpackage with the per-stage
+  render-fn convention docstring (D006 + S01-D10).
+- `tests/test_smoke.py` — 3 smoke tests (top-level import, version
+  match, viz import without matplotlib).
+- `.gitignore` — `proto3:D014` carry + D006 output-dir rules.
+- 7 `.gitkeep` placeholders for `outputs/{debug_runs,viz}/`,
+  `experiments/{notebooks,runs}/`, `tests/golden/`, plus
+  `legacy/.gitkeep` from work item 4.1 (D016 archive target).
+- `.github/workflows/ci.yml` — minimal pytest + ruff CI on Python
+  3.10, green in 16 s on first push.
+
+**Surprises**:
+
+- Conda env (IfcOpenHouse) was actually Python 3.11, but system
+  `pip` defaulted to system Python 3.10 → mismatch on first
+  `pip install -e .`. Resolved by always using `python -m pip`
+  (recorded in §3). S01-D5 lowered `>=3.11` to `>=3.10` as a
+  side-effect; staying as the new floor unless a 3.11-only feature
+  arrives.
+- 4.2 commit accidentally tracked `src/room_layout.egg-info/*` and
+  `src/room_layout/__pycache__/__init__.cpython-311.pyc` via
+  `git add .`. Side-fix `828d40b` (`git rm -r --cached`) cleaned it
+  up after `.gitignore` landed. Lesson: avoid `git add .`.
+- Ruff initially scanned `archive/` and surfaced 291 errors in the
+  predecessor codebases. Added `extend-exclude = ["archive",
+  "outputs", "experiments", "legacy"]` to lock ruff to our code only.
+
+**Plan §4 ordering vs execution**: 4.5 (`.gitignore` + output dir
+scaffold) executed before 4.4 (smoke test) to keep the working tree
+clean before `pytest` generated `.pytest_cache/`. Plan §4 numbering
+left as canonical; Tracker §1 reflects the actual execution order.
+
+**Pushed to a later Step**:
+
+- Per-stage JSON serializers + `manifest.json` writer → Step 06.
+- Matplotlib renderers (Cell port) → Step 03.
+- SVG canonical renderer + `make_gif()` helper → Step 07.
+- ResearchBIM `Building` / `Storey` adapter → Step 08 (post-v1).
+- Multi-floor orchestrator → Step 09 (post-v1).
+
+**Next**: Step 02 (Core schema port). D005 triggers fire
+(regression risk + integration work touching the whole downstream
+chain), so Step 02 starts on a `step02-coreschema` branch. Branch
+kickoff §4.1 commit moves `001_Step01_Skeleton_*.md` to
+`legacy/step01/` per `proto3:D016` H011.

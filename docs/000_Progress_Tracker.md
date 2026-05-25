@@ -28,17 +28,24 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Phase-1 doc lock done (2026-05-24). New D-series D001–D004 accepted
-(external contract, seed-first growth, triple-layer geometry, 7-class
-role). proto3 D001–D023 audited (Carry 14 / Modify 3 / Drop 3 /
-Defer 3). Pipeline Overview §1–5 complete: PlanBIM position, typed
-contract sketches, per-stage operational narrative, terminology, and
-Step map (7 active + 2 deferred Steps).
+Step 01 (Project skeleton) done (2026-05-25). Repo has a working
+pyproject build (`pip install -e .`), the `room_layout` package +
+`viz` placeholder subpackage, pytest smoke tests (3 passing on
+Python 3.10/3.11), ruff lint + format clean, and a GitHub Actions
+CI workflow green on `main` (first run `26391806249`, 16 s). Output
+directory scaffold landed per D006; `legacy/` ready for next-Step
+archival per proto3:D016 H011.
 
-Next: open Step 01 (Project skeleton) per proto3:D015 / D016
-conventions — create the step01 branch, write 001_Step01_Skeleton_
-Plan.md + Tracker, scaffold src/<pkg>/, pyproject.toml, tests/ and
-minimal CI.
+D-series cumulative state: D001-D006 accepted; proto3:D001-D023
+audited (Carry 13 / Modify 4 / Drop 3 / Defer 3 after D005 amended
+proto3:D015). New cross-cutting decisions D005 (workflow) and D006
+(output directories) added during Step 01.
+
+Next: open Step 02 (Core schema port) per proto3:D015 / D016.
+Step 02 hits two D005 triggers (regression risk + integration work
+touching the whole downstream chain), so it proceeds on a
+`step02-coreschema` branch. Branch kickoff §4.1 commit will
+git-mv 001_Step01_Skeleton_*.md to legacy/step01/.
 ```
 
 ---
@@ -56,22 +63,31 @@ minimal CI.
 | 2026-05-24 | D001–D004 contract lock + Pipeline §2 typed sketches |
 | 2026-05-24 | Pipeline §3 internal flow + §4 terminology |
 | 2026-05-24 | Pipeline §5 Step map (7 active + 2 deferred) |
+| 2026-05-25 | D005 lock — solo-mode workflow (default `main`, branch on triggers) |
+| 2026-05-25 | D006 lock — output directory convention (3-category + per-stage layout) |
+| 2026-05-25 | Step 01 Project skeleton — completed (8 work-item commits + 1 side-fix; CI green) |
 
 ---
 
 # 3. Next actions
 
-1. **Open Step 01 (Project skeleton)** per `proto3:D015` / `D016`:
-   - Create `step01-skeleton` branch.
-   - Write `001_Step01_Skeleton_Plan.md` + `001_Step01_Skeleton_Tracker.md`
-     at repo root (Plan §4 work items keyed to commit boundaries).
-   - Scaffold `src/<pkg>/__init__.py`, `pyproject.toml`, `tests/`,
-     `.gitignore` per `proto3:D014`, minimal CI workflow.
-   - Decide the `<pkg>` name (candidates: `room_layout`, `study_roomlayout`,
-     `roomlayout`).
-2. Land Step 01 on `main` via `git merge --no-ff` per `proto3:D015`.
-3. Kick off Step 02 (Core schema port) at the §4.1 commit of the next
-   Step branch.
+1. **Open Step 02 (Core schema port)** on a `step02-coreschema`
+   branch (D005 triggers fire — regression risk + integration work):
+   - Branch kickoff §4.1 commit bundles two operations per
+     `proto3:D016` H011 deferred-archive pattern:
+     - `git mv 001_Step01_Skeleton_Plan.md 001_Step01_Skeleton_Tracker.md legacy/step01/`
+     - Write `002_Step02_CoreSchema_Plan.md` + Tracker at repo root.
+   - Plan §4 work items will be derived from D001 typed sketches
+     (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` /
+     `ProgramRequest` / `SpaceUnitSpec` / `LabeledRoomLayout` etc.)
+     plus `Role` Literal, `FailureRecord`, and strict
+     `proto3:D017` Literal validation on deserialization.
+2. Cell algorithm modules in `archive/celllayout/` use their own
+   internal schema today; Step 02 also defines the refactor scope
+   that Step 03 (geometry pipeline port) will execute (S01-Q1 = "Refactor
+   in-place" — Cell modules adopt the new schema, no internal-vs-
+   public schema split).
+3. Land Step 02 via `git merge --no-ff` to `main`.
 
 ---
 

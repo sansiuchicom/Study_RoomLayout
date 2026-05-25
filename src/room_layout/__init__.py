@@ -14,21 +14,82 @@ Canonical references (repo root)::
                                         proto3 D001–D023 inheritance audit)
     docs/000_Progress_Tracker.md        current implementation status
 
-Future top-level exports (placeholder; populated as Steps land)::
+Step 02 landed the full typed schema (`room_layout.schema`). The public
+surface below mirrors `room_layout.schema.__all__` so callers may write
+either::
 
-    # Step 02 — Core Schema
-    # from .schema import (
-    #     ShapeInput, FloorShape, ShapePart, VerticalAnchor,
-    #     ProgramRequest, SpaceUnitSpec,
-    #     LabeledRoomLayout, LabeledFloorLayout, LabeledRoom,
-    #     Role, FailureRecord,
-    # )
+    from room_layout import ShapeInput
+    # or equivalently
+    from room_layout.schema import ShapeInput
 
-    # Step 06 — Entry point
-    # from .run import run
-
-Step 01 is scaffold-only: this package currently exposes nothing.
-Importing it should succeed (``tests/test_smoke.py`` verifies this).
+The algorithm entry point `run(...)` lands in Step 06.
 """
 
+from room_layout.schema import (
+    WARN_PREFIX,
+    AccessSchemaFailure,
+    AreaGateFailure,
+    DimGateFailure,
+    DomainGateFailure,
+    Door,
+    DoorKind,
+    FailureRecord,
+    FloorShape,
+    LabeledFloorLayout,
+    LabeledRoom,
+    LabeledRoomLayout,
+    Point,
+    ProgramRequest,
+    Ring,
+    Role,
+    ShapeInput,
+    ShapePart,
+    SpaceUnitSpec,
+    TargetType,
+    VerticalAnchor,
+    VerticalAnchorHostRole,
+    VerticalAnchorKind,
+    coords_to_polygon,
+    from_dict,
+    from_json,
+    polygon_to_coords,
+    to_dict,
+    to_json,
+    validate_input,
+)
+
 __version__ = "0.1.0"
+
+__all__ = [
+    "AccessSchemaFailure",
+    "AreaGateFailure",
+    "DimGateFailure",
+    "DomainGateFailure",
+    "Door",
+    "DoorKind",
+    "FailureRecord",
+    "FloorShape",
+    "LabeledFloorLayout",
+    "LabeledRoom",
+    "LabeledRoomLayout",
+    "Point",
+    "ProgramRequest",
+    "Ring",
+    "Role",
+    "ShapeInput",
+    "ShapePart",
+    "SpaceUnitSpec",
+    "TargetType",
+    "VerticalAnchor",
+    "VerticalAnchorHostRole",
+    "VerticalAnchorKind",
+    "WARN_PREFIX",
+    "__version__",
+    "coords_to_polygon",
+    "from_dict",
+    "from_json",
+    "polygon_to_coords",
+    "to_dict",
+    "to_json",
+    "validate_input",
+]

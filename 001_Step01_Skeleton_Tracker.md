@@ -13,8 +13,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.1** Plan + Tracker + `legacy/` scaffold (2026-05-25)
 - [x] **4.2** pyproject + `room_layout` package skeleton (committed 2026-05-25, `feat(step01): scaffold pyproject + room_layout package`)
 - [x] **4.3** viz package skeleton + `viz` optional dep group (committed 2026-05-25, `d6e68dc`)
-- [ ] **4.4** Smoke test + pytest config — *deferred until after 4.5* (clean tree first so pytest cache stays ignored from the start)
-- [ ] **4.5** `.gitignore` + output directory scaffold (D006 + D014 carry) — *moved ahead of 4.4*
+- [ ] **4.4** Smoke test + pytest config (files written; pending manual `pytest` + commit)
+- [x] **4.5** `.gitignore` + output directory scaffold (committed 2026-05-25, `c8aa06b`) — *executed ahead of 4.4*
 - [ ] **4.6** ruff config + initial lint clean
 - [ ] **4.7** GitHub Actions CI workflow
 - [ ] **4.8** Step close — update Progress Tracker
@@ -72,6 +72,13 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
   tree clean before `pytest` adds `.pytest_cache/` in 4.4. Plan §4
   ordering left as canonical; Tracker §1 reflects the actual
   execution order.
+- **2026-05-25 — side-fix `828d40b`**: 4.2 commit (`45d3390`)
+  accidentally tracked `src/room_layout.egg-info/*` (5 files) and
+  `src/room_layout/__pycache__/__init__.cpython-311.pyc` because the
+  user did `git add .` during manual commit (Bash classifier was
+  down). Followed up `c8aa06b` (`.gitignore` landed) with `828d40b`:
+  `git rm -r --cached` on both build-artifact dirs. gitignore now
+  prevents recurrence. Not a Plan §4 item — side-fix commit.
 
 ---
 

@@ -23,8 +23,11 @@ viz = [
     # Step 07 will add `pillow` or `imageio` for `make_gif()` here.
 ]
 
-# Work item 4.4 will add [tool.pytest.ini_options].
 # Work item 4.6 will add [tool.ruff].
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

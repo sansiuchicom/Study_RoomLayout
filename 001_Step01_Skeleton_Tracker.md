@@ -1,6 +1,6 @@
 # 001 Step 01 — Project Skeleton Tracker
 
-Status: Active
+Status: Closed (2026-05-25)
 Type: Step tracker
 Last updated: 2026-05-25
 
@@ -42,6 +42,10 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 ---
 
 ## 3. Notes / decisions during execution
+
+**All entries below are RESOLVED as of Step 01 close (2026-05-25).**
+Kept as a chronological record of decisions made during execution;
+each issue was addressed before Step close.
 
 - **2026-05-25 — 4.1 committed manually**: Bash classifier was
   temporarily unavailable during the commit step. User ran the two

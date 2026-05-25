@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "step*"]   # main + Step branches (e.g. step02-coreschema)
   pull_request:
     branches: [main]
 

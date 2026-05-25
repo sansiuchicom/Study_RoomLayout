@@ -1,6 +1,6 @@
 # 001 Step 01 — Project Skeleton Plan
 
-Status: Active
+Status: Closed (2026-05-25)
 Type: Step plan
 Last updated: 2026-05-25
 
@@ -29,7 +29,7 @@ Cross-references:
 
 | Item | Verification |
 |---|---|
-| `pip install -e .` succeeds locally | `pip install -e . && echo ok` |
+| `python -m pip install -e .` succeeds locally | `python -m pip install -e . && echo ok` |
 | `python -c "import room_layout"` works | local + CI |
 | `python -c "import room_layout.viz"` works (placeholder package) | local + CI |
 | `pytest` passes (≥ 1 smoke test) | `pytest` exit 0 |
@@ -37,7 +37,7 @@ Cross-references:
 | `ruff format --check .` passes | `ruff format --check .` exit 0 |
 | GitHub Actions CI green on push to `main` | GitHub UI / `gh run list` |
 | `.gitignore` excludes pycache / `.venv` / outputs / caches | `git status` clean after dev session |
-| Output directory scaffold present (`outputs/{debug_runs,viz}/`, `experiments/{notebooks,runs}/`, `tests/golden/`) with `.gitkeep` markers per D006 | `find outputs experiments tests/golden -name .gitkeep` shows 6 entries |
+| Output directory scaffold present (`outputs/{debug_runs,viz}/`, `experiments/{notebooks,runs}/`, `tests/golden/`) with `.gitkeep` markers per D006 | `find outputs experiments tests/golden -name .gitkeep` shows 7 entries |
 | `legacy/` directory scaffolded with `.gitkeep` (`proto3:D016` archive convention) | `ls legacy/.gitkeep` exists |
 | Progress Tracker §1 + §2 updated to reflect Step 01 close | docs review |
 | All Plan §4 work items checked in companion Tracker §1 | tracker review |
@@ -126,7 +126,7 @@ exists (`proto3:D016` H011 deferred-archive target).
 
 Files: `pyproject.toml`, `src/room_layout/__init__.py`.
 Commit: `feat(step01): scaffold pyproject + room_layout package`.
-Verification: `pip install -e .` succeeds; `python -c "import room_layout"` works.
+Verification: `python -m pip install -e .` succeeds; `python -c "import room_layout"` works.
 
 ### 4.3 viz package skeleton + `viz` optional dep group
 
@@ -134,7 +134,7 @@ Files: `src/room_layout/viz/__init__.py` (with convention docstring),
 plus update to `pyproject.toml`'s `[project.optional-dependencies]`.
 Commit: `feat(step01): viz package skeleton + viz optional dep group`.
 Verification: `python -c "import room_layout.viz"` works;
-`pip install -e .[viz]` adds matplotlib.
+`python -m pip install -e .[viz]` adds matplotlib.
 
 ### 4.4 Smoke test + pytest config
 
@@ -211,7 +211,7 @@ companion Tracker checked.
 | `room_layout` name conflicts with a hypothetical future PyPI install | Repo is private; no publishing planned. Rename is a 1-commit change if needed. |
 | `matplotlib` as runtime dep bloats install | Moved to `viz` extra (S01-D9). `pip install -e .` alone is lean. |
 | `ruff` default ruleset too strict, breaks empty package | Step 01 starts with `ruff` defaults; add per-rule ignores in `pyproject` only when an actual file triggers them. |
-| CI runtime grows past acceptable | Step 01 uses single Python 3.11 matrix entry. Multi-version matrix is a future concern. |
+| CI runtime grows past acceptable | Step 01 uses single Python 3.10 matrix entry (matches `requires-python = ">=3.10"` per S01-D5). Multi-version matrix is a future concern. |
 | GitHub Actions auth / runner availability | Public-runner free minutes are ample for a single repo. |
 
 ---

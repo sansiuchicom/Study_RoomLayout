@@ -20,11 +20,20 @@ dist/
 
 # === Output directories (D006) ===
 # Keep `.gitkeep` markers; ignore everything else generated inside.
+# Root-level: ignore loose files at outputs/ root, allow only known subdirs.
+outputs/*
+!outputs/.gitkeep
+!outputs/debug_runs/
+!outputs/viz/
 outputs/debug_runs/*
 !outputs/debug_runs/.gitkeep
 outputs/viz/*
 !outputs/viz/.gitkeep
 
+experiments/*
+!experiments/.gitkeep
+!experiments/notebooks/
+!experiments/runs/
 experiments/notebooks/*
 !experiments/notebooks/.gitkeep
 experiments/runs/*

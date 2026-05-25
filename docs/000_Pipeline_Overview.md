@@ -81,7 +81,7 @@ class FloorShape:
 @dataclass(frozen=True)
 class ShapePart:
     exterior: Ring                          # CCW vertex ring, meters
-    holes: tuple[Ring, ...] = ()            # CCW interior holes; empty by default
+    holes: tuple[Ring, ...] = ()            # CW interior holes (shapely right-hand rule, IFC convention)
     # NOTE: no `theta` field. Per-part orientation is *inferred* from the
     # first non-degenerate exterior edge by a helper (`part_theta()` in
     # Cell/algorithm). Callers do not pre-compute orientation.
@@ -165,7 +165,10 @@ class LabeledRoomLayout:
     floors: list[LabeledFloorLayout]        # 1:1 with `ShapeInput.floors`, same order
     failure_records: list[FailureRecord]    # must be non-empty when `valid=False`
     provenance: dict                        # search-path info (TBD typed)
-    debug_artifacts: dict[str, str]         # {kind: path}
+    # Per-stage debug artifacts (PNGs / stage JSON) are NOT carried in
+    # this output. `run()` is pure (no filesystem side-effects); stage
+    # trace emission happens via the `on_stage` callback wired in
+    # Step 06's entry point. See D006 for the file layout.
 
 @dataclass
 class LabeledFloorLayout:
@@ -367,7 +370,7 @@ Tracker companion docs).
 |---|---|---|---|
 | **01** | Project skeleton | `pyproject.toml` + `src/<pkg>/__init__.py` + `tests/` scaffold + minimal CI | `pip install -e .` works; empty `pytest` run passes |
 | **02** | Core schema port | New contract types from D001 (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` / `ProgramRequest` / `SpaceUnitSpec` / `LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Role` / `FailureRecord`). Cell schema is **refactored in-place** to use the new types (no internal-vs-public schema split). | All types importable; instantiation + strict `Literal` validation tests pass (`proto3:D017` carry); Cell algorithm modules still compile against the unified schema |
-| **03** | Geometry pipeline port | Cell Phase 3–8 ported as one bundle: `atomize` / `atom_graph` / `regionize` / `region_graph` / `region_partition_growth` / `carve_corridors`. Phase modules become internal stage functions of the new pipeline. Vertical-anchor handling wired in (forbidden region during atomize). | 6 apartment fixtures from `archive/celllayout/` produce **byte-identical** stage outputs as golden regression tests; `target_atom_size = 0.3 m` defaults preserved |
+| **03** | Geometry pipeline port | Cell Phase 3–8 ported as one bundle: `atomize` / `atom_graph` / `regionize` / `region_graph` / `region_partition_growth` / `carve_corridors`. Phase modules become internal stage functions of the new pipeline. Vertical-anchor handling wired in (forbidden region during atomize). | 6 apartment fixtures from `archive/celllayout/` produce **semantically equivalent** stage outputs vs golden regression tests (polygon area / atom / region / room counts and role assignments match within numeric tolerance — not byte-identical, since shapely / NetworkX float serialization can drift); `target_atom_size = 0.3 m` defaults preserved |
 | **04** | Program layer port | proto3 `stages/stage01_program.py` + `stages/stage02_gate.py` ported. The 4 gates (`check_min_area` / `check_min_dim` / `check_access_schema` / `check_multi_floor_feasibility`) live in `constraints/gates.py`. `proto3:D020` / `D023` carry. | Program gate unit tests pass; `ProgramInstantiationFailure` + `DomainGateFailure` hierarchy round-trips through `FailureRecord` |
 | **05** | Target rules system | `TargetRules` dataclass + `target_rules/apartment.json` + `target_rules/README.md` + `target/rules_loader.py` + `TargetAdapter` (`proto3:D021` / `D022` carry) + `expand_program()` caller helper. Role↔usage mapping table lands here per D001 sub-choice. | `expand_program({"public": 1, "private": 3, ...}, "apartment")` returns a valid `ProgramRequest`; `apartment.json` validates against the loader; anchor `host_role` slot wired |
 | **06** | Entry point + labeling | `run(shape, program, *, seed) -> LabeledRoomLayout` assembled per D001. Per-floor outer loop, labeling stage (3.8) assigns final `Role` + carries `usage` + computes `area_m2` + runs gates. Failure path produces `valid=False` with non-empty `failure_records` (`proto3:D018` enforcement). | `run()` on each of 6 apartment fixtures returns `valid=True` matching golden `LabeledRoomLayout`; failure injection (e.g., infeasible program) returns `valid=False` with the right `FailureRecord` codes |

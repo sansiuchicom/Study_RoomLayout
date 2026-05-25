@@ -31,7 +31,7 @@ Accepted decisions / rationale:
 Step 01 (Project skeleton) done (2026-05-25). Repo has a working
 pyproject build (`pip install -e .`), the `room_layout` package +
 `viz` placeholder subpackage, pytest smoke tests (3 passing on
-Python 3.10/3.11), ruff lint + format clean, and a GitHub Actions
+Python 3.10), ruff lint + format clean, and a GitHub Actions
 CI workflow green on `main` (first run `26391806249`, 16 s). Output
 directory scaffold landed per D006; `legacy/` ready for next-Step
 archival per proto3:D016 H011.

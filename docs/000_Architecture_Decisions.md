@@ -400,15 +400,23 @@ outputs/debug_runs/seed42_2026-05-25T14-30-00/
 ```json
 {
   "seed": 42,
-  "fixture_name": "apt_06_2bed",        // null for arbitrary input
-  "git_commit": "1afc368",              // null when dirty / unknown
-  "config": { /* serialized RunConfig */ },
+  "fixture_name": "apt_06_2bed",
+  "git_commit": "1afc368",
+  "config": {},
   "started_at": "2026-05-25T14:30:00Z",
   "ended_at":   "2026-05-25T14:30:03Z",
   "duration_ms": 3142,
   "package_version": "0.1.0"
 }
 ```
+
+Field notes:
+
+- `fixture_name`: nullable — `null` when input is an ad-hoc (non-fixture) shape.
+- `git_commit`: nullable — `null` when the working tree is dirty or git
+  state cannot be read.
+- `config`: serialized `RunConfig` (Step 06 type; empty `{}` until then).
+- All other fields are required and non-null.
 
 The folder name (`<run_id>`) is kept short and sortable; the manifest
 inside carries the full context. Anyone investigating a debug run can

@@ -11,8 +11,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
 ## 1. Plan §4 work items
 
-- [ ] **4.1** Plan + Tracker land + `git mv` Step 01 docs to `legacy/step01/`
-- [ ] **4.2** Schema subpackage scaffold (`schema/__init__.py` + 6 empty modules)
+- [x] **4.1** Plan + Tracker land + `git mv` Step 01 docs to `legacy/step01/` (committed 2026-05-25; CI green on `step02-coreschema`)
+- [ ] **4.2** Schema subpackage scaffold (files written; pending manual `python -c "import room_layout.schema"` + commit)
 - [ ] **4.3** Geometry types (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` + `Ring`, `Point`)
 - [ ] **4.4** Program types (`ProgramRequest` / `SpaceUnitSpec` / `Role`)
 - [ ] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy)
@@ -47,8 +47,15 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
 ## 3. Notes / decisions during execution
 
-_Populated as Step proceeds. Per-work-item notes go here when a choice
-made during execution differs from or refines Plan §2._
+- **2026-05-25 — S02-D9 reverted A from B before 4.1 land**: original
+  S02-D9 (separate `InputRole` Literal for static-time `corridor`
+  rejection) was reconsidered as over-engineering for a single
+  asymmetric case. Final design: single `Role` Literal +
+  `SpaceUnitSpec.__post_init__` raises `ValueError` on `corridor`.
+  Plan + Tracker updated before 4.1 commit; rationale persisted in
+  S02-D9 cell for future reference.
+
+_Per-work-item notes from 4.2 onward go below._
 
 ---
 

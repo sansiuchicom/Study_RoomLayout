@@ -18,7 +18,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy) — committed 2026-05-25; mutability + exception-hierarchy raise/catch verified; `ruff` + `pytest` green
 - [x] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`) — committed 2026-05-25; full round-trip green for all 6 input + 4 output dataclasses (via JSON); strict rejection paths (extra key / missing required / bad Literal / bool-as-numeric) verified; 4.3 `LinearRing.area` bug surfaced + fixed via shoelace; `ruff` + `pytest` green
 - [x] **4.7** Cross-reference validators (`validate_input(shape, program)`) — committed 2026-05-25; 4 stable codes (3 errors + 1 warning); happy path + each code's trigger + multi-failure accumulation + WARN-prefix consumer split verified; `ruff` + `pytest` green
-- [ ] **4.8** Schema unit tests (6 `test_schema_*.py` files)
+- [x] **4.8** Schema unit tests (6 `test_schema_*.py` files) — committed 2026-05-25; 89 schema tests + 3 carry-over smoke = **92 passed in 0.16s**; covers Plan §1 DoD items 2–11 (frozen / __post_init__ / orientation / kind↔host_role / corridor reject / anchor_id rule / strict Literal / round-trip / cross-ref codes / DomainGateFailure hierarchy); `ruff` + `pytest` green
 - [ ] **4.9** Step close + `git merge --no-ff step02-coreschema` to `main`
 
 ---

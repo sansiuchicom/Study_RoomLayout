@@ -36,13 +36,21 @@ from room_layout.schema.geometry import (
     VerticalAnchorHostRole,
     VerticalAnchorKind,
 )
+from room_layout.schema.program import (
+    ProgramRequest,
+    Role,
+    SpaceUnitSpec,
+)
 
 __all__ = [
     "FloorShape",
     "Point",
+    "ProgramRequest",
     "Ring",
+    "Role",
     "ShapeInput",
     "ShapePart",
+    "SpaceUnitSpec",
     "VerticalAnchor",
     "VerticalAnchorHostRole",
     "VerticalAnchorKind",

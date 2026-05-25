@@ -15,8 +15,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.3** viz package skeleton + `viz` optional dep group (committed 2026-05-25, `d6e68dc`)
 - [x] **4.4** Smoke test + pytest config (committed 2026-05-25; 3 tests pass)
 - [x] **4.5** `.gitignore` + output directory scaffold (committed 2026-05-25, `c8aa06b`) — *executed ahead of 4.4*
-- [ ] **4.6** ruff config + initial lint clean (files written; pending manual `ruff check . && ruff format --check .` + commit)
-- [ ] **4.7** GitHub Actions CI workflow
+- [x] **4.6** ruff config + initial lint clean (committed 2026-05-25 after adding `archive/`/`outputs/`/`experiments/`/`legacy/` to `extend-exclude`)
+- [ ] **4.7** GitHub Actions CI workflow (`.github/workflows/ci.yml` written; pending push + CI green)
 - [ ] **4.8** Step close — update Progress Tracker
 
 ---

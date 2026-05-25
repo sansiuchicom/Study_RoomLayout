@@ -18,8 +18,11 @@ dev = [
     "pytest",
     "ruff",
 ]
+viz = [
+    "matplotlib>=3.7",
+    # Step 07 will add `pillow` or `imageio` for `make_gif()` here.
+]
 
-# Work item 4.3 will add a `viz` extra (matplotlib).
 # Work item 4.4 will add [tool.pytest.ini_options].
 # Work item 4.6 will add [tool.ruff].
 

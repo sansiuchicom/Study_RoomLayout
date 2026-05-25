@@ -10,7 +10,7 @@ invariants); cross-references (e.g. `SpaceUnitSpec.anchor_id` → existing
 """
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, get_args
 
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import LinearRing
@@ -37,6 +37,8 @@ _KIND_TO_HOST_ROLE: dict[str, VerticalAnchorHostRole] = {
     "eps_shaft": None,
     "duct_shaft": None,
 }
+
+_VALID_KINDS = frozenset(get_args(VerticalAnchorKind))
 
 
 def _signed_area(ring: Ring) -> float:
@@ -123,6 +125,11 @@ class VerticalAnchor:
     host_role: VerticalAnchorHostRole
 
     def __post_init__(self) -> None:
+        if self.kind not in _VALID_KINDS:
+            raise ValueError(
+                f"VerticalAnchor {self.id!r}: kind={self.kind!r} not in "
+                f"VerticalAnchorKind Literal: {sorted(_VALID_KINDS)}"
+            )
         expected = _KIND_TO_HOST_ROLE[self.kind]
         if self.host_role != expected:
             raise ValueError(
@@ -138,19 +145,24 @@ class VerticalAnchor:
 
 @dataclass(frozen=True)
 class FloorShape:
-    """One floor's footprint — a list of `ShapePart`s + slab height."""
+    """One floor's footprint — a list of `ShapePart`s + slab height.
+
+    `floor_to_floor_height` is `None`-able per Pipeline §2.1: required
+    only for multi-floor inputs (vertical stacking math). Single-floor
+    v1 may omit it.
+    """
 
     level: int
     parts: list[ShapePart]
-    floor_to_floor_height: float
+    floor_to_floor_height: float | None
 
     def __post_init__(self) -> None:
         if not self.parts:
             raise ValueError(f"FloorShape level={self.level}: parts must be non-empty")
-        if self.floor_to_floor_height <= 0:
+        if self.floor_to_floor_height is not None and self.floor_to_floor_height <= 0:
             raise ValueError(
-                f"FloorShape level={self.level}: floor_to_floor_height must be > 0, "
-                f"got {self.floor_to_floor_height}"
+                f"FloorShape level={self.level}: floor_to_floor_height must be > 0 "
+                f"when set, got {self.floor_to_floor_height}"
             )
 
 

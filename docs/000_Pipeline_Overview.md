@@ -69,6 +69,7 @@ Multi-floor-aware from day one (D001 carries `proto3:D003`'s
 ```python
 @dataclass
 class ShapeInput:
+    name: str                               # required identifier (debug hygiene; S02-D7)
     floors: list[FloorShape]                # length 1 = single-floor v1
     vertical_anchors: list[VerticalAnchor]  # empty list when no anchors
 

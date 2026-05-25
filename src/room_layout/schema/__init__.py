@@ -54,6 +54,7 @@ from room_layout.schema.program import (
     ProgramRequest,
     Role,
     SpaceUnitSpec,
+    TargetType,
 )
 from room_layout.schema.serialize import (
     coords_to_polygon,
@@ -87,6 +88,7 @@ __all__ = [
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "TargetType",
     "VerticalAnchor",
     "VerticalAnchorHostRole",
     "VerticalAnchorKind",

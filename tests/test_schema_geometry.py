@@ -139,6 +139,20 @@ def test_vertical_anchor_rejects_inverted_floor_range():
         )
 
 
+@pytest.mark.parametrize("bad_kind", ["staircore", "elevator", "lift_shaft", ""])
+def test_vertical_anchor_rejects_unknown_kind(bad_kind):
+    """Direct-construction VerticalAnchorKind Literal validation
+    (close-time cleanup — replaces the prior raw KeyError path)."""
+    with pytest.raises(ValueError, match="VerticalAnchorKind Literal"):
+        VerticalAnchor(
+            id="a",
+            kind=bad_kind,
+            footprint_polygon=_va_polygon(),
+            floor_range=(1, 3),
+            host_role=None,
+        )
+
+
 def test_vertical_anchor_is_frozen():
     va = VerticalAnchor(
         id="a",
@@ -173,6 +187,13 @@ def test_floor_shape_rejects_empty_parts():
 def test_floor_shape_rejects_non_positive_height(h):
     with pytest.raises(ValueError, match="floor_to_floor_height"):
         FloorShape(level=1, parts=[_valid_part()], floor_to_floor_height=h)
+
+
+def test_floor_shape_accepts_none_height():
+    """Pipeline §2.1: `floor_to_floor_height: float | None` — required
+    only for multi-floor; single-floor v1 may omit."""
+    fs = FloorShape(level=1, parts=[_valid_part()], floor_to_floor_height=None)
+    assert fs.floor_to_floor_height is None
 
 
 def test_floor_shape_is_frozen():

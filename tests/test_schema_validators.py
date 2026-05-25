@@ -64,7 +64,7 @@ def _sus(id_="x", role="public", anchor_id=None) -> SpaceUnitSpec:
 def test_happy_path_returns_empty_list():
     shape = _shape()
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={
             1: [
                 _sus("living", "public"),
@@ -77,7 +77,7 @@ def test_happy_path_returns_empty_list():
 
 def test_anchor_id_not_found():
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={1: [_sus("vc1", "vertical_circulation", "nope")]},
     )
     records = validate_input(_shape(), program)
@@ -90,7 +90,7 @@ def test_anchor_id_not_found():
 def test_anchor_host_role_mismatch():
     """vc-spec pointing at a ps_shaft (host_role=None) triggers mismatch."""
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={1: [_sus("vc1", "vertical_circulation", "ps_1")]},
     )
     records = validate_input(_shape(), program)
@@ -101,7 +101,7 @@ def test_anchor_host_role_mismatch():
 
 def test_program_floor_not_in_shape():
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={
             1: [_sus("vc1", "vertical_circulation", "stair_1")],
             99: [_sus("ghost", "public")],
@@ -116,7 +116,7 @@ def test_program_floor_not_in_shape():
 def test_warn_anchor_unused():
     """A vc-anchor referenced by no spec produces a WARN-level record."""
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={1: [_sus("living", "public")]},
     )
     records = validate_input(_shape(), program)
@@ -129,7 +129,7 @@ def test_warn_anchor_unused():
 def test_non_vc_anchor_unused_does_not_warn():
     """ps_shaft has host_role=None; being unused is normal — no warning."""
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={1: [_sus("vc1", "vertical_circulation", "stair_1")]},
     )
     assert validate_input(_shape(), program) == []
@@ -137,7 +137,7 @@ def test_non_vc_anchor_unused_does_not_warn():
 
 def test_multiple_failures_accumulate():
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={
             1: [
                 _sus("vc1", "vertical_circulation", "wrong_id"),
@@ -154,10 +154,113 @@ def test_multiple_failures_accumulate():
     assert codes.count("WARN_ANCHOR_UNUSED") == 1
 
 
+def test_duplicate_anchor_id():
+    """Two VerticalAnchors with the same id → DUPLICATE_ANCHOR_ID."""
+    sp = ShapePart(exterior=_SQ)
+    poly = Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])
+    shape = ShapeInput(
+        name="dup-anchor",
+        floors=[FloorShape(level=1, parts=[sp], floor_to_floor_height=3.0)],
+        vertical_anchors=[
+            VerticalAnchor(
+                id="stair_1",
+                kind="stair_core",
+                footprint_polygon=poly,
+                floor_range=(1, 1),
+                host_role="vertical_circulation",
+            ),
+            VerticalAnchor(
+                id="stair_1",
+                kind="elevator_shaft",
+                footprint_polygon=poly,
+                floor_range=(1, 1),
+                host_role="vertical_circulation",
+            ),
+        ],
+    )
+    program = ProgramRequest(
+        target_type="apartment",
+        floor_programs={1: [_sus("vc1", "vertical_circulation", "stair_1")]},
+    )
+    records = validate_input(shape, program)
+    dup = next(r for r in records if r.code == "DUPLICATE_ANCHOR_ID")
+    assert dup.data["anchor_id"] == "stair_1"
+    assert dup.data["count"] == 2
+
+
+def test_duplicate_floor_level():
+    """Two FloorShapes with the same level → DUPLICATE_FLOOR_LEVEL."""
+    sp = ShapePart(exterior=_SQ)
+    shape = ShapeInput(
+        name="dup-floor",
+        floors=[
+            FloorShape(level=1, parts=[sp], floor_to_floor_height=3.0),
+            FloorShape(level=1, parts=[sp], floor_to_floor_height=3.0),
+        ],
+    )
+    program = ProgramRequest(target_type="apartment", floor_programs={1: [_sus("a", "public")]})
+    records = validate_input(shape, program)
+    dup = next(r for r in records if r.code == "DUPLICATE_FLOOR_LEVEL")
+    assert dup.data["level"] == 1
+    assert dup.data["count"] == 2
+
+
+def test_duplicate_spec_id_across_floors():
+    """SpaceUnitSpec.id is a global identifier — duplicates across floors
+    surface DUPLICATE_SPEC_ID (Pipeline §2.3)."""
+    shape = _shape()
+    program = ProgramRequest(
+        target_type="apartment",
+        floor_programs={
+            1: [_sus("living", "public"), _sus("vc", "vertical_circulation", "stair_1")],
+            2: [_sus("living", "private")],  # `living` reused
+        },
+    )
+    records = validate_input(shape, program)
+    dup = next(r for r in records if r.code == "DUPLICATE_SPEC_ID")
+    assert dup.data["spec_id"] == "living"
+    assert dup.data["count"] == 2
+
+
+def test_anchor_floor_range_mismatch():
+    """A vc-spec on a floor outside the anchor's floor_range → mismatch.
+
+    The anchor still counts as 'used' so no redundant WARN_ANCHOR_UNUSED
+    fires for the same anchor."""
+    sp = ShapePart(exterior=_SQ)
+    shape = ShapeInput(
+        name="range-mismatch",
+        floors=[
+            FloorShape(level=1, parts=[sp], floor_to_floor_height=3.0),
+            FloorShape(level=2, parts=[sp], floor_to_floor_height=3.0),
+        ],
+        vertical_anchors=[
+            VerticalAnchor(
+                id="stair_lower",
+                kind="stair_core",
+                footprint_polygon=Polygon([(0, 0), (3, 0), (3, 3), (0, 3)]),
+                floor_range=(1, 1),
+                host_role="vertical_circulation",
+            ),
+        ],
+    )
+    program = ProgramRequest(
+        target_type="apartment",
+        floor_programs={2: [_sus("vc1", "vertical_circulation", "stair_lower")]},
+    )
+    records = validate_input(shape, program)
+    codes = {r.code for r in records}
+    assert "ANCHOR_FLOOR_RANGE_MISMATCH" in codes
+    assert "WARN_ANCHOR_UNUSED" not in codes
+    mismatch = next(r for r in records if r.code == "ANCHOR_FLOOR_RANGE_MISMATCH")
+    assert mismatch.data["spec_floor"] == 2
+    assert mismatch.data["anchor_floor_range"] == [1, 1]
+
+
 def test_warn_prefix_consumer_split():
     """Consumers (Step 06 run) filter by WARN_PREFIX to separate severities."""
     program = ProgramRequest(
-        target_type="apt",
+        target_type="apartment",
         floor_programs={
             1: [
                 _sus("vc1", "vertical_circulation", "wrong_id"),

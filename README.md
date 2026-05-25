@@ -12,12 +12,16 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 01 (Project skeleton) closed 2026-05-25. The new source tree
-(`src/room_layout/`) contains the package scaffold + `viz/` placeholder
-subpackage; `pyproject.toml` builds, smoke tests pass, ruff lints, and
-GitHub Actions CI is green on `main`.
+Step 02 (Core schema port) closed 2026-05-25. The full D001 external
+contract lives in `src/room_layout/schema/` across 6 modules — geometry
+/ program / output / failure / serialize / validators — and is re-exported
+from top-level `room_layout`. Pytest passing, ruff clean, GitHub Actions
+CI green.
 
-**Next**: Step 02 (Core schema port) on the `step02-coreschema` branch.
+**Next**: Step 03 (Geometry pipeline port) on the `step03-geometrypipeline`
+branch — moves Cell Phase 3–8 modules from `archive/celllayout/algorithm/`
+into `src/room_layout/stages/` against the new schema (S02-D8 semantic
+migration).
 
 Canonical docs live under `docs/`:
 

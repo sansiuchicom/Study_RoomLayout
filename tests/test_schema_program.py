@@ -1,8 +1,9 @@
 """Tests for `room_layout.schema.program` — work item 4.8 / Plan §4.8.
 
-Covers: `Role` Literal acceptance (incl. S02-D9 `corridor` rejection),
-`SpaceUnitSpec.anchor_id` rule for `vertical_circulation` role,
-`ProgramRequest` non-empty `target_type` + `floor_programs`, frozen
+Covers: `Role` Literal validation (incl. S02-D9 `corridor` rejection),
+`TargetType` Literal validation, `SpaceUnitSpec.anchor_id` rule for
+`vertical_circulation` role, Optional `area_min_m2` / `min_dimension_m`
+(Pipeline §2.2), `ProgramRequest` non-empty `floor_programs`, frozen
 input contract (S02-D3).
 """
 
@@ -43,6 +44,13 @@ def test_space_unit_spec_rejects_corridor_role():
         _sus(role="corridor")
 
 
+@pytest.mark.parametrize("bad_role", ["bedroom", "BATHROOM", "", "foo"])
+def test_space_unit_spec_rejects_unknown_role(bad_role):
+    """Direct-construction Role Literal validation (close-time cleanup)."""
+    with pytest.raises(ValueError, match="Role Literal"):
+        _sus(role=bad_role)
+
+
 def test_space_unit_spec_vertical_circulation_requires_anchor_id():
     with pytest.raises(ValueError, match="anchor_id"):
         _sus(role="vertical_circulation")
@@ -51,6 +59,18 @@ def test_space_unit_spec_vertical_circulation_requires_anchor_id():
 def test_space_unit_spec_vertical_circulation_with_anchor_id_accepts():
     s = _sus(role="vertical_circulation", anchor_id="stair_1")
     assert s.anchor_id == "stair_1"
+
+
+def test_space_unit_spec_accepts_none_area_min():
+    """Pipeline §2.2: `area_min_m2: float | None`."""
+    s = _sus(area_min_m2=None)
+    assert s.area_min_m2 is None
+
+
+def test_space_unit_spec_accepts_none_min_dimension():
+    """Pipeline §2.2: `min_dimension_m: float | None`."""
+    s = _sus(min_dimension_m=None)
+    assert s.min_dimension_m is None
 
 
 def test_space_unit_spec_is_frozen():
@@ -62,20 +82,21 @@ def test_space_unit_spec_is_frozen():
 # --- ProgramRequest ---
 
 
-def test_program_request_valid():
-    pr = ProgramRequest(target_type="apartment", floor_programs={1: [_sus()]})
-    assert pr.target_type == "apartment"
-    assert 1 in pr.floor_programs
+@pytest.mark.parametrize("target_type", ["apartment", "house", "hotel", "office", "warehouse"])
+def test_program_request_accepts_valid_target_types(target_type):
+    pr = ProgramRequest(target_type=target_type, floor_programs={1: [_sus()]})
+    assert pr.target_type == target_type
 
 
-def test_program_request_rejects_empty_target_type():
-    with pytest.raises(ValueError, match="target_type"):
-        ProgramRequest(target_type="", floor_programs={1: [_sus()]})
+@pytest.mark.parametrize("bad", ["", "   ", "studio", "office_building", "APARTMENT"])
+def test_program_request_rejects_invalid_target_type(bad):
+    """Direct-construction TargetType Literal validation (close-time cleanup).
 
-
-def test_program_request_rejects_whitespace_target_type():
-    with pytest.raises(ValueError, match="target_type"):
-        ProgramRequest(target_type="   ", floor_programs={1: [_sus()]})
+    Subsumes the prior "non-empty / non-whitespace" checks since empty
+    and whitespace strings are not in the TargetType Literal.
+    """
+    with pytest.raises(ValueError, match="TargetType Literal"):
+        ProgramRequest(target_type=bad, floor_programs={1: [_sus()]})
 
 
 def test_program_request_rejects_empty_floor_programs():

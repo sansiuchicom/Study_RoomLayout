@@ -242,3 +242,24 @@ def test_from_dict_rejects_bool_as_float():
 def test_from_dict_accepts_int_as_float():
     """JSON has no 0 vs 0.0 distinction."""
     assert from_dict(float, 5) == 5.0
+
+
+def test_optional_numeric_fields_round_trip_with_none():
+    """Close-time cleanup: `area_min_m2` / `min_dimension_m` / `FloorShape.
+    floor_to_floor_height` are all `float | None` per Pipeline §2.1/§2.2."""
+    sus_no_mins = SpaceUnitSpec(
+        id="flex",
+        role="service",
+        usage=None,
+        area_target_m2=10.0,
+        area_min_m2=None,
+        min_dimension_m=None,
+        required=False,
+    )
+    sus2 = from_dict(SpaceUnitSpec, to_dict(sus_no_mins))
+    assert sus2.area_min_m2 is None
+    assert sus2.min_dimension_m is None
+
+    fs_no_height = FloorShape(level=1, parts=[_shape_part()], floor_to_floor_height=None)
+    fs2 = from_dict(FloorShape, to_dict(fs_no_height))
+    assert fs2.floor_to_floor_height is None

@@ -83,6 +83,34 @@ _Per-work-item notes from 4.2 onward go below._
   orientation sign — `area > 0 ⇔ CCW`), so the same computation
   serves both the degeneracy and orientation checks.
 
+- **2026-05-25 — 4.9 close-time cleanup (pre-merge)**: external
+  pre-merge review surfaced 5 items worth addressing on-branch before
+  `--no-ff` to `main`. (1) `ProgramRequest.target_type`: `str` →
+  `TargetType = Literal["apartment", "house", "hotel", "office",
+  "warehouse"]` (Pipeline §2.2 was authoritative; Step 05 target_rules
+  uses these as keys). (2) Three optional numeric fields relaxed to
+  match Pipeline: `FloorShape.floor_to_floor_height` (single-floor v1
+  may omit), `SpaceUnitSpec.area_min_m2` + `.min_dimension_m`
+  (flexible rooms may omit). (3) Direct-construction Literal
+  validation added to `SpaceUnitSpec.role` / `VerticalAnchor.kind` /
+  `ProgramRequest.target_type` (closed the gap where raw strings like
+  `role="bedroom"` passed through `__post_init__` and were caught
+  only by `from_dict` at the JSON boundary). (4) `VerticalAnchor`
+  unknown kind: raw `KeyError` → `ValueError` with Literal listing
+  (subsumed by the new Literal check above). (5) Four new
+  `validate_input` failure codes: `DUPLICATE_ANCHOR_ID`,
+  `DUPLICATE_FLOOR_LEVEL`, `DUPLICATE_SPEC_ID` (global per Pipeline
+  §2.3), and `ANCHOR_FLOOR_RANGE_MISMATCH` (vc-spec floor outside the
+  bound anchor's floor_range). Plus: `docs/000_Pipeline_Overview.md`
+  §2.1 ShapeInput sketch now lists `name: str` (S02-D7 was authoritative
+  but never propagated to canonical doc); README current-status
+  refreshed to Step 02 done. **Intentionally deferred from this
+  cleanup** (each documented elsewhere in this Tracker / will live
+  as Step 03+ concerns): shallow-frozen tuple migration (E),
+  inverse `anchor_id ⇒ vc-role` check (4.7 §3 note), hole-in-exterior
+  / hole-hole / part-part overlap (Step 03 atomize), output
+  invariant enforcement (Step 06 test responsibility per S02-D11).
+
 - **2026-05-25 — 4.7 decisions + future gap**: (1) Warning vs
   error distinguished by code prefix (`WARN_`) rather than a
   `severity` field on `FailureRecord` — chosen to preserve the

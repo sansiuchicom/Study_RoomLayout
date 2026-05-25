@@ -15,11 +15,19 @@ to a `severity` field on `FailureRecord`.
 
 Stable failure codes emitted by this module:
 
+- ``DUPLICATE_ANCHOR_ID`` — two `VerticalAnchor`s share the same `id`.
+  (error)
+- ``DUPLICATE_FLOOR_LEVEL`` — two `FloorShape`s share the same `level`.
+  (error)
+- ``DUPLICATE_SPEC_ID`` — two `SpaceUnitSpec`s share the same `id`
+  across all floor programs. (error)
 - ``ANCHOR_ID_NOT_FOUND`` — `SpaceUnitSpec.anchor_id` references a
   `VerticalAnchor.id` that does not exist. (error)
 - ``ANCHOR_HOST_ROLE_MISMATCH`` — the resolved anchor has
   `host_role != "vertical_circulation"`, so the spec cannot bind
   to it as a walk-in room. (error)
+- ``ANCHOR_FLOOR_RANGE_MISMATCH`` — the spec's containing floor level
+  is outside the resolved anchor's `floor_range`. (error)
 - ``PROGRAM_FLOOR_NOT_IN_SHAPE`` — `ProgramRequest.floor_programs`
   references a level not in `ShapeInput.floors`. (error)
 - ``WARN_ANCHOR_UNUSED`` — a `VerticalAnchor` with
@@ -30,6 +38,8 @@ Called by Step 06's `run()` before atomize, so the algorithm can
 short-circuit with a `valid=False` `LabeledRoomLayout` carrying
 `failure_records` (proto3:D018 carry).
 """
+
+from collections import Counter
 
 from room_layout.schema.failure import FailureRecord
 from room_layout.schema.geometry import ShapeInput
@@ -46,6 +56,11 @@ def validate_input(shape: ShapeInput, program: ProgramRequest) -> list[FailureRe
     Codes prefixed `WARN_` are warnings (see module docstring).
     """
     records: list[FailureRecord] = []
+
+    _check_duplicate_anchor_ids(shape, records)
+    _check_duplicate_floor_levels(shape, records)
+    _check_duplicate_spec_ids(program, records)
+
     anchors_by_id = {a.id: a for a in shape.vertical_anchors}
     shape_levels = {fs.level for fs in shape.floors}
     used_anchor_ids: set[str] = set()
@@ -108,6 +123,29 @@ def validate_input(shape: ShapeInput, program: ProgramRequest) -> list[FailureRe
                 )
                 continue
 
+            # host_role OK — check floor_range containment.
+            start, end = anchor.floor_range
+            if not (start <= level <= end):
+                records.append(
+                    FailureRecord(
+                        code="ANCHOR_FLOOR_RANGE_MISMATCH",
+                        stage=_STAGE,
+                        message=(
+                            f"SpaceUnitSpec {spec.id!r} on floor {level} binds to "
+                            f"anchor {anchor.id!r} whose floor_range="
+                            f"{anchor.floor_range} does not include {level}"
+                        ),
+                        data={
+                            "spec_id": spec.id,
+                            "anchor_id": anchor.id,
+                            "spec_floor": level,
+                            "anchor_floor_range": list(anchor.floor_range),
+                        },
+                    )
+                )
+                # Still count as used — the user clearly intended to bind here;
+                # avoid double-reporting via WARN_ANCHOR_UNUSED.
+
             used_anchor_ids.add(anchor.id)
 
     for anchor in shape.vertical_anchors:
@@ -126,3 +164,50 @@ def validate_input(shape: ShapeInput, program: ProgramRequest) -> list[FailureRe
             )
 
     return records
+
+
+def _check_duplicate_anchor_ids(shape: ShapeInput, records: list[FailureRecord]) -> None:
+    counts = Counter(a.id for a in shape.vertical_anchors)
+    for anchor_id, count in counts.items():
+        if count > 1:
+            records.append(
+                FailureRecord(
+                    code="DUPLICATE_ANCHOR_ID",
+                    stage=_STAGE,
+                    message=(f"VerticalAnchor.id {anchor_id!r} appears {count} times"),
+                    data={"anchor_id": anchor_id, "count": count},
+                )
+            )
+
+
+def _check_duplicate_floor_levels(shape: ShapeInput, records: list[FailureRecord]) -> None:
+    counts = Counter(fs.level for fs in shape.floors)
+    for level, count in counts.items():
+        if count > 1:
+            records.append(
+                FailureRecord(
+                    code="DUPLICATE_FLOOR_LEVEL",
+                    stage=_STAGE,
+                    message=f"FloorShape.level {level} appears {count} times",
+                    data={"level": level, "count": count},
+                )
+            )
+
+
+def _check_duplicate_spec_ids(program: ProgramRequest, records: list[FailureRecord]) -> None:
+    """SpaceUnitSpec.id is a global identifier across floors (Pipeline §2.3
+    — `LabeledRoom.id` matches `SpaceUnitSpec.id` when known)."""
+    all_ids = [s.id for specs in program.floor_programs.values() for s in specs]
+    counts = Counter(all_ids)
+    for spec_id, count in counts.items():
+        if count > 1:
+            records.append(
+                FailureRecord(
+                    code="DUPLICATE_SPEC_ID",
+                    stage=_STAGE,
+                    message=(
+                        f"SpaceUnitSpec.id {spec_id!r} appears {count} times across floor_programs"
+                    ),
+                    data={"spec_id": spec_id, "count": count},
+                )
+            )

@@ -12,8 +12,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 ## 1. Plan §4 work items
 
 - [x] **4.1** Plan + Tracker land + `git mv` Step 01 docs to `legacy/step01/` (committed 2026-05-25; CI green on `step02-coreschema`)
-- [ ] **4.2** Schema subpackage scaffold (files written; pending manual `python -c "import room_layout.schema"` + commit)
-- [ ] **4.3** Geometry types (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` + `Ring`, `Point`)
+- [x] **4.2** Schema subpackage scaffold (committed 2026-05-25, `22b264b`; `python -c "import room_layout.schema"` verified green)
+- [x] **4.3** Geometry types (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` + `Ring`, `Point`) — committed 2026-05-25; `ruff` + `pytest` green locally
 - [ ] **4.4** Program types (`ProgramRequest` / `SpaceUnitSpec` / `Role`)
 - [ ] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy)
 - [ ] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`)
@@ -56,6 +56,19 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
   S02-D9 cell for future reference.
 
 _Per-work-item notes from 4.2 onward go below._
+
+- **2026-05-25 — 4.3 implementation notes**: (1) `kind ↔ host_role`
+  matrix collapsed to a single module-level dict
+  (`_KIND_TO_HOST_ROLE`) used as the source of truth in
+  `VerticalAnchor.__post_init__` — new `kind` adds one entry, no `if`
+  chain. (2) Ring validation centralized in `_validate_ring(ring, *,
+  label, expect_ccw)`, called by both `ShapePart.exterior` and each
+  `ShapePart.holes[i]`. Check order extends Plan §6 Risk row by one
+  step: `len ≥ 3` → `signed area ≠ 0` → orientation → `is_simple`
+  (self-intersection); each step assumes the prior passed. `is_simple`
+  was not enumerated in Plan §4.3 but is a structural invariant for
+  shapely `Polygon` construction downstream, so caught at the schema
+  boundary rather than later.
 
 ---
 

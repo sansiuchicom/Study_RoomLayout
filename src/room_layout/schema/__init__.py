@@ -25,3 +25,25 @@ References:
 
 Re-exports are populated in subsequent work items (4.3 onward).
 """
+
+from room_layout.schema.geometry import (
+    FloorShape,
+    Point,
+    Ring,
+    ShapeInput,
+    ShapePart,
+    VerticalAnchor,
+    VerticalAnchorHostRole,
+    VerticalAnchorKind,
+)
+
+__all__ = [
+    "FloorShape",
+    "Point",
+    "Ring",
+    "ShapeInput",
+    "ShapePart",
+    "VerticalAnchor",
+    "VerticalAnchorHostRole",
+    "VerticalAnchorKind",
+]

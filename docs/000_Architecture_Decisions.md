@@ -284,6 +284,65 @@ Reason:
 
 ---
 
+## D005 — Solo-mode workflow: default to main, branch only on size / risk triggers
+
+Status: Accepted
+Type: Repo / VCS convention
+Date: 2026-05-25
+Amends: `proto3:D015` (per-Step branch + per-work-item commit + no-squash merge)
+
+Decision:
+
+`proto3:D015`'s per-Step-branch requirement is **demoted to a
+guideline** for this repo's solo-work context. Default behavior is to
+work directly on `main` with atomic commits. Branch only when the Step
+meets at least one of these triggers:
+
+| Trigger | Reason |
+|---|---|
+| Expected commit count > 5 | Limits work-in-progress noise on `main` |
+| Regression risk (changes existing validated behavior) | Easy rollback via branch deletion if a port goes wrong |
+| Integration work (joins multiple module areas) | Mid-Step pivots are more likely; isolation reduces blast radius |
+| Mid-Step design pivot plausible | Same |
+
+The remaining `proto3:D015` provisions **carry unchanged**:
+
+- **Per-work-item commit**: each Plan §4 work item is its own commit,
+  regardless of where it lands.
+- **No-squash merge**: when a Step *does* branch, `git merge --no-ff`
+  preserves the commit cluster.
+- **Commit message prefix style** (`feat:` / `fix:` / `refactor:` /
+  `docs:` / `chore:`).
+
+`proto3:D016` (per-Step Plan + Tracker companion docs) is **unchanged
+and unconditional** — Plan / Tracker apply regardless of branching
+choice. The amendment is solely about branch policy.
+
+Step 01 (Project skeleton) is the first application of this decision —
+none of the four triggers fire (scaffold work, no regression risk,
+single-module scope, no design pivot expected), so Step 01 proceeds on
+`main`.
+
+Per-Step branch / no-branch choice is recorded in each Step's Plan §2
+(decision table) as a per-Step decision (`S0N-D…`), citing the trigger
+that fired or noting that none did.
+
+Reason:
+
+- The chief value `proto3:D015` extracted — *reviewable merge commit
+  clusters per Step* — depends on PR review. Solo work has no PR
+  review, so this value is weaker.
+- The remaining values (WIP isolation, easy rollback, plan↔commit
+  mapping) still apply, but only when the Step is large or risky
+  enough that they're worth the overhead. The four triggers above
+  identify those Steps.
+- proto3 itself made Step 01 an exception to D015 (precedent for
+  on-main Step 01). This decision generalizes the principle:
+  proto3:D015 was correct for a multi-developer or reviewed-work
+  context; for solo work it is overhead-dominant on small Steps.
+
+---
+
 # 4. Inherited-decision audit (proto3 D001–D023)
 
 The proto3 D-series is the framework decision record for the `archive/proto3/`
@@ -319,7 +378,7 @@ own namespace, restarted at D001. Proto3 decisions are referenced as
 | `proto3:D012` | start with dataclasses for schema | **Carry** |
 | `proto3:D013` | SVG-first visualization | **Carry** |
 | `proto3:D014` | debug outputs out of version control | **Carry** |
-| `proto3:D015` | per-Step branch + per-work-item commit + no-squash merge | **Carry** |
+| `proto3:D015` | per-Step branch + per-work-item commit + no-squash merge | **Modify** |
 | `proto3:D016` | per-Step Plan + Tracker companion docs | **Carry** |
 | `proto3:D017` | strict `Literal` validation in schema deserialization | **Carry** |
 | `proto3:D018` | Stage 13 output assembly: unified `LayoutCandidate(valid=…)` | **Modify** |
@@ -329,7 +388,7 @@ own namespace, restarted at D001. Proto3 decisions are referenced as
 | `proto3:D022` | generic `TargetAdapter` + 3-layer typology extensibility | **Carry** |
 | `proto3:D023` | required-only cardinality and area summation | **Carry** |
 
-Verdict counts: **Carry 14 · Modify 3 · Drop 3 · Defer 3**.
+Verdict counts: **Carry 13 · Modify 4 · Drop 3 · Defer 3** (updated 2026-05-25 — `proto3:D015` reclassified Carry → Modify per D005).
 
 ## 4.2 Notes on Modify / Drop / Defer entries
 
@@ -434,6 +493,16 @@ scope" from "schema reach":
   against what `archive/celllayout/` actually produces
   (`LayoutFixture` / `GrowthResult` / `CorridoredLayout`).
 
+### `proto3:D015` — Modify (per-Step branch demoted to guideline for solo work)
+
+Reclassified 2026-05-25 from Carry to Modify when D005 landed:
+
+- The **per-Step branch requirement** is demoted to a guideline.
+  Default is `main`; branch only when one of D005's four triggers fires.
+- The **per-work-item commit** and **no-squash merge** provisions
+  carry unchanged.
+- See D005 for full rationale and trigger criteria.
+
 ### `proto3:D019` — Drop (proto3-only amendment; superseded by Cell DimensionPolicy)
 
 - D019 was the import contract for `src/proto3/geometry/`
@@ -454,3 +523,4 @@ scope" from "schema reach":
 | 2026-05-24 | repo init | scaffold only — no decisions yet committed |
 | 2026-05-24 | §4 audit | proto3 D001–D023 audited: Carry 14 · Modify 3 · Drop 3 · Defer 3 |
 | 2026-05-24 | D001–D004 lock | Phase-1 D-series accepted — external contract, seed-first growth + corridor carving, triple-layer geometry, 7-class Role taxonomy |
+| 2026-05-25 | D005 lock | Solo-mode workflow — default to `main`, branch only on size / risk triggers. `proto3:D015` audit verdict moved Carry → Modify (audit summary now Carry 13 · Modify 4 · Drop 3 · Defer 3). |

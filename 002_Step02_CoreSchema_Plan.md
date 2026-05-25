@@ -42,12 +42,12 @@ Cross-references:
 
 | Item | Verification |
 |---|---|
-| All schema types importable from `room_layout.schema` | `python -c "from room_layout.schema import ShapeInput, FloorShape, ShapePart, VerticalAnchor, ProgramRequest, SpaceUnitSpec, LabeledRoomLayout, LabeledFloorLayout, LabeledRoom, Door, FailureRecord, Role, InputRole"` |
+| All schema types importable from `room_layout.schema` | `python -c "from room_layout.schema import ShapeInput, FloorShape, ShapePart, VerticalAnchor, ProgramRequest, SpaceUnitSpec, LabeledRoomLayout, LabeledFloorLayout, LabeledRoom, Door, FailureRecord, Role"` |
 | Input dataclasses are `frozen=True`; output dataclasses are mutable | code review + tests attempt mutation |
 | `__post_init__` structural validation enforced | unit tests — invalid inputs raise `ValueError` |
 | `ShapePart` orientation: exterior CCW + holes CW (right-hand rule) | unit test |
 | `VerticalAnchor.kind` ↔ `host_role` consistency enforced | unit test — invalid combinations raise `ValueError` |
-| `SpaceUnitSpec.role` cannot be `"corridor"` (uses `InputRole` Literal) | unit test — `role="corridor"` raises at construction (mypy / runtime) |
+| `SpaceUnitSpec.role` cannot be `"corridor"` | unit test — `SpaceUnitSpec(role="corridor", ...)` raises `ValueError` in `__post_init__` (S02-D9) |
 | `SpaceUnitSpec.anchor_id` required when `role == "vertical_circulation"` | unit test |
 | Strict `Literal` validation per `proto3:D017` at deserialization | unit test — `from_dict` rejects out-of-range Literal |
 | Serialization round-trip: `from_dict(cls, to_dict(obj)) == obj` for all dataclasses | unit tests, one per type |
@@ -74,7 +74,7 @@ Cross-references:
 | **S02-D6** | `__post_init__` scope | *Structural* validation only (single-object invariants): non-empty list, `Ring` ≥ 3 points, exterior CCW + holes CW, `VerticalAnchor.kind ↔ host_role`, `SpaceUnitSpec.role == "vertical_circulation"` ⇒ `anchor_id` set. Cross-references go to `validators.py`. |
 | **S02-D7** | `ShapeInput.name` | Required `str` (matches Cell + proto3 precedent; forces debugging hygiene; one extra kwarg is cheap). |
 | **S02-D8** | Migration character | Cell → new schema is a **semantic migration**, not a mechanical port. Cell `ShapeInput(name, parts)` lacks multi-floor + vertical anchors; new schema is a superset. Step 03 ports Cell modules to use this new schema (S01-Q1 "Refactor in-place"). |
-| **S02-D9** | `corridor` role in input | `SpaceUnitSpec.role` typed as `InputRole = Literal["public", "private", "service", "wet", "hub", "vertical_circulation"]` — `"corridor"` excluded. Output `LabeledRoom.role: Role` (full 7-class). Type system rejects `SpaceUnitSpec(role="corridor")` at construction; runtime cannot bypass without explicit cast. (D004: `corridor` is *output of carve*, not pre-seeded.) |
+| **S02-D9** | `corridor` role in input | **Single `Role` Literal** (7-class per D004) used for both `SpaceUnitSpec.role` and `LabeledRoom.role`. `SpaceUnitSpec.__post_init__` rejects `role == "corridor"` with `ValueError`. Rationale: `corridor` is *output of carving* per D004, not user-requestable. Considered a separate `InputRole` Literal for static-time rejection; rejected as over-engineering for a single asymmetric case — single source of truth + runtime check is cleaner, scales better to future asymmetric roles (one `__post_init__` line each), and the editor-level static-check margin is narrow (only catches literal-string-in-source; variable / JSON paths fall through to runtime in both designs). |
 | **S02-D10** | Anchor validation split | Structural validation in `VerticalAnchor.__post_init__` (`kind ↔ host_role` matrix). Cross-reference validation (`SpaceUnitSpec.anchor_id` resolves to an existing `VerticalAnchor.id` with matching `host_role`) in `validators.validate_input(shape, program)` — separate function called by Step 06's `run()`. |
 | **S02-D11** | `LabeledRoomLayout.debug_artifacts` | **Removed** from the output dataclass (per the Pipeline §2.3 cleanup). Stage trace emission is entirely callback-based (Step 06 `on_stage`); `run()` is pure (no filesystem). `LabeledRoomLayout` carries only the in-memory result + `failure_records` + `provenance`. |
 | **S02-D12** | `holes` orientation | Exterior CCW + interior holes CW (shapely right-hand rule, IFC `IfcArbitraryProfileDefWithVoids` convention). Enforced in `ShapePart.__post_init__`. |
@@ -101,7 +101,7 @@ Study_RoomLayout/
 │       │   ├── geometry.py                  (ShapeInput, FloorShape, ShapePart,
 │       │   │                                 VerticalAnchor, Ring, Point)
 │       │   ├── program.py                   (ProgramRequest, SpaceUnitSpec,
-│       │   │                                 Role, InputRole)
+│       │   │                                 Role)
 │       │   ├── output.py                    (LabeledRoomLayout, LabeledFloorLayout,
 │       │   │                                 LabeledRoom, Door)
 │       │   ├── failure.py                   (FailureRecord + DomainGateFailure
@@ -175,9 +175,8 @@ Verification: unit-test stubs pass for each type's instantiation and `__post_ini
 
 Implement in `program.py`:
 
-- `Role = Literal["public", "private", "service", "wet", "hub", "corridor", "vertical_circulation"]` (full 7-class per D004).
-- `InputRole = Literal["public", "private", "service", "wet", "hub", "vertical_circulation"]` (`corridor` excluded, S02-D9).
-- `@dataclass(frozen=True) SpaceUnitSpec` — `id`, `role: InputRole`, `usage: str | None`, `area_target_m2`, `area_min_m2`, `min_dimension_m`, `required: bool`, `anchor_id: str | None`. `__post_init__` enforces `role == "vertical_circulation"` ⇒ `anchor_id is not None`.
+- `Role = Literal["public", "private", "service", "wet", "hub", "corridor", "vertical_circulation"]` (full 7-class per D004) — used for **both** `SpaceUnitSpec.role` and `LabeledRoom.role` (S02-D9, single source of truth).
+- `@dataclass(frozen=True) SpaceUnitSpec` — `id`, `role: Role`, `usage: str | None`, `area_target_m2`, `area_min_m2`, `min_dimension_m`, `required: bool`, `anchor_id: str | None`. `__post_init__` enforces: (a) `role != "corridor"` (per S02-D9 — `corridor` is output-only), (b) `role == "vertical_circulation"` ⇒ `anchor_id is not None`.
 - `@dataclass(frozen=True) ProgramRequest` — `target_type`, `floor_programs: dict[int, list[SpaceUnitSpec]]`. `__post_init__` enforces non-empty `floor_programs`.
 
 Update `schema/__init__.py`.
@@ -232,7 +231,7 @@ Commit: `feat(step02): cross-ref validators`.
 Implement under `tests/`:
 
 - `test_schema_geometry.py` — `ShapePart` orientation (CCW exterior + CW holes), `VerticalAnchor` kind↔host_role matrix, `FloorShape` non-empty parts, `ShapeInput` non-empty floors + name.
-- `test_schema_program.py` — `Role` / `InputRole` separation, `SpaceUnitSpec` anchor_id rule for vertical_circulation, `ProgramRequest` non-empty floor_programs.
+- `test_schema_program.py` — `Role` Literal validation (incl. `SpaceUnitSpec(role="corridor")` rejection per S02-D9), `SpaceUnitSpec` `anchor_id` rule for `vertical_circulation`, `ProgramRequest` non-empty `floor_programs`.
 - `test_schema_output.py` — `LabeledRoomLayout` mutable / instantiation / `valid=False` carries non-empty `failure_records`.
 - `test_schema_failure.py` — exception hierarchy + `FailureRecord` round-trip.
 - `test_schema_serialize.py` — `to_dict`/`from_dict` round-trip for every dataclass + strict Literal rejection.

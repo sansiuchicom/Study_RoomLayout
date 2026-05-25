@@ -39,6 +39,22 @@ _KIND_TO_HOST_ROLE: dict[str, VerticalAnchorHostRole] = {
 }
 
 
+def _signed_area(ring: Ring) -> float:
+    """Shoelace signed area. Positive = CCW, negative = CW, zero = degenerate.
+
+    Direct math on the input coords — independent of shapely's `LinearRing`
+    behavior, which reports `.area == 0` for all LinearRings (they're 1-D
+    curves in shapely's geometry model, not 2-D regions).
+    """
+    n = len(ring)
+    s = 0.0
+    for i in range(n):
+        x1, y1 = ring[i]
+        x2, y2 = ring[(i + 1) % n]
+        s += x1 * y2 - x2 * y1
+    return s / 2.0
+
+
 def _validate_ring(ring: Ring, *, label: str, expect_ccw: bool) -> None:
     """Structural validation of a single ring.
 
@@ -47,22 +63,29 @@ def _validate_ring(ring: Ring, *, label: str, expect_ccw: bool) -> None:
     1. ``len(ring) >= 3`` — degenerate rings (point / segment) cannot
        form a polygon.
     2. ``signed area != 0`` — collinear rings are degenerate even with
-       3+ points; reject before checking orientation since `is_ccw`
-       is undefined on zero-area rings.
+       3+ points; reject before orientation since orientation is
+       undefined on zero-area rings.
     3. orientation matches ``expect_ccw`` (exterior CCW + holes CW per
        S02-D12 / shapely right-hand rule).
-    4. ``is_simple`` — no self-intersection.
+    4. ``is_simple`` — no self-intersection (delegated to shapely).
     """
     if len(ring) < 3:
         raise ValueError(f"{label}: ring must have ≥ 3 points, got {len(ring)}")
-    lr = LinearRing(ring)
-    if lr.area == 0:
+    area = _signed_area(ring)
+    if area == 0:
+        # Catches truly collinear rings AND bowtie self-intersections whose
+        # opposing triangles cancel to zero (e.g. (0,0)→(10,10)→(10,0)→(0,10)).
+        # Bowties get this message rather than the later "self-intersecting"
+        # one; functionally still rejected. Decided 2026-05-25 (4.6
+        # verification surfaced it): keep current order; message precision
+        # for bowties is a minor diagnostic cost worth the simpler ordering.
         raise ValueError(f"{label}: ring has zero signed area (degenerate / collinear)")
-    if lr.is_ccw != expect_ccw:
+    is_ccw = area > 0
+    if is_ccw != expect_ccw:
         want = "CCW" if expect_ccw else "CW"
-        got = "CCW" if lr.is_ccw else "CW"
+        got = "CCW" if is_ccw else "CW"
         raise ValueError(f"{label}: ring orientation must be {want}, got {got}")
-    if not lr.is_simple:
+    if not LinearRing(ring).is_simple:
         raise ValueError(f"{label}: ring is self-intersecting")
 
 

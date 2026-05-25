@@ -55,6 +55,14 @@ from room_layout.schema.program import (
     Role,
     SpaceUnitSpec,
 )
+from room_layout.schema.serialize import (
+    coords_to_polygon,
+    from_dict,
+    from_json,
+    polygon_to_coords,
+    to_dict,
+    to_json,
+)
 
 __all__ = [
     "AccessSchemaFailure",
@@ -78,4 +86,10 @@ __all__ = [
     "VerticalAnchor",
     "VerticalAnchorHostRole",
     "VerticalAnchorKind",
+    "coords_to_polygon",
+    "from_dict",
+    "from_json",
+    "polygon_to_coords",
+    "to_dict",
+    "to_json",
 ]

@@ -16,7 +16,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.3** Geometry types (`ShapeInput` / `FloorShape` / `ShapePart` / `VerticalAnchor` + `Ring`, `Point`) — committed 2026-05-25; `ruff` + `pytest` green locally
 - [x] **4.4** Program types (`ProgramRequest` / `SpaceUnitSpec` / `Role`) — committed 2026-05-25; 8/8 `__post_init__` paths verified; `ruff` + `pytest` green
 - [x] **4.5** Output + Failure types (`LabeledRoomLayout` / `LabeledFloorLayout` / `LabeledRoom` / `Door` / `FailureRecord` + exception hierarchy) — committed 2026-05-25; mutability + exception-hierarchy raise/catch verified; `ruff` + `pytest` green
-- [ ] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`)
+- [x] **4.6** Serialization helpers (`to_dict` / `from_dict` + strict `Literal` validation per `proto3:D017`) — committed 2026-05-25; full round-trip green for all 6 input + 4 output dataclasses (via JSON); strict rejection paths (extra key / missing required / bad Literal / bool-as-numeric) verified; 4.3 `LinearRing.area` bug surfaced + fixed via shoelace; `ruff` + `pytest` green
 - [ ] **4.7** Cross-reference validators (`validate_input(shape, program)`)
 - [ ] **4.8** Schema unit tests (6 `test_schema_*.py` files)
 - [ ] **4.9** Step close + `git merge --no-ff step02-coreschema` to `main`
@@ -69,6 +69,40 @@ _Per-work-item notes from 4.2 onward go below._
   was not enumerated in Plan §4.3 but is a structural invariant for
   shapely `Polygon` construction downstream, so caught at the schema
   boundary rather than later.
+
+- **2026-05-25 — 4.6 surfaced latent 4.3 bug**: original
+  `_validate_ring` used `shapely.geometry.polygon.LinearRing.area == 0`
+  as the degeneracy check. `LinearRing.area` is **always 0** in
+  shapely (a `LinearRing` is a 1-D curve in shapely's geometry model,
+  not a 2-D region) — so the check fired for every input, rejecting
+  even valid CCW rings. Missed in 4.3 because the runtime smoke
+  verification only ran `import` + `pytest`, never actually
+  instantiated `ShapePart`. Surfaced when 4.6 round-trip tests
+  attempted the first real `ShapePart(...)` call. Fix: replaced
+  with hand-rolled shoelace `_signed_area(ring)` (also folds in the
+  orientation sign — `area > 0 ⇔ CCW`), so the same computation
+  serves both the degeneracy and orientation checks.
+
+- **2026-05-25 — 4.6 decisions**: (a) `from_dict` rejects unknown
+  extra keys (`ValueError`). Reconsidered from initial "ignore"
+  recommendation; rationale — Step 02 is defining the schema fresh
+  with no external saved-data clients yet, strict catches fixture
+  typos immediately, consistent with proto3:D017 strict-Literal
+  spirit, and `strict=False` flag can be added later without
+  breaking the strict path. (b) Missing required fields rejected;
+  fields with `default`/`default_factory` may be omitted. (c)
+  `dict[str, Any]` / `Any`-typed values pass through (no recursion
+  on `from_dict`) — `provenance` + `FailureRecord.data` rely on
+  caller for JSON-safety. (d) Polygon dispatch via `cls is Polygon`
+  special-case + `polygon_to_coords` / `coords_to_polygon`
+  helpers. (e) `bool` rejected where `int`/`float` expected
+  (Python's bool-is-int quirk would otherwise silently accept
+  True/False as numeric); `int` accepted where `float` expected
+  (JSON has no 0 vs 0.0). (f) Bowtie self-intersection edge case:
+  shoelace area of a bowtie sums to 0 (opposing triangles cancel),
+  so bowties get the "zero signed area" rejection message rather
+  than "self-intersecting" — functionally still rejected; current
+  check order kept for simplicity.
 
 ---
 

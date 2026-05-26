@@ -1,0 +1,83 @@
+{
+  "shape": {
+    "name": "7자 angled (-25 + 0°)",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                7.2504622962931995,
+                4.619053906074404
+              ],
+              [
+                8.518317081515297,
+                7.337977267184354
+              ],
+              [
+                1.2678547852220983,
+                10.71892336110995
+              ],
+              [
+                0.0,
+                8.0
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                7,
+                0
+              ],
+              [
+                10,
+                0
+              ],
+              [
+                10,
+                8
+              ],
+              [
+                7,
+                8
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

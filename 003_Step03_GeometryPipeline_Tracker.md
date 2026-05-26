@@ -55,6 +55,37 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 _Per-work-item notes go below as they accumulate. Pre-execution decisions
 S03-D1..D12 are frozen in Plan §2._
 
+- **2026-05-26 — 4.3 heuristics flagged for Step 05/06 revisit**: Cell
+  ``LayoutFixture`` doesn't carry per-room target areas or a typology
+  label, so two values were filled by heuristic during fixture
+  conversion: (1) ``SpaceUnitSpec.area_target_m2 =
+  footprint_area_m2 / num_rooms`` (equal split) — Cell has min areas
+  via ``role_min_areas`` but no per-room target; Phase 6 growth will
+  refine. (2) ``ProgramRequest.target_type = "apartment"`` for all 33
+  cases — Cell fixtures are Korean apartment-style by design; Step 05
+  will re-evaluate once ``target_rules/<typology>.json`` lands. Both
+  decisions are also documented in
+  ``scripts/cell_fixtures_to_json.py`` docstring; flagging here so
+  they don't get forgotten when downstream stages start depending on
+  them as ground truth.
+
+- **2026-05-26 — 4.3 slug convention**: replaced Cell's lossy
+  ``case_slug`` (NFKD + ASCII-strip → "타워형" → "case") with an
+  English-only mapping table in ``scripts/cell_fixtures_to_json.py``
+  (``_english_slug``). Maps shape ideograms (ㄱ자/ㄷ자/7자/十자/ㅁ자/E자/
+  ㄹ자/T자/standalone ㄱ/ㄷ/ㅁ/ㄹ) + 평/판상형/타워형/비대칭/큰 to
+  meaningful tokens (``l_shape`` / ``c_shape`` / ``j_shape`` / ``cross``
+  / ``donut`` / ``e_shape`` / ``z_shape`` / ``t_shape`` / ``py`` /
+  ``flat`` / ``tower`` / ``asym`` / ``big``). Result: every case dir is
+  human-readable (e.g., ``case_05_tower``, ``case_31_asym_l``). Trade-
+  off: slug names no longer match Cell's ``case_slug`` output, so
+  cross-referencing Cell docs requires the index alone, not the slug.
+  Acceptable — ongoing-dev readability beats Cell-doc symmetry.
+
+- **2026-05-26 — 4.3 ``.gitkeep`` retired**: ``tests/golden/.gitkeep``
+  removed in the 4.3 commit since the directory now has 33 case
+  subdirectories carrying real fixture content.
+
 ---
 
 ## 4. Close summary

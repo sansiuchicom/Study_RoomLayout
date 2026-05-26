@@ -1,0 +1,103 @@
+{
+  "shape": {
+    "name": "Main + wing 25°",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                0,
+                0
+              ],
+              [
+                12,
+                0
+              ],
+              [
+                12,
+                8
+              ],
+              [
+                0,
+                8
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                13.53153893518325,
+                9.113091308703497
+              ],
+              [
+                11.841065888220452,
+                12.738322456850097
+              ],
+              [
+                7.309526953037202,
+                10.6252311481466
+              ],
+              [
+                9.0,
+                7.0
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 29.0,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 29.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 29.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 29.0,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

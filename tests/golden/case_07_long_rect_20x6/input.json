@@ -1,0 +1,82 @@
+{
+  "shape": {
+    "name": "Long rect 20x6",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                0,
+                0
+              ],
+              [
+                20,
+                0
+              ],
+              [
+                20,
+                6
+              ],
+              [
+                0,
+                6
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 30.0,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 30.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 30.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 30.0,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

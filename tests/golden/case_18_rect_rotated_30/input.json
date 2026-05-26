@@ -1,0 +1,82 @@
+{
+  "shape": {
+    "name": "Rect rotated 30°",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                13.196152422706632,
+                3.5358983848622447
+              ],
+              [
+                9.196152422706632,
+                10.464101615137753
+              ],
+              [
+                -1.1961524227066316,
+                4.464101615137755
+              ],
+              [
+                2.803847577293368,
+                -2.4641016151377544
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 24.0,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

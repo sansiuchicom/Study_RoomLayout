@@ -14,6 +14,7 @@ Grows incrementally: 4.8 lands what ``save_atom_figure`` needs
 demo CLI (4.12).
 """
 
+from math import degrees
 from pathlib import Path
 
 import matplotlib
@@ -24,8 +25,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib import font_manager  # noqa: E402
 from shapely.ops import unary_union  # noqa: E402
 
-from room_layout.schema import FloorShape  # noqa: E402
-from room_layout.stages._helpers import polygon_parts, to_shapely  # noqa: E402
+from room_layout.schema import FloorShape, ShapePart  # noqa: E402
+from room_layout.stages._helpers import part_theta, polygon_parts, to_shapely  # noqa: E402
 
 PART_COLORS = [
     "#9ad0c2",
@@ -76,3 +77,44 @@ def _finish_axis(ax, floor: FloorShape) -> None:
     ax.set_aspect("equal")
     ax.grid(True, color="#dddddd", linewidth=0.5, alpha=0.8)
     ax.tick_params(labelsize=7)
+
+
+def _draw_part(ax, part: ShapePart, color: str, idx: int) -> None:
+    """Fill a single ``ShapePart`` (exterior + holes) with a P# / θ label."""
+    xs, ys = zip(*part.exterior, strict=True)
+    ax.fill(
+        [*xs, xs[0]], [*ys, ys[0]], facecolor=color, edgecolor="#333333", alpha=0.55, linewidth=1.0
+    )
+    for hole in part.holes:
+        hx, hy = zip(*hole, strict=True)
+        ax.fill(
+            [*hx, hx[0]],
+            [*hy, hy[0]],
+            facecolor="#444444",
+            edgecolor="#111111",
+            alpha=1.0,
+            linewidth=0.8,
+        )
+    poly = to_shapely(part)
+    if not poly.is_empty:
+        rp = poly.representative_point()
+        ax.text(
+            rp.x,
+            rp.y,
+            f"P{idx}\n{degrees(part_theta(part)):.1f}°",
+            ha="center",
+            va="center",
+            fontsize=8,
+            bbox={
+                "boxstyle": "round,pad=0.2",
+                "facecolor": "white",
+                "edgecolor": "#777777",
+                "linewidth": 0.4,
+                "alpha": 0.88,
+            },
+        )
+
+
+def _draw_vertices(ax, part: ShapePart) -> None:
+    for x, y in part.exterior:
+        ax.plot(x, y, "o", markersize=3, color="#222222", zorder=10)

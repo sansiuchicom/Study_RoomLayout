@@ -66,6 +66,35 @@ def assert_layout_equal(
     _compare(actual, expected, tol=tol, path="")
 
 
+def assert_golden(
+    actual: Any,
+    golden_path: Path,
+    *,
+    update_goldens: bool,
+    tol: float = 1e-6,
+) -> None:
+    """Compare a stage output against its golden JSON file (S03-D5 / S03-D10).
+
+    Serializes ``actual`` via ``to_dict`` and either:
+
+    - ``update_goldens=True``: (re)writes the golden file and returns
+      silently. Delegates to ``assert_layout_equal``'s update path so
+      there is a single writer.
+    - ``update_goldens=False``: loads the golden and compares the two
+      **serialized** forms (plain dict / list / float) — no dataclass
+      reconstruction, no tuple/list strictness, Polygon coords compared
+      with `tol`. The driver passes whatever serializable representation
+      the stage warrants (full `to_dict` for regionize / region_graph /
+      gates; a digest dict for atomize per S03-D14).
+    """
+    if update_goldens:
+        assert_layout_equal(actual, None, update_mode=True, golden_path=golden_path, tol=tol)
+        return
+    with golden_path.open(encoding="utf-8") as f:
+        expected = json.load(f)
+    assert_layout_equal(to_dict(actual), expected, tol=tol)
+
+
 def _compare(actual: Any, expected: Any, *, tol: float, path: str) -> None:
     """Recursive deep-compare. ``path`` accumulates the location for diagnostics."""
 

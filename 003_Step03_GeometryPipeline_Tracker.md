@@ -86,6 +86,17 @@ S03-D1..D12 are frozen in Plan §2._
   removed in the 4.3 commit since the directory now has 33 case
   subdirectories carrying real fixture content.
 
+- **2026-05-28 — 4.8 golden size → S03-D14 (atomize digest)**: measured
+  atomize on case 1 (14×10 rect) = **1551 atoms, ~404 KB full JSON**;
+  ×33 ≈ 13 MB for atomize goldens alone. Atoms are mechanical grid
+  cells with no individual identity, so atomize's golden is a **digest**
+  (n_atoms / total_area / per_part_counts / n_slivers / bbox / thetas)
+  rather than full geometry — catches every gross port-regression mode
+  at ~200 B/case. regionize / region_graph / gates keep full goldens
+  (few, meaningful outputs). S03-D14 recorded in Plan §2; digest builder
+  lives in the test layer. 4.8 split into 8a (algorithm port + unit
+  tests, done) and 8b (viz + digest goldens).
+
 - **2026-05-28 — 4.7/4.8 swap + S03-D13 (FloorShape input)**: porting
   ``territory`` surfaced two things. (1) **Order defect**: ``atomize``
   imports ``resolve_territories`` / ``collect_cross_theta_contact_coords``

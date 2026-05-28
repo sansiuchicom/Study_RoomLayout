@@ -108,6 +108,7 @@ Cross-references:
 | **S03-D11** | Cell test porting policy | Cell's 17 test files under `archive/celllayout/algorithm/tests/` are kept as *reference only*. New tests for the ported stages are written from scratch against the new schema and committed alongside their stage in the same work-item commit (not as a separate test-bundle commit per Step 02 §4.8 pattern). |
 | **S03-D12** | Viz output locations | Two paths, intentionally: (a) `tests/golden/<case>/<stage>.png` — committed sidecars for in-PR visual inspection (33 × 4 = 132 PNGs, kept small via `dpi=130`). (b) `outputs/step03/<case>/<stage>.png` — D006-compliant dev demo target (`.gitignore`d, regenerable via `python -m room_layout.viz.demo`). |
 | **S03-D13** | Stage input granularity | Phase 3–5 stages take a **`FloorShape`**, not a `ShapeInput`. Cell's `ShapeInput` was single-floor (`name` + `parts`), so the 1:1 semantic mapping to the new schema is `FloorShape` (one floor's `parts`), not the new multi-floor `ShapeInput`. Per-floor orchestration (`for floor in shape.floors`) lives in Step 06 `run()`; stages stay floor-scoped, matching Pipeline §2.1 ("processes one floor at a time") and keeping multi-floor (Step 09) a loop-only change with no stage rewrite. v1 golden drivers call stages with `shape.floors[0]`. `vertical_anchors` are not passed to Phase 3–5 stages (unused until Phase 6+; supplied separately then). Discovered while porting `territory` (4.7), which accessed Cell's `shape.parts`. |
+| **S03-D14** | Golden granularity per stage | Golden representation is matched to each stage's output semantics. **`atomize` → digest** (`n_atoms`, `total_area`, `per_part_counts`, `n_slivers`, `bbox`, distinct `thetas`), **not** full per-atom geometry: a single case produces ~1500 mechanical grid cells (~400 KB full JSON; ~13 MB across 33 cases), and individual atoms carry no human-meaningful identity. The digest catches the real port-regression modes (atom-count drift, area-conservation break, part-assignment change, sliver-absorption change, bounds shift) at ~200 B/case. **`regionize` / `region_graph` / `gates` → full goldens** — their outputs are few + meaningful (tens of regions, a small graph, per-region pass/fail), so exact geometry is worth pinning and cheap to store. `tests/golden/<case>/atomize.json` holds the digest (filename convention preserved); the digest builder lives in the test layer (golden-strategy concern, not algorithm). If exact per-atom regression is ever needed, add full goldens for a few representative cases then. |
 
 ---
 
@@ -309,13 +310,20 @@ Files:
 - `tests/test_golden_per_stage.py` — initial parametrized golden test
   covering atomize (other stages added in their own work items).
 
-Commit: `feat(step03): atomize + dev-bridge viz + 33-case goldens`.
+Split into **8a** (algorithm port + unit tests — committed) and **8b**
+(viz + golden bootstrap, this part). `atomize.json` holds a **digest**,
+not full per-atom geometry (S03-D14).
+
+Commit (8b): `feat(step03): atomize dev-bridge viz + 33-case digest goldens`.
 
 **Manual review checkpoint**: this is the first "big" work item where
 golden bootstrap happens. Review pattern: render all 33 atomize PNGs
-to `outputs/step03/`, eyeball each for sanity (atom count, boundary
-alignment, theta inheritance), THEN commit goldens. If any case looks
-wrong, fix algorithm and re-render before commit.
+to `outputs/step03/` + `tests/golden/<case>/`, eyeball each for sanity
+(atom count, boundary alignment, theta inheritance), THEN commit
+goldens. If any case looks wrong, fix algorithm and re-render before
+commit. The digest golden (S03-D14) pins count / area / part-assignment
+/ sliver / bbox; the PNG is the human-facing artifact for the parts a
+digest can't capture (boundary placement).
 
 ### 4.9 Regionize + viz + 33 goldens
 

@@ -7,15 +7,19 @@ for regression coverage.
 
 Module layout (Plan §3):
 
-    _helpers.py     Cell geometry utilities (to_shapely / polygon_parts
-                    / part_theta) ported and adapted to new schema
+    _helpers.py     Cell geometry utilities (to_shapely / from_shapely /
+                    polygon_parts / line_length / rotate_radians /
+                    part_theta) ported and adapted to new schema
     dimensions.py   DimensionPolicy + quantum helpers (is_quantum_aligned,
                     split_interval); foundational utility for the rest
-    atomize.py      Atom dataclass + atomize(shape, policy)
-    territory.py    Territory dataclass + resolve_territories(atoms)
-    regionize.py    Region dataclass + regionize(shape, atoms, ...)
-    region_graph.py build_region_graph(regions) → networkx
-    shape_gate.py   shape gate checks (DimGateFailure / AccessSchemaFailure)
+    territory.py    Territory dataclass + resolve_territories(floor)
+    atomize.py      Atom dataclass + atomize(floor, policy)
+    regionize.py    Region dataclass + regionize(floor, atoms, ...)
+    atom_graph.py   AtomGraph + build_atom_graph(floor) (region_graph dep)
+    region_graph.py RegionGraph + build_region_graph(floor)
+
+(shape_gate is a Phase 6/7 growth helper — deferred to Step 04 per
+S03-D16, not part of this subpackage in Step 03.)
 
 Internal dataclasses (`Atom` / `Region` / `Territory` / `DimensionPolicy`)
 live alongside their producing stage per S03-D6 and are **not**

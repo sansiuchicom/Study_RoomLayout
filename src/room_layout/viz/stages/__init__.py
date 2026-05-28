@@ -6,13 +6,16 @@ overlay pattern), code written fresh against the new schema.
 
 Module layout (Plan §3):
 
-    input.py     save_input_figure
+    input.py     save_input_figure (lands with the demo CLI, 4.12)
     atomize.py   save_atom_figure
     regionize.py save_region_figure + save_region_graph_figure
-    gates.py     save_gate_figure + save_dimension_examples_figure
 
-Renderers take **outputs** (lists of ``Atom`` / ``Region`` / gate
-results) as parameters rather than running the algorithm internally.
+(No gates renderer — `shape_gate` is a Phase 6/7 helper deferred to
+Step 04, not a Phase-5 stage; S03-D16.)
+
+Renderers take **outputs** (lists of ``Atom`` / ``Region`` / the
+``RegionGraph``) as parameters rather than running the algorithm
+internally.
 The CLI ``viz/demo.py`` (work item 4.12) orchestrates: run pipeline →
 pass results to renderer → save PNG.
 

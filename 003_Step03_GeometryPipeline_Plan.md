@@ -17,19 +17,24 @@ establishes the development-bridge visualization (`src/room_layout/viz/`)
 and the per-stage JSON golden test infrastructure
 (`tests/golden/`) that subsequent Steps depend on for regression coverage.
 
-Phase 3–5 are the **pure-geometry stages** — ShapeInput → atoms → regions
-→ gate-OK. The growth-and-carving half (Phase 6–8) is deferred to
-**Step 04** to keep this Step reviewable and the work-item commits atomic
-(S03-D3).
+The pure-geometry stages — a floor's parts → atoms → regions → region
+adjacency graph. There is **no separate "gate" stage**: the size/aspect
+gates (`MIN_AREA` / `MAX_ASPECT` / balance) are enforced *inside*
+`regionize`'s cut selection, and Cell's `shape_gate.py` is a reflex
+helper for Phase 6/7 room absorption (S03-D16), not a Phase-5 stage —
+it is deferred to **Step 04** with its only consumer, `growth_absorb`.
+The growth-and-carving half (Phase 6–8) is deferred to **Step 04** to
+keep this Step reviewable and the work-item commits atomic (S03-D3).
 
 After Step 03 closes:
 
 - `from room_layout.stages import atomize, regionize, ...` works.
-- A `ShapeInput` can be carried through atomize → regionize → gate
-  checks; intermediate outputs are typed Python dataclasses.
-- Per-stage matplotlib renderers (input / atomize / regionize / gates)
-  produce dev-bridge PNGs; visual vocabulary mirrors Cell `viz.py`
-  selectively, code is new-schema-native (S03-D4).
+- A `FloorShape` can be carried through atomize → regionize →
+  region_graph; intermediate outputs are typed Python dataclasses.
+- Per-stage matplotlib renderers (atomize / regionize / region_graph,
+  plus an input renderer in the demo CLI) produce dev-bridge PNGs;
+  visual vocabulary mirrors Cell `viz.py` selectively, code is
+  new-schema-native (S03-D4).
 - `tests/golden/<case>/` carries 33 Cell showcase cases as JSON
   fixtures, each with per-stage golden outputs and PNG sidecars; a
   Polygon-aware comparator (`tests/_golden.py`) drives regression
@@ -38,7 +43,7 @@ After Step 03 closes:
 Cross-references:
 
 - `docs/000_Pipeline_Overview.md` §3 — per-stage operational view
-  (this Step implements the atomize / regionize / gates portion).
+  (this Step implements the atomize / regionize / region_graph portion).
 - `docs/000_Architecture_Decisions.md`:
   - **D001** — external contract (Step 02 implemented; Step 03 ports
     algorithm against it).
@@ -56,9 +61,11 @@ Cross-references:
 - `legacy/step02/002_Step02_CoreSchema_*.md` — direct predecessor;
   Plan §7 sketches this Step's outline.
 - `archive/celllayout/algorithm/celllayout_tf/` — porting source.
-  Phase 3–5 modules: `atomize.py`, `regionize.py`, `region_graph.py`,
-  `territory.py`, `shape_gate.py`, `dimensions.py` + the support
-  helpers in `geometry.py`. Phase 6–8 modules untouched this Step.
+  Phase 3–4 geometry modules: `territory.py`, `atomize.py`,
+  `regionize.py`, `atom_graph.py`, `region_graph.py`, `dimensions.py`
+  + the support helpers in `geometry.py`. `shape_gate.py` is a Phase 6/7
+  growth helper (S03-D16) and is **not** ported this Step. Phase 6–8
+  modules untouched.
 - `archive/celllayout/algorithm/celllayout_tf/viz.py` — visual
   vocabulary reference (S03-D4 selective port).
 - `archive/celllayout/algorithm/celllayout_tf/cases.py` +
@@ -72,16 +79,16 @@ Cross-references:
 
 | Item | Verification |
 |---|---|
-| Phase 3–5 modules ported into `src/room_layout/stages/` (atomize / regionize / region_graph / territory / shape_gate / dimensions + `_helpers.py` for shared geometry utilities) | `python -c "from room_layout.stages import atomize, regionize, region_graph, territory, shape_gate, dimensions"` |
-| Every stage accepts `room_layout.schema.ShapeInput` (new schema) — Cell internal types (`Atom` / `Region` / `Territory` / `DimensionPolicy`) live alongside their producing stage and are not re-exported from `room_layout` (S03-D6 internal-types policy) | code review + `room_layout.__all__` audit |
-| Internal dataclasses (`Atom` / `Region` / `Territory`) round-trip through `to_dict` / `from_dict` cleanly (proto3:D017 strict-Literal carry) | unit tests under `tests/test_stages_*.py` |
+| Phase 3–4 modules ported into `src/room_layout/stages/` (territory / atomize / regionize / atom_graph / region_graph / dimensions + `_helpers.py` for shared geometry utilities) — `shape_gate` deferred to Step 04 (S03-D16) | `python -c "from room_layout.stages import atomize, regionize, region_graph, atom_graph, territory, dimensions"` |
+| Every stage accepts `room_layout.schema.FloorShape` (S03-D13) — Cell internal types (`Atom` / `Region` / `Territory` / `AtomGraph` / `RegionGraph` / `DimensionPolicy`) live alongside their producing stage and are not re-exported from `room_layout` (S03-D6 internal-types policy) | code review + `room_layout.__all__` audit |
+| Internal dataclasses round-trip through `to_dict` / `from_dict` cleanly (proto3:D017 strict-Literal carry) | unit tests under `tests/test_stages_*.py` |
 | 33 Cell showcase fixtures converted to JSON under `tests/golden/<case>/input.json` (one-shot via `scripts/cell_fixtures_to_json.py`; Cell Python `LayoutFixture` form retired afterward) | directory listing + each input.json loads via `from_json(ShapeInput, ...)` cleanly |
-| Per-stage golden JSON files exist for all 33 cases × 4 stages: `atomize.json`, `regionize.json`, `region_graph.json`, `gates.json` | listing under `tests/golden/<case>/` |
-| Polygon-aware comparator `tests/_golden.py::assert_layout_equal(actual, expected, *, tol=1e-6)` implemented + self-tested | `tests/test_golden_comparator.py` green |
-| 33 × 4 = 132 per-stage golden assertions all pass | `pytest tests/test_golden_per_stage.py` green |
+| Per-stage golden JSON files exist for all 33 cases × 3 stages: `atomize.json` (digest, S03-D14), `regionize.json` (full geom minus atom_ids), `region_graph.json` (edges only, S03-D15) | listing under `tests/golden/<case>/` |
+| Polygon-aware comparator `tests/_golden.py::assert_layout_equal(actual, expected, *, tol=1e-6)` + `assert_golden` implemented + self-tested | `tests/test_golden_comparator.py` green |
+| 33 × 3 = 99 per-stage golden assertions all pass | `pytest tests/test_golden_per_stage.py` green |
 | Golden update mechanism: `pytest --update-goldens` flag (pytest fixture hook) regenerates the *.json files in place; documented in Plan §3 / Tracker | running with the flag produces a diff in `tests/golden/<case>/<stage>.json` for any case where the algorithm changed |
-| 4 dev-bridge matplotlib renderers under `src/room_layout/viz/stages/` (input / atomize / regionize / gates) with shared `viz/_helpers.py` for `_draw_part` / `_draw_footprint` / `_finish_axis` / color palette | `python -m room_layout.viz.demo --case 1 --stage atomize --out outputs/step03/` produces a PNG; visual style matches Cell viz selectively (S03-D4) |
-| PNG sidecars rendered for all 33 cases × 4 stages → `tests/golden/<case>/<stage>.png` (committed; small enough to git-track) and also reproducible via `viz/demo.py` into `outputs/step03/` (D006) | listing + spot check |
+| 3 dev-bridge matplotlib renderers under `src/room_layout/viz/stages/` (atomize / regionize incl. region-graph overlay) + an input renderer landed with the demo CLI (4.12), shared `viz/_helpers.py` for `_draw_footprint_outline` / `_finish_axis` / `PART_COLORS` | `python -m room_layout.viz.demo --case 1 --stage atomize --out outputs/step03/` produces a PNG; visual style matches Cell viz selectively (S03-D4) |
+| PNG sidecars rendered for all 33 cases × 3 stages → `tests/golden/<case>/<stage>.png` (committed; small enough to git-track) and also reproducible via `viz/demo.py` into `outputs/step03/` (D006) | listing + spot check |
 | Unit tests for every ported module (mirroring Cell test coverage but written against the new schema, not auto-ported — S03-D11) | per-module test files green |
 | `python -m pytest` green; `ruff check .` + `ruff format --check .` green | local + CI |
 | CI green on `step03-geometrypipeline` branch | `gh run list` |
@@ -108,6 +115,7 @@ Cross-references:
 | **S03-D11** | Cell test porting policy | Cell's 17 test files under `archive/celllayout/algorithm/tests/` are kept as *reference only*. New tests for the ported stages are written from scratch against the new schema and committed alongside their stage in the same work-item commit (not as a separate test-bundle commit per Step 02 §4.8 pattern). |
 | **S03-D12** | Viz output locations | Two paths, intentionally: (a) `tests/golden/<case>/<stage>.png` — committed sidecars for in-PR visual inspection (33 × 4 = 132 PNGs, kept small via `dpi=130`). (b) `outputs/step03/<case>/<stage>.png` — D006-compliant dev demo target (`.gitignore`d, regenerable via `python -m room_layout.viz.demo`). |
 | **S03-D13** | Stage input granularity | Phase 3–5 stages take a **`FloorShape`**, not a `ShapeInput`. Cell's `ShapeInput` was single-floor (`name` + `parts`), so the 1:1 semantic mapping to the new schema is `FloorShape` (one floor's `parts`), not the new multi-floor `ShapeInput`. Per-floor orchestration (`for floor in shape.floors`) lives in Step 06 `run()`; stages stay floor-scoped, matching Pipeline §2.1 ("processes one floor at a time") and keeping multi-floor (Step 09) a loop-only change with no stage rewrite. v1 golden drivers call stages with `shape.floors[0]`. `vertical_anchors` are not passed to Phase 3–5 stages (unused until Phase 6+; supplied separately then). Discovered while porting `territory` (4.7), which accessed Cell's `shape.parts`. |
+| **S03-D16** | `shape_gate` is a Phase 6/7 helper, deferred to Step 04 | Cell's `shape_gate.py` (`count_reflex_vertices` + `_reflex_of_union`) was mis-bucketed as a Phase-5 "gate stage" in the original Plan. Verified empirically: its **only** consumer is `growth_absorb.py` (Phase 6/7 room absorption — it checks the reflex count of a candidate merged-room union). It produces no stage output, raises no `DimGateFailure`, and nothing in Phase 3–4 imports it. The actual size/aspect gates (`MIN_AREA` / `MAX_ASPECT` / balance) live *inside* `regionize`'s cut selection (already ported, 4.9). So `shape_gate` is **deferred to Step 04** and ported there alongside `growth_absorb`. Consequences for Step 03: no `gates.json` golden, no gates renderer (renderers are atomize / regionize / region-graph-overlay + input-in-demo = 3), no third manual-review checkpoint. Original work item 4.11 is retired (see §4.11). |
 | **S03-D15** | `region_graph` golden = edges only | `build_region_graph` returns a `RegionGraph(regions, edges)` dataclass — the `regions` are identical to regionize's output (already pinned by `regionize.json`), so the region_graph golden stores **only the `edges`** (`region_a` / `region_b` / `shared_boundary_length` / `centroid_distance` / `same_theta_group` / `exterior_contact` / `hole_contact`, floats rounded). Avoids duplicating region geometry; pins exactly what this stage adds — the adjacency. `atom_graph` is an *intermediate* (consumed only by `region_graph`): no standalone golden or viz (territory precedent), covered indirectly via the region_graph golden + direct unit tests. Note: both `build_atom_graph` and `build_region_graph` return plain dataclasses (not `networkx.Graph`), so `to_dict` serializes them with no special adapter — the earlier networkx-serialization concern was unfounded. |
 | **S03-D14** | Golden granularity per stage | Golden representation is matched to each stage's output semantics. **`atomize` → digest** (`n_atoms`, `total_area`, `per_part_counts`, `n_slivers`, `bbox`, distinct `thetas`), **not** full per-atom geometry: a single case produces ~1500 mechanical grid cells (~400 KB full JSON; ~13 MB across 33 cases), and individual atoms carry no human-meaningful identity. The digest catches the real port-regression modes (atom-count drift, area-conservation break, part-assignment change, sliver-absorption change, bounds shift) at ~200 B/case. **`regionize` / `region_graph` / `gates` → full goldens** — their outputs are few + meaningful (tens of regions, a small graph, per-region pass/fail), so exact geometry is worth pinning and cheap to store. `tests/golden/<case>/atomize.json` holds the digest (filename convention preserved); the digest builder lives in the test layer (golden-strategy concern, not algorithm). If exact per-atom regression is ever needed, add full goldens for a few representative cases then. |
 
@@ -130,47 +138,49 @@ Study_RoomLayout/
 │   └── room_layout/
 │       ├── __init__.py                          (existing — Step 02 re-exports; may add stages re-export at close)
 │       ├── schema/                              (existing — public contract; unchanged)
-│       ├── stages/                              (new package, Phase 3–5)
+│       ├── stages/                              (new package, Phase 3–4 geometry)
 │       │   ├── __init__.py
-│       │   ├── _helpers.py                      (Cell geometry utilities ported: to_shapely, polygon_parts, part_theta)
+│       │   ├── _helpers.py                      (Cell geometry utilities ported: to_shapely, from_shapely, polygon_parts, line_length, rotate_radians, part_theta)
 │       │   ├── dimensions.py                    (DimensionPolicy + is_quantum_aligned + split_interval)
-│       │   ├── atomize.py                       (Atom dataclass + atomize())
 │       │   ├── territory.py                     (Territory dataclass + resolve_territories())
+│       │   ├── atomize.py                       (Atom dataclass + atomize())
 │       │   ├── regionize.py                     (Region dataclass + regionize())
-│       │   ├── atom_graph.py                     (AtomGraph + build_atom_graph(); region_graph dep)
-│       │   ├── region_graph.py                  (RegionGraph + build_region_graph())
-│       │   └── shape_gate.py                    (shape gate checks; raises DimGateFailure)
+│       │   ├── atom_graph.py                    (AtomGraph + build_atom_graph(); region_graph dep)
+│       │   └── region_graph.py                  (RegionGraph + build_region_graph())
+│       │   #  shape_gate.py → deferred to Step 04 (S03-D16; Phase 6/7 growth helper)
 │       └── viz/                                 (existing — currently empty)
 │           ├── __init__.py
 │           ├── _helpers.py                      (new — shared draw helpers + PART_COLORS palette)
-│           ├── demo.py                          (new — CLI: render any case × any stage)
+│           ├── demo.py                          (new, 4.12 — CLI: render any case × any stage; also lands input.py renderer)
 │           └── stages/                          (new)
 │               ├── __init__.py
-│               ├── input.py                     (save_input_figure)
+│               ├── input.py                     (save_input_figure — landed with demo CLI, 4.12)
 │               ├── atomize.py                   (save_atom_figure)
-│               ├── regionize.py                 (save_region_figure + save_region_graph_figure)
-│               └── gates.py                     (save_gate_figure + save_dimension_examples_figure)
+│               └── regionize.py                 (save_region_figure + save_region_graph_figure)
+│               #  gates.py → not created (S03-D16: no gate stage)
 ├── tests/
 │   ├── golden/                                  (existing — was empty; populated here)
 │   │   ├── case_01_<slug>/
 │   │   │   ├── input.json                       (ShapeInput + ProgramRequest)
-│   │   │   ├── atomize.json
-│   │   │   ├── regionize.json
-│   │   │   ├── region_graph.json
-│   │   │   ├── gates.json
+│   │   │   ├── atomize.json                     (digest, S03-D14)
+│   │   │   ├── regionize.json                   (full geom minus atom_ids)
+│   │   │   ├── region_graph.json                (edges only, S03-D15)
 │   │   │   ├── atomize.png                      (sidecar, dpi=130)
 │   │   │   ├── regionize.png
-│   │   │   └── gates.png
+│   │   │   └── region_graph.png
 │   │   └── ... (33 cases total per S03-D9)
-│   ├── _golden.py                               (new — assert_layout_equal + Polygon-aware tolerance)
+│   ├── _golden.py                               (new — assert_layout_equal + assert_golden + Polygon-aware tolerance)
+│   ├── conftest.py                              (new — --update-goldens flag)
 │   ├── test_golden_comparator.py                (new — tests for the comparator itself)
+│   ├── test_golden_inputs.py                    (new — input.json round-trip smoke)
+│   ├── test_stages_helpers.py                   (new)
 │   ├── test_stages_dimensions.py                (new)
-│   ├── test_stages_atomize.py                   (new)
 │   ├── test_stages_territory.py                 (new)
+│   ├── test_stages_atomize.py                   (new)
 │   ├── test_stages_regionize.py                 (new)
+│   ├── test_stages_atom_graph.py               (new)
 │   ├── test_stages_region_graph.py              (new)
-│   ├── test_stages_shape_gate.py                (new)
-│   ├── test_golden_per_stage.py                 (new — parametrized 33 × 4)
+│   ├── test_golden_per_stage.py                 (new — parametrized 33 × 3 stages)
 │   ├── test_schema_*.py                         (existing — Step 02; unchanged)
 │   └── test_smoke.py                            (existing)
 └── outputs/
@@ -380,24 +390,22 @@ goldens).
 Commits: 10a `feat(step03): atom graph + region graph (algorithm port)`;
 10b `feat(step03): region graph viz + 33-case edge goldens`.
 
-### 4.11 Shape gate + viz + 33 goldens
+### 4.11 ~~Shape gate + viz + 33 goldens~~ — RETIRED (S03-D16)
 
-Files:
+**Retired 2026-05-28.** Cell's `shape_gate.py` is not a Phase-5 gate
+stage; it is a reflex-counting helper (`count_reflex_vertices` /
+`_reflex_of_union`) whose *only* consumer is `growth_absorb.py`
+(Phase 6/7). It produces no stage output, raises no `DimGateFailure`,
+and is imported by nothing in Phase 3–4. The genuine size/aspect gates
+are already enforced inside `regionize`'s cut selection (4.9). So
+`shape_gate` is **deferred to Step 04** and ported there with
+`growth_absorb`; there is no gates golden, no gates renderer, and no
+third manual-review checkpoint in Step 03 (S03-D16). The 4.2-scaffold
+placeholders `stages/shape_gate.py` + `viz/stages/gates.py` are removed
+in the same docs-correction commit.
 
-- `src/room_layout/stages/shape_gate.py` — gate checks; raises
-  `DimGateFailure` / `AccessSchemaFailure` (from Step 02) on violation.
-- `src/room_layout/viz/stages/gates.py` — `save_gate_figure(...)` +
-  `save_dimension_examples_figure(...)` (the singleton diagnostic).
-- `tests/golden/case_*/gates.json` × 33.
-- `tests/golden/case_*/gates.png` × 33.
-- `tests/test_stages_shape_gate.py`.
-- `tests/test_golden_per_stage.py` — extend.
-
-Commit: `feat(step03): shape gate + dev-bridge viz + 33-case goldens`.
-
-**Manual review checkpoint** (third of three): gates determine which
-cases proceed to Step 04 growth; passing/failing wrongly here would
-cascade.
+(Step 03 work items continue at 4.12 / 4.13; numbering preserved to keep
+existing 8a–10b commit references stable.)
 
 ### 4.12 Demo CLI
 
@@ -431,7 +439,12 @@ Commit: `feat(step03): viz demo CLI for dev-bridge PNG generation`.
 
 - **Phase 6–8** (`seed_placement`, `growth_seed`, `growth_cells`,
   `growth_partition`, `growth_absorb`, `room_growth`, `corridor`,
-  `corridor_*`, `atom_graph`) → **Step 04** (Algorithm core port).
+  `corridor_*`) → **Step 04** (Algorithm core port). (Note: `atom_graph`
+  was *not* deferred — it is a Phase 4 dependency of `region_graph` and
+  is ported here, 4.10.)
+- **`shape_gate.py`** (`count_reflex_vertices` / `_reflex_of_union`) →
+  **Step 04**, ported with its only consumer `growth_absorb` (S03-D16 —
+  it is a Phase 6/7 reflex helper, not a Phase-5 gate stage).
 - **`run()` entry point + `on_stage` callback + `manifest.json` writer**
   → **Step 06**.
 - **`target_rules/<typology>.json` + `expand_program()` helper +
@@ -456,12 +469,12 @@ Commit: `feat(step03): viz demo CLI for dev-bridge PNG generation`.
 
 | Risk | Mitigation |
 |---|---|
-| **Manual golden bootstrap for 33 cases is the single biggest cost** — for each "big" work item (4.7 / 4.9 / 4.11) all 33 outputs need eyeball review before goldens are committed. Bad goldens lock in bugs. | Render PNGs first → eyeball pass against Cell's pre-existing PNGs (if available) and against the visual vocabulary in `archive/celllayout/algorithm/celllayout_tf/viz.py` → THEN commit JSON+PNG goldens. Per-stage commit boundary matches review boundary so re-do scope is contained. |
+| **Manual golden bootstrap for 33 cases is the single biggest cost** — for each "big" work item (4.8 atomize / 4.9 regionize / 4.10 region_graph) all 33 outputs need eyeball review before goldens are committed. Bad goldens lock in bugs. | Render PNGs first → eyeball pass against the visual vocabulary in `archive/celllayout/algorithm/celllayout_tf/viz.py` → THEN commit JSON+PNG goldens. Per-stage commit boundary matches review boundary so re-do scope is contained. (Outcome: all three review checkpoints passed on spot-checks of diverse cases.) |
 | Cell internal types (`Atom` / `Region` / `Territory`) were built around Cell's old `ShapePart` (single-floor `parts` only). Refactoring against the new multi-floor schema may surface non-trivial shape — e.g., does `Atom.part_id` still make sense across floors? | Phase 3–5 are single-floor stages in v1 (per Pipeline §2.1 — algorithm processes one floor at a time). New schema's `FloorShape.parts` is just `ShapePart` list, so `Atom.part_id: int` maps directly to `FloorShape.parts[i]`. Multi-floor orchestration is Step 09, not this Step. |
-| `DimensionPolicy` is consumed by atomize / regionize / shape_gate — any divergence between Cell's implementation and the port surfaces as algorithm drift. | Port `dimensions.py` (4.6) before any consumer (4.7+). Unit tests in `test_stages_dimensions.py` use known-good Cell example values for regression. |
+| `DimensionPolicy` is consumed by atomize / regionize — any divergence between Cell's implementation and the port surfaces as algorithm drift. | Ported `dimensions.py` (4.6) before any consumer. Unit tests in `test_stages_dimensions.py` pin Cell's exact known-good values (e.g. `split_interval(1.00) == [0.35, 0.30, 0.35]`). |
 | Selective-port viz may drift in appearance from Cell viz (different label position / font / spacing) → makes visual regression checks against Cell's pre-existing PNGs harder. | Accept the drift; goldens are about the new code's output, not parity with Cell. PNG sidecars exist for *future* regression coverage (i.e., within Step 03+ history), not for direct Cell parity. |
 | Branch lifetime > Step 02's (1 day) — Step 03 is bigger. Drift from `main`. | Rebase or merge `main` into branch every 1–2 work items. Solo single-developer realistic drift is small but real. |
-| 33 × 4 = 132 JSON files + 132 PNG files + 33 input.json = ~300 new files in git. Risk: bloated commits, slow `git status` on `tests/golden/`. | PNG dpi=130 keeps individual PNGs ~30–80 KB. JSON files are 1–10 KB each. Total ~10–20 MB across 33 cases. Manageable. If repo bloat becomes a concern post-Step 04, consider Git LFS for PNGs only — JSON stays in regular git. |
+| 33 × 3 = 99 JSON + 99 PNG + 33 input.json = ~230 new files in git. Risk: bloated commits, slow `git status` on `tests/golden/`. | PNG dpi=130 keeps individual PNGs ~30–80 KB; JSON 0.2–50 KB each (atomize digest tiny, regionize full ~50 KB). Observed total ~11 MB at end of 4.10. Manageable. If repo bloat grows in Step 04, consider Git LFS for PNGs only — JSON stays in regular git. |
 | `pytest --update-goldens` is risky if accidentally enabled — silently rewrites all goldens. | Hook prints a loud `[GOLDEN UPDATE] rewriting tests/golden/<case>/<stage>.json` line per file. Make goldens updates always be a separate commit so PR review catches "this PR shouldn't be updating goldens but is". |
 | Cell `viz.py` imports its own internal modules (`from .atomize import atomize`) — using it directly as a reference shows API patterns we don't want to inherit (e.g., calling the algorithm inside the renderer). | Render functions in `viz/stages/` take *outputs* (lists of `Atom` / `Region`) as parameters, not `ShapeInput`. The CLI (`viz/demo.py`) orchestrates: run pipeline → pass results to renderer. Decouples viz from algorithm. |
 
@@ -482,9 +495,12 @@ Step 04 will:
 - Port Cell **Phase 6–8** modules into `src/room_layout/stages/`:
   `seed_placement.py`, `growth_seed.py`, `growth_cells.py`,
   `growth_partition.py`, `growth_absorb.py`, `room_growth.py`,
-  `corridor.py` + `corridor_*.py` (×5), `atom_graph.py`.
-- Reuse `Region` / `DimensionPolicy` / `Atom` from Step 03 — no
-  re-declaration; these are the input to growth.
+  `corridor.py` + `corridor_*.py` (×5). Plus `shape_gate.py`
+  (`count_reflex_vertices` / `_reflex_of_union`), the reflex helper
+  `growth_absorb` consumes (deferred from Step 03 per S03-D16).
+- Reuse `Region` / `DimensionPolicy` / `Atom` / `AtomGraph` /
+  `RegionGraph` from Step 03 — no re-declaration; these are the input
+  to growth. (`atom_graph` already ported in Step 03 §4.10.)
 - Add per-stage golden JSON + PNG for each new Phase 6–8 stage (seed,
   layout, corridor) on the same 33 cases — Step 03's golden
   infrastructure carries through; only the stage list grows.

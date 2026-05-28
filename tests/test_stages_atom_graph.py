@@ -7,7 +7,7 @@ empty handling, atoms-param consistency.
 
 from room_layout.schema import FloorShape, ShapePart
 from room_layout.stages.atom_graph import AtomEdge, AtomGraph, build_atom_graph
-from room_layout.stages.atomize import atomize
+from room_layout.stages.atomize import Atom, atomize
 
 
 def _rect(x0, y0, x1, y1) -> ShapePart:
@@ -45,11 +45,12 @@ def test_atom_graph_edges_have_positive_shared_length():
     assert all(e.shared_boundary_length > 0 for e in g.edges)
 
 
-def test_atom_graph_edge_indices_ordered_and_valid():
+def test_atom_graph_edge_atom_ids_ordered_and_valid():
     g = build_atom_graph(_floor(_rect(0, 0, 2, 2)))
-    n = len(g.atoms)
+    valid_ids = {a.atom_id for a in g.atoms}
     for e in g.edges:
-        assert 0 <= e.atom_a < e.atom_b < n
+        assert e.atom_a < e.atom_b
+        assert e.atom_a in valid_ids and e.atom_b in valid_ids
 
 
 def test_atom_graph_neighbors_symmetric():
@@ -57,6 +58,34 @@ def test_atom_graph_neighbors_symmetric():
     for e in g.edges:
         assert e.atom_b in g.neighbors(e.atom_a)
         assert e.atom_a in g.neighbors(e.atom_b)
+
+
+def test_atom_graph_neighbors_keyed_by_atom_id_not_index():
+    # After sliver absorption atom_id is sparse (id != position in `atoms`).
+    # neighbors() must key on atom_id, not the list index. Hand-build a graph
+    # with a gap in the ids to lock this in.
+    atoms = tuple(
+        Atom(
+            atom_id=i,
+            shape=_rect(0, 0, 1, 1),
+            part_id=0,
+            piece_id=0,
+            theta=0.0,
+            is_feature_sliver=False,
+        )
+        for i in (0, 5, 9)
+    )
+
+    def _edge(a: int, b: int) -> AtomEdge:
+        return AtomEdge(a, b, 1.0, 1.0, True, 0.0, False, False)
+
+    g = AtomGraph(atoms=atoms, edges=(_edge(0, 5), _edge(5, 9)))
+    assert set(g.neighbors(5)) == {0, 9}
+    assert g.neighbors(0) == (5,)
+    assert g.neighbors(9) == (5,)
+    # id 1 is a *position*, not an atom_id here; an index-based lookup would
+    # wrongly return atom 5's neighbors.
+    assert g.neighbors(1) == ()
 
 
 def test_atom_graph_has_exterior_contact_edges():

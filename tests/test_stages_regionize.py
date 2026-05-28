@@ -12,7 +12,7 @@ import pytest
 from room_layout.schema import FloorShape, ShapePart
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import atomize
-from room_layout.stages.regionize import MIN_AREA, Region, regionize
+from room_layout.stages.regionize import MIN_AREA, Region, _lattice_cuts, regionize
 
 
 def _rect(x0, y0, x1, y1) -> ShapePart:
@@ -116,3 +116,24 @@ def test_regionize_carries_theta_and_piece():
     assert r.theta == 0.0
     assert r.piece_id == 0
     assert isinstance(r.cut_history, tuple)
+
+
+# --- latent-bug PoC (review B5) ---
+
+
+@pytest.mark.xfail(
+    reason="B5 latent: _lattice_cuts splits left/right with strict < / >, so an atom "
+    "whose local centroid sits exactly on a cut coordinate is dropped from BOTH sides "
+    "(silent atom loss). Pass A guards this case via bisect_right; Pass B does not. "
+    "Not triggered by the 33 fixtures; this is the minimal direct trigger.",
+    strict=True,
+)
+def test_lattice_cuts_conserves_atom_whose_centroid_is_on_the_cut():
+    # aw is (atom, local_centroid, ...); _lattice_cuts only reads aw[1]. Three
+    # atoms at x = 1, 2, 3; cutting at the pool coord x = 2 must keep all three.
+    aws = [(None, (1.0, 0.5)), (None, (2.0, 0.5)), (None, (3.0, 0.5))]
+    cuts = _lattice_cuts(aws, [2.0], [])
+    assert cuts, "expected an x-cut at 2.0"
+    _, _, left, right = cuts[0]
+    # the atom centred exactly at x = 2.0 must land on one side, not vanish
+    assert len(left) + len(right) == len(aws)

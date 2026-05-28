@@ -6,7 +6,9 @@ Covers part_kind classification, resolve_territories overlap resolution
 edge. Stage takes a FloorShape (S03-D13).
 """
 
+import pytest
 import shapely.geometry as sg
+from shapely.ops import unary_union
 
 from room_layout.schema import FloorShape, ShapePart
 from room_layout.stages._helpers import from_shapely, to_shapely
@@ -123,3 +125,24 @@ def test_territory_is_empty_property():
     assert Territory(part_id=0, theta=0.0, kind=KIND_AXIS_ALIGNED, pieces=()).is_empty
     sp = _rect(0, 0, 1, 1)
     assert not Territory(part_id=0, theta=0.0, kind=KIND_AXIS_ALIGNED, pieces=(sp,)).is_empty
+
+
+# --- latent-bug PoC (review C10) ---
+
+
+@pytest.mark.xfail(
+    reason="C10 latent: _pair_winner's 'fewer intruding vertices' rule is not a total "
+    "order. For 3 mutually-overlapping parts whose pairwise winners form a cycle, the "
+    "triple-overlap region is subtracted (against the original winner polygon) from all "
+    "three territories, leaving a hole in the footprint coverage. Not triggered by the "
+    "33 fixtures (no 3-way overlap); this is a minimal direct trigger.",
+    strict=True,
+)
+def test_resolve_territories_conserves_coverage_under_cyclic_3way_overlap():
+    # Pairwise winners cycle: (0,1)->1, (1,2)->2, (0,2)->0. The triple overlap
+    # [3,4]x[4,5] (area 1) ends up removed from every territory.
+    parts = (_rect(3, 1, 7, 5), _rect(2, 4, 8, 7), _rect(1, 4, 4, 8))
+    terr = resolve_territories(_floor(*parts))
+    covered = unary_union([to_shapely(pc) for t in terr for pc in t.pieces])
+    original = unary_union([to_shapely(p) for p in parts])
+    assert covered.area == pytest.approx(original.area, abs=1e-9)

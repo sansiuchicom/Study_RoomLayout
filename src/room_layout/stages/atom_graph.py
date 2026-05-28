@@ -16,17 +16,24 @@ router):
     centroid_distance       Euclidean distance between atom centroids
     same_part               True iff both atoms come from the same part + piece
     theta_diff              orientation difference (radians, mod π/2)
-    exterior_contact        True iff the shared boundary endpoints lie on the
-                            footprint exterior (this edge runs along the outer
-                            wall of the building)
-    hole_contact            True iff the shared boundary endpoints lie on a
-                            footprint hole boundary
+    exterior_contact        True iff *at least one endpoint* of the shared
+                            boundary lies on the footprint exterior ring. This
+                            means the shared edge is anchored to the outer wall
+                            at a point — it does NOT mean the edge runs along
+                            the wall (an atom-atom edge is always interior). A
+                            single touch is enough, and ``region_graph`` OR-
+                            aggregates it across all atom-edges of a region
+                            pair, so the flag fires broadly. Downstream
+                            consumers (Step 04 corridor) must confirm this
+                            "endpoint-anchored" meaning is what they want before
+                            treating it as "adjacent to the exterior wall".
+    hole_contact            same test against a footprint hole ring.
 
 Internal per S03-D6 — consumed by ``region_graph`` (and Phase 8 corridor
 in Step 04); not re-exported from the public surface.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import hypot, pi
 
 import shapely.geometry as sg
@@ -43,6 +50,8 @@ CONTACT_TOL = 1e-6
 
 @dataclass(frozen=True)
 class AtomEdge:
+    # atom_a / atom_b are ``Atom.atom_id`` values (NOT positional indices into
+    # ``AtomGraph.atoms``); ids are sparse after sliver absorption. atom_a < atom_b.
     atom_a: int
     atom_b: int
     shared_boundary_length: float
@@ -57,15 +66,21 @@ class AtomEdge:
 class AtomGraph:
     atoms: tuple[Atom, ...]
     edges: tuple[AtomEdge, ...]
+    # atom_id -> adjacent atom_ids, built once so neighbors() is O(1) not O(E).
+    _adjacency: dict[int, tuple[int, ...]] = field(
+        init=False, repr=False, compare=False, default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        adj: dict[int, list[int]] = {a.atom_id: [] for a in self.atoms}
+        for e in self.edges:
+            adj[e.atom_a].append(e.atom_b)
+            adj[e.atom_b].append(e.atom_a)
+        object.__setattr__(self, "_adjacency", {k: tuple(v) for k, v in adj.items()})
 
     def neighbors(self, atom_id: int) -> tuple[int, ...]:
-        out: list[int] = []
-        for e in self.edges:
-            if e.atom_a == atom_id:
-                out.append(e.atom_b)
-            elif e.atom_b == atom_id:
-                out.append(e.atom_a)
-        return tuple(out)
+        """Atom ids adjacent to ``atom_id`` (empty tuple if id is unknown)."""
+        return self._adjacency.get(atom_id, ())
 
 
 def build_atom_graph(
@@ -119,10 +134,11 @@ def build_atom_graph(
             ext_contact = _any_endpoint_on_lines(endpoints, exterior_lines)
             hole_contact = _any_endpoint_on_lines(endpoints, hole_lines)
 
+            a_id, b_id = sorted((atoms[i].atom_id, atoms[j].atom_id))
             edges.append(
                 AtomEdge(
-                    atom_a=i,
-                    atom_b=j,
+                    atom_a=a_id,
+                    atom_b=b_id,
                     shared_boundary_length=length,
                     centroid_distance=cd,
                     same_part=same_part,

@@ -12,16 +12,17 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 02 (Core schema port) closed 2026-05-25. The full D001 external
-contract lives in `src/room_layout/schema/` across 6 modules — geometry
-/ program / output / failure / serialize / validators — and is re-exported
-from top-level `room_layout`. Pytest passing, ruff clean, GitHub Actions
-CI green.
+Step 03 (Geometry pipeline port) done, merged to `main` 2026-05-28. The
+geometry stages live in `src/room_layout/stages/` — territory / atomize /
+regionize / atom_graph / region_graph (+ dimensions, `_helpers`) — against
+the D001 schema (S03-D13 floor-scoped). Per-stage golden regression covers
+33 Cell showcase cases. Tests pass under the canonical runtime (conda env
+`IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1); CI pins `geos=3.14.1` because
+the regionize goldens are GEOS-version-sensitive.
 
-**Next**: Step 03 (Geometry pipeline port) on the `step03-geometrypipeline`
-branch — moves Cell Phase 3–8 modules from `archive/celllayout/algorithm/`
-into `src/room_layout/stages/` against the new schema (S02-D8 semantic
-migration).
+**Next**: Step 04 (Algorithm core port) — Cell Phase 6–8 (`growth_*` /
+`corridor*`) plus `shape_gate` (the reflex helper deferred from Step 03 per
+S03-D16), against the new schema.
 
 Canonical docs live under `docs/`:
 
@@ -46,3 +47,7 @@ python -m pytest
 ruff check .
 ruff format --check .
 ```
+
+> The `regionize` / `region_graph` goldens are pinned to GEOS 3.14.x (the
+> `IfcOpenHouse` runtime). On a different GEOS build they may show spurious
+> diffs — see the GEOS-pin note in `tests/_golden.py`.

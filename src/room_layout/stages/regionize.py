@@ -1,4 +1,4 @@
-"""Atom-based regionizer — Phase 4.
+"""Atom-based regionizer — Phase 5.
 
 Plan reference: ``003_Step03_GeometryPipeline_Plan.md`` §4.9 + S03-D13.
 

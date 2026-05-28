@@ -1,9 +1,9 @@
 # 003 Step 03 — Geometry Pipeline Port Tracker
 
-Status: Active
+Status: Closed (merged to `main` 2026-05-28, commit `b2cf8d9`)
 Type: Step tracker
-Branch: `step03-geometrypipeline`
-Last updated: 2026-05-25
+Branch: `step03-geometrypipeline` (merged)
+Last updated: 2026-05-28
 
 Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
@@ -22,8 +22,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.9** `stages/regionize.py` (Region + regionize) + `viz/stages/regionize.py` + 33-case `regionize.json` + PNG sidecars + unit tests — split 9a/9b (+ pipeline cache); **second manual review passed**
 - [x] **4.10** `stages/atom_graph.py` (AtomGraph — region_graph dep, was mis-bucketed as Phase 8) + `stages/region_graph.py` (RegionGraph) + region-graph viz overlay + 33-case `region_graph.json` (**edges only**, S03-D15) + PNG sidecars + unit tests — split 10a/10b; spot-check passed
 - [x] **4.11** ~~shape_gate + gates viz + gates golden~~ **RETIRED → Step 04** (S03-D16: `shape_gate` is a Phase 6/7 reflex helper for `growth_absorb`, not a Phase-5 gate stage; numbering preserved)
-- [ ] **4.12** `viz/demo.py` CLI + `viz/stages/input.py` (`save_input_figure`) — render any case × stage into `outputs/step03/`
-- [ ] **4.13** Step close + `git merge --no-ff step03-geometrypipeline` to `main` (chore close commit prepared 2026-05-28; pending `git push` → CI green → merge → CI green on `main`)
+- [x] **4.12** `viz/demo.py` CLI + `viz/stages/input.py` (`save_input_figure`) — render any case × stage into `outputs/step03/` (commit `8af0af5`)
+- [x] **4.13** Step close + `git merge --no-ff step03-geometrypipeline` to `main` (commit `b2cf8d9`)
 
 ---
 
@@ -43,8 +43,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] Unit tests for every ported module (S03-D11 — written fresh, not auto-ported from Cell)
 - [x] `python -m pytest` green (371 passing)
 - [x] `ruff check .` + `ruff format --check .` green
-- [ ] CI green on `step03-geometrypipeline` branch (pending `git push`)
-- [ ] CI green on `main` after `--no-ff` merge (pending merge)
+- [x] CI ran for the branch push + `--no-ff` merge to `main` (commit `b2cf8d9`)
+- [x] CI subsequently reworked to conda-forge + `geos=3.14.1` pin (goldens are GEOS-version-sensitive); re-verifies on next push to `main`
 - [x] **Viz status documented**: 3 dev-bridge renderers exist; canonical SVG replacement deferred to Step 07
 - [x] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated (Step 03 closed; Step 04 kickoff)
 

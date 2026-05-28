@@ -28,6 +28,13 @@ flag via the ``tests/conftest.py`` hook):
 
 Mismatches raise ``AssertionError`` with a path like
 ``layout.floors[0].rooms[2].polygon`` to locate the diff fast.
+
+GEOS-pinned: the regionize / region_graph goldens are sensitive to the GEOS
+library version — region emission order and ring vertices differ across
+builds — so they are pinned to the canonical runtime GEOS 3.14.x (conda env
+``IfcOpenHouse``), which CI enforces via ``geos=3.14.1``. A deliberate GEOS
+bump therefore requires regenerating the goldens with ``pytest
+--update-goldens`` under the new GEOS and committing the resulting diff.
 """
 
 import dataclasses

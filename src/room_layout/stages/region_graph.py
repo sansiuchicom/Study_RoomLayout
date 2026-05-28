@@ -1,4 +1,4 @@
-"""Region adjacency graph — Phase 4.
+"""Region adjacency graph — Phase 6.
 
 Plan reference: ``003_Step03_GeometryPipeline_Plan.md`` §4.10 + S03-D13.
 
@@ -18,7 +18,7 @@ Internal per S03-D6 — not re-exported from the public surface.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import hypot
 
 from room_layout.schema import FloorShape
@@ -44,22 +44,30 @@ class RegionEdge:
 class RegionGraph:
     regions: tuple[Region, ...]
     edges: tuple[RegionEdge, ...]
+    # built once so neighbors() / edge_between() are O(1) not O(E).
+    _adjacency: dict[int, tuple[int, ...]] = field(
+        init=False, repr=False, compare=False, default_factory=dict
+    )
+    _edge_by_pair: dict[tuple[int, int], RegionEdge] = field(
+        init=False, repr=False, compare=False, default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        adj: dict[int, list[int]] = {r.region_id: [] for r in self.regions}
+        pair: dict[tuple[int, int], RegionEdge] = {}
+        for e in self.edges:
+            adj.setdefault(e.region_a, []).append(e.region_b)
+            adj.setdefault(e.region_b, []).append(e.region_a)
+            pair[(e.region_a, e.region_b)] = e  # edges are stored region_a < region_b
+        object.__setattr__(self, "_adjacency", {k: tuple(v) for k, v in adj.items()})
+        object.__setattr__(self, "_edge_by_pair", pair)
 
     def neighbors(self, region_id: int) -> tuple[int, ...]:
-        out: list[int] = []
-        for e in self.edges:
-            if e.region_a == region_id:
-                out.append(e.region_b)
-            elif e.region_b == region_id:
-                out.append(e.region_a)
-        return tuple(out)
+        """Region ids adjacent to ``region_id`` (empty tuple if id is unknown)."""
+        return self._adjacency.get(region_id, ())
 
     def edge_between(self, region_a: int, region_b: int) -> "RegionEdge | None":
-        a, b = sorted((region_a, region_b))
-        for e in self.edges:
-            if e.region_a == a and e.region_b == b:
-                return e
-        return None
+        return self._edge_by_pair.get(tuple(sorted((region_a, region_b))))
 
 
 @dataclass
@@ -90,10 +98,8 @@ def build_region_graph(
     graph = build_atom_graph(floor, atoms=atoms, policy=policy)
     accum: dict[tuple[int, int], _RegionEdgeAccum] = defaultdict(_RegionEdgeAccum)
     for edge in graph.edges:
-        atom_a = graph.atoms[edge.atom_a]
-        atom_b = graph.atoms[edge.atom_b]
-        region_a = atom_to_region.get(atom_a.atom_id)
-        region_b = atom_to_region.get(atom_b.atom_id)
+        region_a = atom_to_region.get(edge.atom_a)
+        region_b = atom_to_region.get(edge.atom_b)
         if region_a is None or region_b is None or region_a == region_b:
             continue
 

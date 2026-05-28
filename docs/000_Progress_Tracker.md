@@ -2,7 +2,7 @@
 
 Status: Current working status only
 Scope: active work item, completed work, next actions, blockers
-Last updated: 2026-05-25
+Last updated: 2026-05-28
 
 ---
 
@@ -36,9 +36,11 @@ matplotlib viz (atomize / regionize / region-graph overlay + input
 renderer in the demo CLI) under `src/room_layout/viz/`. Per-stage
 golden infra in `tests/golden/` — 33 Cell showcase cases × 3 stages
 (atomize digest / regionize full-geom / region_graph edges), Polygon-
-aware comparator with `--update-goldens`. 371 pytest passing (~38 s,
-golden-heavy); ruff clean; chore close commit prepared on
-`step03-geometrypipeline` (pending push + no-ff merge + CI green).
+aware comparator with `--update-goldens`. 371 pytest passing **under the
+canonical runtime** (conda env `IfcOpenHouse`: shapely 2.1.2 / GEOS
+3.14.1; ~38 s, golden-heavy); ruff clean. NB: the regionize / region_graph
+goldens are GEOS-version-sensitive — a different GEOS build (e.g. base
+conda GEOS 3.13.1) shows ~20 false failures, so CI pins `geos=3.14.1`.
 
 Key Step-03 course-corrections (Plan §2 S03-D13..D16): stages take
 `FloorShape` not `ShapeInput` (D13); atomize golden is a digest, not
@@ -78,21 +80,17 @@ as growth input. Third D005-triggered branch →
 | 2026-05-25 | D006 lock — output directory convention (3-category + per-stage layout) |
 | 2026-05-25 | Step 01 Project skeleton — completed (8 work-item commits + 1 side-fix; CI green) |
 | 2026-05-25 | Step 02 Core schema port — completed (9 work-item commits incl. chore close; 92 pytest passing; ruff clean; latent 4.3 LinearRing.area bug surfaced + fixed in 4.6) |
-| 2026-05-28 | Step 03 Geometry pipeline port — completed (territory / atomize / regionize / atom_graph / region_graph + dev-bridge viz + 33×3 goldens; 371 pytest passing; ruff clean; S03-D13..D16 course-corrections; shape_gate deferred to Step 04) |
+| 2026-05-28 | Step 03 Geometry pipeline port — completed (territory / atomize / regionize / atom_graph / region_graph + dev-bridge viz + 33×3 goldens; 371 pytest passing under GEOS 3.14.1 (IfcOpenHouse); ruff clean; S03-D13..D16 course-corrections; shape_gate deferred to Step 04) |
+| 2026-05-28 | Post-Step-03 review hardening (on `main`) — CI repinned to conda-forge + `geos=3.14.1` (regionize goldens are GEOS-version-sensitive); atom/region graph `neighbors`/`edge_between` made O(1) + atom edges keyed by `atom_id` not list index; `xfail` PoCs for two latent geometry bugs (regionize Pass-B atom loss; territory 3-way-overlap coverage hole); README/tracker doc sync. 372 passing + 2 xfailed |
 
 ---
 
 # 3. Next actions
 
-1. **Land Step 03** to `main`:
-   - `git push origin step03-geometrypipeline` → confirm CI green on the branch.
-   - `git switch main && git merge --no-ff step03-geometrypipeline && git push`.
-   - Confirm CI green on `main`.
-   - `git branch -d step03-geometrypipeline` (only after CI green on `main`).
-   - Flip the pending CI boxes in `003_Step03_GeometryPipeline_Tracker.md`
-     §2 + §1 4.13; can ride as a follow-up tracker-only commit on `main`.
+Step 03 landed on `main` (commit `b2cf8d9`, 2026-05-28); a post-merge
+review-hardening pass on `main` followed (see log above). Remaining:
 
-2. **Open Step 04 (Algorithm core port)** on a `step04-algorithmcore`
+1. **Open Step 04 (Algorithm core port)** on a `step04-algorithmcore`
    branch (D005 triggers fire — regression risk + integration work):
    - Branch kickoff §4.1 commit (per `proto3:D016` H011 deferred-archive
      pattern):

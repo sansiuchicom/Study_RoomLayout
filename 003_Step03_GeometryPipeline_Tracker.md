@@ -20,7 +20,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [ ] **4.7** `stages/territory.py` (Territory + part_kind + resolve_territories + collect_cross_theta_contact_coords, `FloorShape` input per S03-D13) + unit tests — *(swapped ahead of atomize: atomize depends on territory)*
 - [ ] **4.8** `stages/atomize.py` (Atom + atomize) + `viz/stages/atomize.py` + 33-case `atomize.json` + PNG sidecars + unit tests + extend `test_golden_per_stage.py` — **first manual review checkpoint**
 - [ ] **4.9** `stages/regionize.py` (Region + regionize) + `viz/stages/regionize.py` + 33-case `regionize.json` + PNG sidecars + unit tests — **second manual review checkpoint**
-- [ ] **4.10** `stages/region_graph.py` (build_region_graph) + region-graph viz overlay + 33-case `region_graph.json` + PNG sidecars + unit tests
+- [ ] **4.10** `stages/atom_graph.py` (AtomGraph — region_graph dep, mis-bucketed as Phase 8) + `stages/region_graph.py` (RegionGraph) + region-graph viz overlay + 33-case `region_graph.json` (**edges only**, S03-D15) + PNG sidecars + unit tests — split 10a (both graph modules + tests) / 10b (viz + goldens)
 - [ ] **4.11** `stages/shape_gate.py` (gates raising `DimGateFailure`) + `viz/stages/gates.py` + 33-case `gates.json` + PNG sidecars + unit tests — **third manual review checkpoint**
 - [ ] **4.12** `viz/demo.py` CLI (`python -m room_layout.viz.demo --case <n> --stage <s> --out outputs/step03/`)
 - [ ] **4.13** Step close + `git merge --no-ff step03-geometrypipeline` to `main`
@@ -85,6 +85,22 @@ S03-D1..D12 are frozen in Plan §2._
 - **2026-05-26 — 4.3 ``.gitkeep`` retired**: ``tests/golden/.gitkeep``
   removed in the 4.3 commit since the directory now has 33 case
   subdirectories carrying real fixture content.
+
+- **2026-05-28 — 4.10 atom_graph mis-bucketed + S03-D15**: ``region_graph``
+  imports ``build_atom_graph`` from ``atom_graph`` — the original Plan
+  bucketed ``atom_graph`` as Phase 8 (with corridor), but it's a Phase 4
+  dependency (needs only atomize / dimensions / _helpers / schema, no
+  Phase 6-8). Ported in 4.10 ahead of ``region_graph``. Added to Plan §3
+  module set; the full Phase 3-5 graph is now territory → atomize →
+  {atom_graph, regionize} → region_graph; shape_gate → regionize (4.11
+  re-verified clean, no hidden deps). Both ``build_atom_graph`` /
+  ``build_region_graph`` return plain dataclasses (``AtomGraph`` /
+  ``RegionGraph``), **not** ``networkx.Graph`` — the earlier
+  networkx-serialization worry (4.2-4.4 review item 1) was unfounded.
+  S03-D15: region_graph golden stores **edges only** (regions duplicate
+  regionize.json); atom_graph gets no standalone golden/viz (intermediate,
+  territory precedent). 4.10 split 10a (graph modules + tests) / 10b
+  (viz + edge goldens).
 
 - **2026-05-28 — 4.8 golden size → S03-D14 (atomize digest)**: measured
   atomize on case 1 (14×10 rect) = **1551 atoms, ~404 KB full JSON**;

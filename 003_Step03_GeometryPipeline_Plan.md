@@ -108,6 +108,7 @@ Cross-references:
 | **S03-D11** | Cell test porting policy | Cell's 17 test files under `archive/celllayout/algorithm/tests/` are kept as *reference only*. New tests for the ported stages are written from scratch against the new schema and committed alongside their stage in the same work-item commit (not as a separate test-bundle commit per Step 02 §4.8 pattern). |
 | **S03-D12** | Viz output locations | Two paths, intentionally: (a) `tests/golden/<case>/<stage>.png` — committed sidecars for in-PR visual inspection (33 × 4 = 132 PNGs, kept small via `dpi=130`). (b) `outputs/step03/<case>/<stage>.png` — D006-compliant dev demo target (`.gitignore`d, regenerable via `python -m room_layout.viz.demo`). |
 | **S03-D13** | Stage input granularity | Phase 3–5 stages take a **`FloorShape`**, not a `ShapeInput`. Cell's `ShapeInput` was single-floor (`name` + `parts`), so the 1:1 semantic mapping to the new schema is `FloorShape` (one floor's `parts`), not the new multi-floor `ShapeInput`. Per-floor orchestration (`for floor in shape.floors`) lives in Step 06 `run()`; stages stay floor-scoped, matching Pipeline §2.1 ("processes one floor at a time") and keeping multi-floor (Step 09) a loop-only change with no stage rewrite. v1 golden drivers call stages with `shape.floors[0]`. `vertical_anchors` are not passed to Phase 3–5 stages (unused until Phase 6+; supplied separately then). Discovered while porting `territory` (4.7), which accessed Cell's `shape.parts`. |
+| **S03-D15** | `region_graph` golden = edges only | `build_region_graph` returns a `RegionGraph(regions, edges)` dataclass — the `regions` are identical to regionize's output (already pinned by `regionize.json`), so the region_graph golden stores **only the `edges`** (`region_a` / `region_b` / `shared_boundary_length` / `centroid_distance` / `same_theta_group` / `exterior_contact` / `hole_contact`, floats rounded). Avoids duplicating region geometry; pins exactly what this stage adds — the adjacency. `atom_graph` is an *intermediate* (consumed only by `region_graph`): no standalone golden or viz (territory precedent), covered indirectly via the region_graph golden + direct unit tests. Note: both `build_atom_graph` and `build_region_graph` return plain dataclasses (not `networkx.Graph`), so `to_dict` serializes them with no special adapter — the earlier networkx-serialization concern was unfounded. |
 | **S03-D14** | Golden granularity per stage | Golden representation is matched to each stage's output semantics. **`atomize` → digest** (`n_atoms`, `total_area`, `per_part_counts`, `n_slivers`, `bbox`, distinct `thetas`), **not** full per-atom geometry: a single case produces ~1500 mechanical grid cells (~400 KB full JSON; ~13 MB across 33 cases), and individual atoms carry no human-meaningful identity. The digest catches the real port-regression modes (atom-count drift, area-conservation break, part-assignment change, sliver-absorption change, bounds shift) at ~200 B/case. **`regionize` / `region_graph` / `gates` → full goldens** — their outputs are few + meaningful (tens of regions, a small graph, per-region pass/fail), so exact geometry is worth pinning and cheap to store. `tests/golden/<case>/atomize.json` holds the digest (filename convention preserved); the digest builder lives in the test layer (golden-strategy concern, not algorithm). If exact per-atom regression is ever needed, add full goldens for a few representative cases then. |
 
 ---
@@ -136,7 +137,8 @@ Study_RoomLayout/
 │       │   ├── atomize.py                       (Atom dataclass + atomize())
 │       │   ├── territory.py                     (Territory dataclass + resolve_territories())
 │       │   ├── regionize.py                     (Region dataclass + regionize())
-│       │   ├── region_graph.py                  (build_region_graph())
+│       │   ├── atom_graph.py                     (AtomGraph + build_atom_graph(); region_graph dep)
+│       │   ├── region_graph.py                  (RegionGraph + build_region_graph())
 │       │   └── shape_gate.py                    (shape gate checks; raises DimGateFailure)
 │       └── viz/                                 (existing — currently empty)
 │           ├── __init__.py
@@ -344,19 +346,39 @@ algorithm's "where do walls roughly go" decision, so visually
 checking R# labels + areas across all 33 cases is the most
 load-bearing inspection of the Step.
 
-### 4.10 Region graph + 33 goldens
+### 4.10 Atom graph + region graph + 33 goldens
 
-Files:
+**Dependency note (2026-05-28)**: `region_graph` imports `build_atom_graph`
+from `atom_graph` — `atom_graph` was mis-bucketed as Phase 8 in the
+original Plan but is a Phase 4 dependency (it only needs `atomize` /
+`dimensions` / `_helpers` / `schema`). Ported here, ahead of
+`region_graph`. Both `build_atom_graph` and `build_region_graph` return
+plain dataclasses (`AtomGraph` / `RegionGraph`), not `networkx.Graph`.
 
-- `src/room_layout/stages/region_graph.py` — `build_region_graph(regions)`.
+Split into **10a** (both graph modules + unit tests) and **10b** (viz +
+goldens).
+
+10a files:
+
+- `src/room_layout/stages/atom_graph.py` — `AtomEdge` + `AtomGraph` +
+  `build_atom_graph(floor, ...)`. Intermediate (consumed by
+  region_graph): no standalone viz/golden (S03-D15), unit-tested only.
+- `src/room_layout/stages/region_graph.py` — `RegionEdge` +
+  `RegionGraph` + `build_region_graph(floor, ...)`.
+- `tests/test_stages_atom_graph.py`, `tests/test_stages_region_graph.py`.
+
+10b files:
+
 - `src/room_layout/viz/stages/regionize.py` — extend with
   `save_region_graph_figure(...)` (graph overlaid on regions).
-- `tests/golden/case_*/region_graph.json` × 33.
+- `tests/golden/case_*/region_graph.json` × 33 — **edges only** per
+  S03-D15 (regions already pinned by `regionize.json`).
 - `tests/golden/case_*/region_graph.png` × 33 (additive — same dir).
-- `tests/test_stages_region_graph.py`.
-- `tests/test_golden_per_stage.py` — extend.
+- `tests/test_golden_per_stage.py` — extend with the region_graph
+  edges golden.
 
-Commit: `feat(step03): region adjacency graph + 33-case goldens`.
+Commits: 10a `feat(step03): atom graph + region graph (algorithm port)`;
+10b `feat(step03): region graph viz + 33-case edge goldens`.
 
 ### 4.11 Shape gate + viz + 33 goldens
 

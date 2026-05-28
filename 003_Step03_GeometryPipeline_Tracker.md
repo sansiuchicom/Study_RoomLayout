@@ -17,8 +17,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [ ] **4.4** Polygon-aware golden comparator (`tests/_golden.py::assert_layout_equal`) + `pytest --update-goldens` flag + self-tests (S03-D10)
 - [ ] **4.5** `stages/_helpers.py` — Cell geometry utilities ported (`to_shapely` / `polygon_parts` / `part_theta`) + unit tests
 - [ ] **4.6** `stages/dimensions.py` — `DimensionPolicy` + `is_quantum_aligned` + `split_interval` + unit tests (S03-D8)
-- [ ] **4.7** `stages/atomize.py` (Atom + atomize) + `viz/stages/atomize.py` + 33-case `atomize.json` + PNG sidecars + unit tests + extend `test_golden_per_stage.py` — **first manual review checkpoint**
-- [ ] **4.8** `stages/territory.py` (Territory + resolve_territories) + unit tests
+- [ ] **4.7** `stages/territory.py` (Territory + part_kind + resolve_territories + collect_cross_theta_contact_coords, `FloorShape` input per S03-D13) + unit tests — *(swapped ahead of atomize: atomize depends on territory)*
+- [ ] **4.8** `stages/atomize.py` (Atom + atomize) + `viz/stages/atomize.py` + 33-case `atomize.json` + PNG sidecars + unit tests + extend `test_golden_per_stage.py` — **first manual review checkpoint**
 - [ ] **4.9** `stages/regionize.py` (Region + regionize) + `viz/stages/regionize.py` + 33-case `regionize.json` + PNG sidecars + unit tests — **second manual review checkpoint**
 - [ ] **4.10** `stages/region_graph.py` (build_region_graph) + region-graph viz overlay + 33-case `region_graph.json` + PNG sidecars + unit tests
 - [ ] **4.11** `stages/shape_gate.py` (gates raising `DimGateFailure`) + `viz/stages/gates.py` + 33-case `gates.json` + PNG sidecars + unit tests — **third manual review checkpoint**
@@ -85,6 +85,24 @@ S03-D1..D12 are frozen in Plan §2._
 - **2026-05-26 — 4.3 ``.gitkeep`` retired**: ``tests/golden/.gitkeep``
   removed in the 4.3 commit since the directory now has 33 case
   subdirectories carrying real fixture content.
+
+- **2026-05-28 — 4.7/4.8 swap + S03-D13 (FloorShape input)**: porting
+  ``territory`` surfaced two things. (1) **Order defect**: ``atomize``
+  imports ``resolve_territories`` / ``collect_cross_theta_contact_coords``
+  / ``KIND_CURVED`` from ``territory`` and calls ``resolve_territories``
+  first — territory is a hard prerequisite, but Plan ordered atomize
+  (4.7) before territory (4.8). Verified the full Phase 3–5 dependency
+  graph: territory → atomize → regionize → region_graph → shape_gate;
+  only atomize/territory were inverted. Swapped to 4.7 territory /
+  4.8 atomize; the rest were already correct. (2) **S03-D13 (now in
+  Plan §2)**: Phase 3–5 stages take a ``FloorShape``, not a
+  ``ShapeInput``. Cell's ``ShapeInput`` was single-floor (`name` +
+  `parts`), so the new-schema 1:1 mapping is ``FloorShape``; per-floor
+  orchestration moves to Step 06 ``run()``. Stage signatures change
+  from Cell's ``f(shape)`` to ``f(floor)``; golden drivers pass
+  ``shape.floors[0]``. Territory golden: confirmed **none** (Plan §4.7) —
+  output absorbed into regionize.json + unit tests; the module is
+  well-exercised in its origin repo.
 
 - **2026-05-28 — 4.5 scope wider than Plan sketch + ``part_theta``
   location**: Plan §4.5 sketched 3 helpers (``to_shapely`` /

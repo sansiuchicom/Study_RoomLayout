@@ -107,6 +107,7 @@ Cross-references:
 | **S03-D10** | Golden update interface | `pytest --update-goldens` flag (pytest fixture hook). When set, the per-stage golden test rewrites the expected `*.json` file in place using the current algorithm output instead of comparing. Idiomatic — uses the same test invocation; no separate CLI. Updates are *always* committed as a separate commit so the diff is visible in PR review. |
 | **S03-D11** | Cell test porting policy | Cell's 17 test files under `archive/celllayout/algorithm/tests/` are kept as *reference only*. New tests for the ported stages are written from scratch against the new schema and committed alongside their stage in the same work-item commit (not as a separate test-bundle commit per Step 02 §4.8 pattern). |
 | **S03-D12** | Viz output locations | Two paths, intentionally: (a) `tests/golden/<case>/<stage>.png` — committed sidecars for in-PR visual inspection (33 × 4 = 132 PNGs, kept small via `dpi=130`). (b) `outputs/step03/<case>/<stage>.png` — D006-compliant dev demo target (`.gitignore`d, regenerable via `python -m room_layout.viz.demo`). |
+| **S03-D13** | Stage input granularity | Phase 3–5 stages take a **`FloorShape`**, not a `ShapeInput`. Cell's `ShapeInput` was single-floor (`name` + `parts`), so the 1:1 semantic mapping to the new schema is `FloorShape` (one floor's `parts`), not the new multi-floor `ShapeInput`. Per-floor orchestration (`for floor in shape.floors`) lives in Step 06 `run()`; stages stay floor-scoped, matching Pipeline §2.1 ("processes one floor at a time") and keeping multi-floor (Step 09) a loop-only change with no stage rewrite. v1 golden drivers call stages with `shape.floors[0]`. `vertical_anchors` are not passed to Phase 3–5 stages (unused until Phase 6+; supplied separately then). Discovered while porting `territory` (4.7), which accessed Cell's `shape.parts`. |
 
 ---
 
@@ -270,13 +271,36 @@ Files:
 
 Commit: `feat(step03): dimension policy + quantum helpers`.
 
-### 4.7 Atomize + viz + 33 goldens
+### 4.7 Territory (`stages/territory.py`)
+
+**Order note (2026-05-28)**: swapped ahead of atomize. `atomize` imports
+`resolve_territories` / `collect_cross_theta_contact_coords` /
+`KIND_CURVED` from `territory` and calls `resolve_territories(...)` as its
+first step, so territory is a hard prerequisite. Original Plan ordered
+atomize (4.7) before territory (4.8); corrected here.
 
 Files:
 
-- `src/room_layout/stages/atomize.py` — `Atom` dataclass (frozen, with
-  `part_id: int` and `shape: ShapePart`-like coords) + `atomize(shape,
-  policy)`.
+- `src/room_layout/stages/territory.py` — `Territory` dataclass +
+  `part_kind(part)` + `resolve_territories(floor: FloorShape)` (S03-D13)
+  + `collect_cross_theta_contact_coords(floor, territories)` + the
+  `KIND_AXIS_ALIGNED` / `KIND_ROTATED` / `KIND_CURVED` constants.
+- `tests/test_stages_territory.py`.
+
+No standalone viz (territory is intermediate; visualized as part of
+regionize). No standalone golden — output is absorbed into
+`regionize.json` and covered indirectly by the regionize goldens plus
+direct unit tests (S03-D9 thoroughness is satisfied via the downstream
+stage; territory is a well-exercised module elsewhere).
+
+Commit: `feat(step03): territory resolution`.
+
+### 4.8 Atomize + viz + 33 goldens
+
+Files:
+
+- `src/room_layout/stages/atomize.py` — `Atom` dataclass (frozen) +
+  `atomize(floor: FloorShape, policy)` (S03-D13).
 - `src/room_layout/viz/stages/atomize.py` — `save_atom_figure(...)`.
 - `tests/golden/case_*/atomize.json` × 33.
 - `tests/golden/case_*/atomize.png` × 33.
@@ -292,19 +316,6 @@ golden bootstrap happens. Review pattern: render all 33 atomize PNGs
 to `outputs/step03/`, eyeball each for sanity (atom count, boundary
 alignment, theta inheritance), THEN commit goldens. If any case looks
 wrong, fix algorithm and re-render before commit.
-
-### 4.8 Territory (`stages/territory.py`)
-
-Files:
-
-- `src/room_layout/stages/territory.py` — `Territory` dataclass +
-  `resolve_territories(atoms, ...)`.
-- `tests/test_stages_territory.py`.
-
-No standalone viz (territory is intermediate; visualized as part of
-regionize). No standalone golden (output absorbed into regionize.json).
-
-Commit: `feat(step03): territory resolution`.
 
 ### 4.9 Regionize + viz + 33 goldens
 

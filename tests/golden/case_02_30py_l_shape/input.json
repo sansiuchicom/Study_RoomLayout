@@ -1,0 +1,113 @@
+{
+  "shape": {
+    "name": "30평 ㄱ자",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                0,
+                0
+              ],
+              [
+                8,
+                0
+              ],
+              [
+                8,
+                10
+              ],
+              [
+                0,
+                10
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                8,
+                0
+              ],
+              [
+                14,
+                0
+              ],
+              [
+                14,
+                7
+              ],
+              [
+                8,
+                7
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 24.4,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.4,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.4,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 24.4,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_5",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 24.4,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

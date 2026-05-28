@@ -1,0 +1,272 @@
+[
+  {
+    "region_a": 0,
+    "region_b": 1,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.525,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 0,
+    "region_b": 6,
+    "shared_boundary_length": 1.55,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 0,
+    "region_b": 19,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.875,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 1,
+    "region_b": 2,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 1,
+    "region_b": 7,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 2,
+    "region_b": 3,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 2,
+    "region_b": 8,
+    "shared_boundary_length": 3.0,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 3,
+    "region_b": 4,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 3,
+    "region_b": 9,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 4,
+    "region_b": 5,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.125,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 4,
+    "region_b": 10,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 5,
+    "region_b": 11,
+    "shared_boundary_length": 2.75,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 6,
+    "region_b": 7,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.525,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 6,
+    "region_b": 20,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.875,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 7,
+    "region_b": 8,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 8,
+    "region_b": 9,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 9,
+    "region_b": 10,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 10,
+    "region_b": 11,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.125,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 12,
+    "region_b": 13,
+    "shared_boundary_length": 2.1,
+    "centroid_distance": 1.1,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 12,
+    "region_b": 14,
+    "shared_boundary_length": 1.25,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 12,
+    "region_b": 20,
+    "shared_boundary_length": 1.25,
+    "centroid_distance": 1.861619,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 13,
+    "region_b": 15,
+    "shared_boundary_length": 0.95,
+    "centroid_distance": 2.25,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 13,
+    "region_b": 20,
+    "shared_boundary_length": 0.95,
+    "centroid_distance": 1.90542,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 14,
+    "region_b": 15,
+    "shared_boundary_length": 2.4,
+    "centroid_distance": 1.1,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 14,
+    "region_b": 16,
+    "shared_boundary_length": 1.25,
+    "centroid_distance": 2.299592,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 15,
+    "region_b": 16,
+    "shared_boundary_length": 0.95,
+    "centroid_distance": 2.335193,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 16,
+    "region_b": 17,
+    "shared_boundary_length": 1.25,
+    "centroid_distance": 2.299592,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 16,
+    "region_b": 18,
+    "shared_boundary_length": 0.95,
+    "centroid_distance": 2.335193,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 17,
+    "region_b": 18,
+    "shared_boundary_length": 2.4,
+    "centroid_distance": 1.1,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 19,
+    "region_b": 20,
+    "shared_boundary_length": 2.2,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  }
+]

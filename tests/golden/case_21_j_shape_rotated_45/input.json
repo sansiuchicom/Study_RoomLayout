@@ -1,0 +1,93 @@
+{
+  "shape": {
+    "name": "7자 rotated 45°",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                11.03324969994664,
+                10.515759867635264
+              ],
+              [
+                7.497715794013902,
+                14.051293773568005
+              ],
+              [
+                -0.9875655802246692,
+                5.566012399329433
+              ],
+              [
+                2.5479683257080685,
+                2.0304784933966946
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                15.98299716825247,
+                5.5660123993294315
+              ],
+              [
+                11.03324969994664,
+                10.515759867635264
+              ],
+              [
+                8.204822575200449,
+                7.687332742889075
+              ],
+              [
+                13.154570043506281,
+                2.7375852745832416
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 29.333333333333332,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 29.333333333333332,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 29.333333333333332,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

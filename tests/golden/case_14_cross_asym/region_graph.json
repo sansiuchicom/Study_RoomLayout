@@ -1,0 +1,317 @@
+[
+  {
+    "region_a": 0,
+    "region_b": 1,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 0,
+    "region_b": 2,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 1,
+    "region_b": 2,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 2,
+    "region_b": 3,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.371708,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 2,
+    "region_b": 4,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 3,
+    "region_b": 4,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 3,
+    "region_b": 5,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 3,
+    "region_b": 20,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.371708,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 4,
+    "region_b": 5,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 5,
+    "region_b": 20,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 6,
+    "region_b": 7,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 6,
+    "region_b": 8,
+    "shared_boundary_length": 2.35,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 6,
+    "region_b": 21,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.925,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 7,
+    "region_b": 9,
+    "shared_boundary_length": 1.2,
+    "centroid_distance": 1.666021,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 7,
+    "region_b": 10,
+    "shared_boundary_length": 1.45,
+    "centroid_distance": 1.615549,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 8,
+    "region_b": 9,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.775,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 8,
+    "region_b": 22,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.925,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 9,
+    "region_b": 10,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.325,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 11,
+    "region_b": 12,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 11,
+    "region_b": 13,
+    "shared_boundary_length": 2.35,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 11,
+    "region_b": 20,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.675,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 12,
+    "region_b": 14,
+    "shared_boundary_length": 1.2,
+    "centroid_distance": 1.666021,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 12,
+    "region_b": 15,
+    "shared_boundary_length": 1.45,
+    "centroid_distance": 1.615549,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 13,
+    "region_b": 14,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.775,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 13,
+    "region_b": 22,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.925,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 14,
+    "region_b": 15,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.325,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 16,
+    "region_b": 17,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.0,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 16,
+    "region_b": 18,
+    "shared_boundary_length": 1.85,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 17,
+    "region_b": 19,
+    "shared_boundary_length": 2.15,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 17,
+    "region_b": 20,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.575,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 18,
+    "region_b": 19,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 2.0,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 19,
+    "region_b": 21,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.825,
+    "same_theta_group": true,
+    "exterior_contact": true,
+    "hole_contact": false
+  },
+  {
+    "region_a": 20,
+    "region_b": 21,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 20,
+    "region_b": 22,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.677051,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  },
+  {
+    "region_a": 21,
+    "region_b": 22,
+    "shared_boundary_length": 1.5,
+    "centroid_distance": 1.5,
+    "same_theta_group": true,
+    "exterior_contact": false,
+    "hole_contact": false
+  }
+]

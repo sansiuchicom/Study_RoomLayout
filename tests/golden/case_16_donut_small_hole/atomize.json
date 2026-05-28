@@ -1,0 +1,17 @@
+{
+  "n_atoms": 1408,
+  "total_area": 126.0,
+  "per_part_counts": {
+    "0": 1408
+  },
+  "n_slivers": 0,
+  "bbox": [
+    0.0,
+    0.0,
+    14.0,
+    10.0
+  ],
+  "thetas": [
+    0.0
+  ]
+}

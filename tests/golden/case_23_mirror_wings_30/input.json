@@ -1,0 +1,134 @@
+{
+  "shape": {
+    "name": "Mirror wings +/-30°",
+    "floors": [
+      {
+        "level": 1,
+        "parts": [
+          {
+            "exterior": [
+              [
+                0,
+                0
+              ],
+              [
+                12,
+                0
+              ],
+              [
+                12,
+                8
+              ],
+              [
+                0,
+                8
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                1.3301270189221936,
+                8.5
+              ],
+              [
+                -0.16987298107780635,
+                11.098076211353316
+              ],
+              [
+                -4.5,
+                8.598076211353316
+              ],
+              [
+                -3.0,
+                6.0
+              ]
+            ],
+            "holes": []
+          },
+          {
+            "exterior": [
+              [
+                14.330127018922195,
+                5.5
+              ],
+              [
+                15.830127018922195,
+                8.098076211353316
+              ],
+              [
+                11.5,
+                10.598076211353316
+              ],
+              [
+                10.0,
+                8.0
+              ]
+            ],
+            "holes": []
+          }
+        ],
+        "floor_to_floor_height": null
+      }
+    ],
+    "vertical_anchors": []
+  },
+  "program": {
+    "target_type": "apartment",
+    "floor_programs": {
+      "1": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_target_m2": 25.2,
+          "area_min_m2": 8.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 25.2,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 25.2,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "private",
+          "usage": null,
+          "area_target_m2": 25.2,
+          "area_min_m2": 4.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        },
+        {
+          "id": "space_5",
+          "role": "wet",
+          "usage": null,
+          "area_target_m2": 25.2,
+          "area_min_m2": 2.0,
+          "min_dimension_m": null,
+          "required": true,
+          "anchor_id": null
+        }
+      ]
+    }
+  }
+}

@@ -86,6 +86,22 @@ S03-D1..D12 are frozen in Plan §2._
   removed in the 4.3 commit since the directory now has 33 case
   subdirectories carrying real fixture content.
 
+- **2026-05-28 — 4.5 scope wider than Plan sketch + ``part_theta``
+  location**: Plan §4.5 sketched 3 helpers (``to_shapely`` /
+  ``polygon_parts`` / ``part_theta``) but a grep of the Phase 3–5
+  modules' actual imports showed **all six** Cell geometry helpers are
+  used: ``to_shapely`` (5×), ``from_shapely`` (4×), ``part_theta``
+  (3×), ``rotate_radians`` (2×), ``polygon_parts`` (2×), ``line_length``
+  (1×, in atomize). Ported all six into ``stages/_helpers.py``.
+  ``part_theta`` (Cell kept it in ``schema.py``) is placed in
+  ``stages/_helpers.py``, **not** ``room_layout.schema`` — Pipeline §2.1
+  frames orientation as algorithm-inferred (not a contract field) and
+  S03-D6 keeps stage internals off the public surface. ``from_shapely``
+  is a deliberate tightening over Cell: it builds the new strict
+  ``ShapePart``, so degenerate / self-intersecting atoms raise at the
+  boundary instead of propagating (verified by
+  ``test_from_shapely_rejects_degenerate``).
+
 ---
 
 ## 4. Close summary

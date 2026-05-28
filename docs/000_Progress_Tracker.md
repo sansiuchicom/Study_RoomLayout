@@ -28,30 +28,35 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Step 02 (Core schema port) done (2026-05-25). The full D001 external
-contract is implemented as typed dataclasses in
-`src/room_layout/schema/` across 6 modules — geometry / program /
-output / failure / serialize / validators — re-exported from
-top-level `room_layout` per Plan §5. 92 pytest tests passing in
-0.16 s; ruff lint + format clean; chore close commit prepared on
-`step02-coreschema` branch (pending push + no-ff merge to `main`
-+ CI green on both).
+Step 03 (Geometry pipeline port) done (2026-05-28). Cell Phase 3–4
+geometry stages ported to `src/room_layout/stages/` against the new
+schema (S03-D13 floor-scoped): territory / atomize / regionize /
+atom_graph / region_graph + dimensions + _helpers. Dev-bridge
+matplotlib viz (atomize / regionize / region-graph overlay + input
+renderer in the demo CLI) under `src/room_layout/viz/`. Per-stage
+golden infra in `tests/golden/` — 33 Cell showcase cases × 3 stages
+(atomize digest / regionize full-geom / region_graph edges), Polygon-
+aware comparator with `--update-goldens`. 371 pytest passing (~38 s,
+golden-heavy); ruff clean; chore close commit prepared on
+`step03-geometrypipeline` (pending push + no-ff merge + CI green).
+
+Key Step-03 course-corrections (Plan §2 S03-D13..D16): stages take
+`FloorShape` not `ShapeInput` (D13); atomize golden is a digest, not
+per-atom geometry (D14); region_graph golden is edges-only (D15);
+`shape_gate` is a Phase 6/7 reflex helper — deferred to Step 04, not
+a Phase-5 gate stage (D16). Two dependency-order fixes during port:
+territory before atomize; atom_graph (region_graph dep) was
+mis-bucketed as Phase 8.
 
 D-series cumulative state: D001-D006 accepted; proto3:D001-D023
-audited (Carry 13 / Modify 4 / Drop 3 / Defer 3); 13 Step-local
-S02-D1..D13 decisions logged in Step 02 Plan §2 (notably S02-D8
-semantic-migration, S02-D9 single Role + corridor runtime reject,
-S02-D11 no debug_artifacts, S02-D13 no viz this Step).
+audited; S02-D1..D13 + S03-D1..D16 logged in their Step Plans.
 
-Next: open Step 03 (Geometry pipeline port) per Plan §7 / S02-D8.
-Step 03 moves Cell Phase 3–8 modules from
-`archive/celllayout/algorithm/celllayout_tf/` into
-`src/room_layout/stages/`, refactors each module's schema
-references to `from room_layout.schema import ...`, and adds the
-first per-stage matplotlib renderers under `src/room_layout/viz/`
-(the development bridge — Step 07 swaps in canonical SVG). Step 03
-is the second D005-triggered branch (regression risk + integration
-work) → `step03-geometrypipeline` branch.
+Next: open Step 04 (Algorithm core port) per Step 03 Plan §7. Step 04
+ports Cell Phase 6–8 (seed_placement / growth_* / room_growth /
+corridor_*) + `shape_gate` (with its consumer growth_absorb), reusing
+the Step 03 stage outputs (Region / AtomGraph / RegionGraph / atoms)
+as growth input. Third D005-triggered branch →
+`step04-algorithmcore` branch.
 ```
 
 ---
@@ -73,37 +78,35 @@ work) → `step03-geometrypipeline` branch.
 | 2026-05-25 | D006 lock — output directory convention (3-category + per-stage layout) |
 | 2026-05-25 | Step 01 Project skeleton — completed (8 work-item commits + 1 side-fix; CI green) |
 | 2026-05-25 | Step 02 Core schema port — completed (9 work-item commits incl. chore close; 92 pytest passing; ruff clean; latent 4.3 LinearRing.area bug surfaced + fixed in 4.6) |
+| 2026-05-28 | Step 03 Geometry pipeline port — completed (territory / atomize / regionize / atom_graph / region_graph + dev-bridge viz + 33×3 goldens; 371 pytest passing; ruff clean; S03-D13..D16 course-corrections; shape_gate deferred to Step 04) |
 
 ---
 
 # 3. Next actions
 
-1. **Land Step 02** to `main`:
-   - `git push origin step02-coreschema` → confirm CI green on the branch.
-   - `git switch main && git merge --no-ff step02-coreschema && git push`.
+1. **Land Step 03** to `main`:
+   - `git push origin step03-geometrypipeline` → confirm CI green on the branch.
+   - `git switch main && git merge --no-ff step03-geometrypipeline && git push`.
    - Confirm CI green on `main`.
-   - `git branch -d step02-coreschema` (only after CI green on `main`).
-   - Flip the two pending boxes in `002_Step02_CoreSchema_Tracker.md`
-     §2 (`CI green on step02-coreschema` / `CI green on main`) and §1
-     4.9; this can ride as a follow-up tracker-only commit on `main`.
+   - `git branch -d step03-geometrypipeline` (only after CI green on `main`).
+   - Flip the pending CI boxes in `003_Step03_GeometryPipeline_Tracker.md`
+     §2 + §1 4.13; can ride as a follow-up tracker-only commit on `main`.
 
-2. **Open Step 03 (Geometry pipeline port)** on a
-   `step03-geometrypipeline` branch (D005 triggers fire again —
-   regression risk + integration work touching the whole pipeline):
+2. **Open Step 04 (Algorithm core port)** on a `step04-algorithmcore`
+   branch (D005 triggers fire — regression risk + integration work):
    - Branch kickoff §4.1 commit (per `proto3:D016` H011 deferred-archive
      pattern):
-     - `git mv 002_Step02_CoreSchema_Plan.md 002_Step02_CoreSchema_Tracker.md legacy/step02/`
-     - Write `003_Step03_GeometryPipeline_Plan.md` + Tracker at repo root.
-   - Plan §4 work items derive from Plan §7 of Step 02 + Pipeline §3
-     internal flow: move Cell Phase 3–8 modules from
-     `archive/celllayout/algorithm/celllayout_tf/` into
-     `src/room_layout/stages/`, refactor schema imports to
-     `from room_layout.schema import ...` (S02-D8 semantic migration),
-     and add per-stage matplotlib renderers under
-     `src/room_layout/viz/` as the development bridge (Step 07 swaps in
-     canonical SVG).
-   - Establish `tests/golden/<fixture>/` infrastructure using
-     `validate_input` + semantic-equality comparison (per Pipeline §5.1).
+     - `git mv 003_Step03_GeometryPipeline_Plan.md 003_Step03_GeometryPipeline_Tracker.md legacy/step03/`
+     - Write `004_Step04_AlgorithmCore_Plan.md` + Tracker at repo root.
+   - Plan §4 work items derive from Step 03 Plan §7 + Pipeline §3: port
+     Cell Phase 6–8 (`seed_placement` / `growth_seed` / `growth_cells` /
+     `growth_partition` / `growth_absorb` / `room_growth` / `corridor` +
+     `corridor_*`) **plus `shape_gate`** (the reflex helper
+     `growth_absorb` consumes — deferred from Step 03 per S03-D16).
+   - Reuse Step 03 stage outputs (Region / AtomGraph / RegionGraph /
+     atoms) as growth input; extend the per-stage golden + viz infra
+     (seed / layout / corridor) on the same 33 cases. Final stage
+     (corridor) emits the `LabeledRoomLayout` — the input to Step 06 `run()`.
 
 ---
 

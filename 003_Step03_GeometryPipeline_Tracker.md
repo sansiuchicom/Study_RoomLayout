@@ -23,7 +23,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.10** `stages/atom_graph.py` (AtomGraph — region_graph dep, was mis-bucketed as Phase 8) + `stages/region_graph.py` (RegionGraph) + region-graph viz overlay + 33-case `region_graph.json` (**edges only**, S03-D15) + PNG sidecars + unit tests — split 10a/10b; spot-check passed
 - [x] **4.11** ~~shape_gate + gates viz + gates golden~~ **RETIRED → Step 04** (S03-D16: `shape_gate` is a Phase 6/7 reflex helper for `growth_absorb`, not a Phase-5 gate stage; numbering preserved)
 - [ ] **4.12** `viz/demo.py` CLI + `viz/stages/input.py` (`save_input_figure`) — render any case × stage into `outputs/step03/`
-- [ ] **4.13** Step close + `git merge --no-ff step03-geometrypipeline` to `main`
+- [ ] **4.13** Step close + `git merge --no-ff step03-geometrypipeline` to `main` (chore close commit prepared 2026-05-28; pending `git push` → CI green → merge → CI green on `main`)
 
 ---
 
@@ -37,16 +37,16 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] Polygon-aware comparator `tests/_golden.py::assert_layout_equal` + `assert_golden` implemented + self-tested in `test_golden_comparator.py`
 - [x] 33 × 3 = 99 per-stage golden assertions all pass (`pytest tests/test_golden_per_stage.py`)
 - [x] `pytest --update-goldens` flag implemented; rewrites are loud (per-file print) and produce git-visible diffs
-- [ ] 3 dev-bridge renderers under `src/room_layout/viz/stages/` (atomize / regionize incl. region-graph overlay) + input renderer in demo CLI (4.12); shared `viz/_helpers.py` (S03-D4)
-- [ ] PNG sidecars rendered for all 33 cases × 3 stages → `tests/golden/<case>/<stage>.png` (committed) — atomize/regionize/region_graph done; input renderer is demo-only (4.12)
-- [ ] `outputs/step03/` directory active (D006); `viz/demo.py` regenerates PNGs into it without re-rendering goldens (4.12)
+- [x] 3 dev-bridge renderers under `src/room_layout/viz/stages/` (atomize / regionize incl. region-graph overlay) + input renderer in demo CLI (4.12); shared `viz/_helpers.py` (S03-D4)
+- [x] PNG sidecars rendered for all 33 cases × 3 stages → `tests/golden/<case>/<stage>.png` (committed) — atomize/regionize/region_graph done; input renderer is demo-only (4.12)
+- [x] `outputs/step03/` directory active (D006, gitignored); `viz/demo.py` regenerates PNGs into it without re-rendering goldens (4.12)
 - [x] Unit tests for every ported module (S03-D11 — written fresh, not auto-ported from Cell)
-- [ ] `python -m pytest` green (371 passing as of 4.10)
-- [ ] `ruff check .` + `ruff format --check .` green
-- [ ] CI green on `step03-geometrypipeline` branch
-- [ ] CI green on `main` after `--no-ff` merge
-- [ ] **Viz status documented**: 3 dev-bridge renderers exist; canonical SVG replacement deferred to Step 07
-- [ ] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated (Step 03 closed; Step 04 kickoff)
+- [x] `python -m pytest` green (371 passing)
+- [x] `ruff check .` + `ruff format --check .` green
+- [ ] CI green on `step03-geometrypipeline` branch (pending `git push`)
+- [ ] CI green on `main` after `--no-ff` merge (pending merge)
+- [x] **Viz status documented**: 3 dev-bridge renderers exist; canonical SVG replacement deferred to Step 07
+- [x] `docs/000_Progress_Tracker.md` §1 / §2 / §3 updated (Step 03 closed; Step 04 kickoff)
 
 ---
 
@@ -169,8 +169,44 @@ Plan §2 + a note below)._
 
 ## 4. Close summary
 
-_Populated at Step close (work item 4.13). One-paragraph retro: what was
-actually built, any surprises encountered during manual golden bootstrap
-(4.7 / 4.9 / 4.11), any items pushed forward to Step 04 — e.g., a stage
-that turned out to need Phase 6 context to validate, or a case from the
-33 that revealed an edge condition worth a Tracker §3 entry._
+**What was built (2026-05-26 → 2026-05-28).** The Cell Phase 3–4
+geometry pipeline ported into `src/room_layout/stages/`, floor-scoped
+against the Step 02 schema (S03-D13): `territory` → `atomize` →
+`regionize` → {`atom_graph`, `region_graph`}, on `dimensions` +
+`_helpers`. Algorithms are faithful ports (e.g. `dimensions.split_interval`
+reproduces Cell's exact values). Dev-bridge matplotlib viz
+(`viz/stages/` + `viz/_helpers` + a `viz/demo.py` CLI) renders input /
+atomize / regionize / region-graph figures — selective port of Cell's
+visual vocabulary (S03-D4), renderers take stage *outputs* as params.
+Golden infra: 33 Cell showcase cases (`scripts/cell_fixtures_to_json.py`)
+× 3 stages, granularity matched to each stage (atomize digest S03-D14 /
+regionize full-geom-minus-atom_ids / region_graph edges-only S03-D15),
+driven by a Polygon-aware comparator (`tests/_golden.py`) with
+`pytest --update-goldens`. End state: **371 pytest passing (~38 s)**,
+ruff clean, `tests/golden/` ~11 MB.
+
+**Surprises / course-corrections.** Four mid-execution decisions
+(S03-D13..D16) and two dependency-order fixes, all in §3: (1) stages
+take `FloorShape` not `ShapeInput` — Cell's single-floor ShapeInput maps
+to one FloorShape (D13). (2) atomize emits ~1500 mechanical cells/case
+→ digest golden, not per-atom geometry (D14). (3) 4.3's
+`LinearRing.area`-is-always-0 bug (surfaced in 4.6 because the 4.3 smoke
+never instantiated a ShapePart) → fixed via shoelace. (4) territory had
+to be ported *before* atomize (atomize depends on it) — swapped 4.7/4.8.
+(5) `atom_graph` was mis-bucketed as Phase 8 but is a Phase 4
+region_graph dependency — ported in 4.10; both graphs return plain
+dataclasses (no networkx). (6) **`shape_gate` is not a Phase-5 gate
+stage** — it is a reflex helper used only by `growth_absorb` (Phase 6/7);
+work item 4.11 retired, deferred to Step 04 (D16).
+
+**Pushed forward to Step 04.** `shape_gate.py`
+(`count_reflex_vertices` / `_reflex_of_union`), ported with its consumer
+`growth_absorb`. Also flagged for later: the 4.3 fixture heuristics
+(`area_target_m2 = footprint/N`, `target_type="apartment"`) become real
+ground truth once Phase 6 growth + Step 05 target_rules consume them.
+
+**Deliberately not done.** `src/room_layout/__init__.py` does **not**
+re-export stage internals (`Atom` / `Region` / `AtomGraph` / etc.) per
+S03-D6 — `room_layout.schema` stays the sole public contract surface;
+stage types are imported directly from `room_layout.stages.<module>`.
+Decision confirmed at close (Plan §4.13 default).

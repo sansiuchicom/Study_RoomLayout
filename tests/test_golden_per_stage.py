@@ -25,9 +25,10 @@ import pytest
 from shapely.ops import unary_union
 from tests._golden import assert_golden
 
-from room_layout.schema import ShapeInput, from_dict
+from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.regionize import Region, regionize
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 
@@ -48,6 +49,25 @@ def _load_floor(case_dir: Path):
         data = json.load(f)
     shape = from_dict(ShapeInput, data["shape"])
     return shape.floors[0]
+
+
+# Per-case pipeline cache: each fixture's Phase 3-5 stages run exactly once
+# across the whole suite, shared by every per-stage golden test. Without it,
+# each stage's golden test re-ran every upstream stage (atomize alone ran
+# ~once per downstream stage per case). Module-level dict → persists for the
+# session; outputs are immutable, so tests stay independent.
+_PIPELINE_CACHE: dict[Path, dict] = {}
+
+
+def _pipeline(case_dir: Path) -> dict:
+    cached = _PIPELINE_CACHE.get(case_dir)
+    if cached is None:
+        floor = _load_floor(case_dir)
+        atoms = atomize(floor)
+        regions = regionize(floor, atoms=atoms)
+        cached = {"floor": floor, "atoms": atoms, "regions": regions}
+        _PIPELINE_CACHE[case_dir] = cached
+    return cached
 
 
 def atomize_digest(atoms: tuple[Atom, ...]) -> dict:
@@ -72,8 +92,37 @@ def atomize_digest(atoms: tuple[Atom, ...]) -> dict:
     }
 
 
+def regionize_golden(regions: tuple[Region, ...]) -> list[dict]:
+    """Full-geometry golden record for regionize (S03-D14), minus atom_ids.
+
+    Each region is pinned by its decided geometry + metadata: region_id,
+    area, part_id, piece_id, theta, cut_history, and the union polygon.
+    `atom_ids` is deliberately excluded — it is provenance (which atomize
+    cells fell in the region), brittle to atomize renumbering, and
+    redundant with the polygon. regionize regressions surface as polygon
+    / cut_history / count changes regardless.
+    """
+    return [
+        {
+            "region_id": r.region_id,
+            "area": round(to_shapely(r.shape).area, 6),
+            "part_id": r.part_id,
+            "piece_id": r.piece_id,
+            "theta": round(r.theta, 9),
+            "cut_history": [list(c) for c in r.cut_history],
+            "polygon": to_dict(r.shape),
+        }
+        for r in regions
+    ]
+
+
 @pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
 def test_atomize_golden(case_dir: Path, update_goldens: bool):
-    floor = _load_floor(case_dir)
-    digest = atomize_digest(atomize(floor))
+    digest = atomize_digest(_pipeline(case_dir)["atoms"])
     assert_golden(digest, case_dir / "atomize.json", update_goldens=update_goldens)
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_regionize_golden(case_dir: Path, update_goldens: bool):
+    record = regionize_golden(_pipeline(case_dir)["regions"])
+    assert_golden(record, case_dir / "regionize.json", update_goldens=update_goldens)

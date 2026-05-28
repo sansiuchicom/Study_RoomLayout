@@ -29,6 +29,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+# Put the repo root on sys.path so the shared `tests._golden` helper imports
+# under bare `pytest` (CI), not just `python -m pytest` (which adds CWD).
+pythonpath = ["."]
 
 [tool.ruff]
 target-version = "py310"

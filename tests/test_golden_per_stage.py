@@ -28,6 +28,7 @@ from tests._golden import assert_golden
 from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.region_graph import RegionGraph, build_region_graph
 from room_layout.stages.regionize import Region, regionize
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
@@ -65,7 +66,13 @@ def _pipeline(case_dir: Path) -> dict:
         floor = _load_floor(case_dir)
         atoms = atomize(floor)
         regions = regionize(floor, atoms=atoms)
-        cached = {"floor": floor, "atoms": atoms, "regions": regions}
+        region_graph = build_region_graph(floor, atoms=atoms, regions=regions)
+        cached = {
+            "floor": floor,
+            "atoms": atoms,
+            "regions": regions,
+            "region_graph": region_graph,
+        }
         _PIPELINE_CACHE[case_dir] = cached
     return cached
 
@@ -122,7 +129,34 @@ def test_atomize_golden(case_dir: Path, update_goldens: bool):
     assert_golden(digest, case_dir / "atomize.json", update_goldens=update_goldens)
 
 
+def region_graph_golden(graph: RegionGraph) -> list[dict]:
+    """Edges-only golden for region_graph (S03-D15).
+
+    The regions are already pinned by ``regionize.json``; this stage adds
+    the adjacency, so the golden stores only the edge records (floats
+    rounded for stable diffs).
+    """
+    return [
+        {
+            "region_a": e.region_a,
+            "region_b": e.region_b,
+            "shared_boundary_length": round(e.shared_boundary_length, 6),
+            "centroid_distance": round(e.centroid_distance, 6),
+            "same_theta_group": e.same_theta_group,
+            "exterior_contact": e.exterior_contact,
+            "hole_contact": e.hole_contact,
+        }
+        for e in graph.edges
+    ]
+
+
 @pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
 def test_regionize_golden(case_dir: Path, update_goldens: bool):
     record = regionize_golden(_pipeline(case_dir)["regions"])
     assert_golden(record, case_dir / "regionize.json", update_goldens=update_goldens)
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_region_graph_golden(case_dir: Path, update_goldens: bool):
+    record = region_graph_golden(_pipeline(case_dir)["region_graph"])
+    assert_golden(record, case_dir / "region_graph.json", update_goldens=update_goldens)

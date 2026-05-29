@@ -415,7 +415,7 @@ Field notes:
 - `fixture_name`: nullable — `null` when input is an ad-hoc (non-fixture) shape.
 - `git_commit`: nullable — `null` when the working tree is dirty or git
   state cannot be read.
-- `config`: serialized `RunConfig` (Step 06 type; empty `{}` until then).
+- `config`: serialized `RunConfig` (Step 07 type; empty `{}` until then).
 - All other fields are required and non-null.
 
 The folder name (`<run_id>`) is kept short and sortable; the manifest
@@ -440,14 +440,14 @@ without parsing the folder name.
 
 ### Implementation lands later
 
-- **Step 06 (entry point + labeling)** — implements the `on_stage`
+- **Step 07 (entry point + labeling)** — implements the `on_stage`
   callback hook, `StageOutput` dataclass, JSON serializers, and the
   `manifest.json` writer.
-- **Step 07 (SVG viz)** — canonical PNG/SVG renderer per stage plus
+- **Step 08 (SVG viz)** — canonical PNG/SVG renderer per stage plus
   `make_gif()` composition helper. Adds `pillow` or `imageio` to the
   `viz` extra dep.
 - **Step 03 (geometry port)** — brings Cell's matplotlib renderers as
-  the development-bridge viz path until Step 07 ships canonical SVG.
+  the development-bridge viz path until Step 08 ships canonical SVG.
 
 Reason:
 

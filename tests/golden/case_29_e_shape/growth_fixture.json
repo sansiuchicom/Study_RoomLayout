@@ -1,0 +1,78 @@
+{
+  "case_index": 29,
+  "case_name": "E자",
+  "footprint_area_m2": 132.0,
+  "rooms": [
+    {
+      "name": "space_1",
+      "role": "public",
+      "seed_position": [
+        2.5,
+        8.0
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_2",
+      "role": "private",
+      "seed_position": [
+        9.0,
+        1.5
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_3",
+      "role": "private",
+      "seed_position": [
+        9.0,
+        6.5
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_4",
+      "role": "private",
+      "seed_position": [
+        9.0,
+        11.0
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_5",
+      "role": "wet",
+      "seed_position": [
+        2.5,
+        3.0
+      ],
+      "target_aspect_range": null
+    }
+  ],
+  "role_min_areas": {
+    "public": 8.0,
+    "private": 4.0,
+    "wet": 2.0,
+    "service": 3.0
+  },
+  "role_aspect_ranges": {
+    "public": [
+      1.0,
+      4.0
+    ],
+    "private": [
+      1.0,
+      4.0
+    ],
+    "wet": [
+      1.0,
+      4.0
+    ],
+    "service": [
+      1.0,
+      4.0
+    ]
+  },
+  "max_l_rooms": 2,
+  "detour_threshold": 2.0
+}

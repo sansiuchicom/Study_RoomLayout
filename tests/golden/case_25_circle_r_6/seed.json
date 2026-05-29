@@ -1,0 +1,18 @@
+[
+  {
+    "region_id": 28,
+    "phase": "hub"
+  },
+  {
+    "region_id": 0,
+    "phase": "fps"
+  },
+  {
+    "region_id": 10,
+    "phase": "fps"
+  },
+  {
+    "region_id": 21,
+    "phase": "fps"
+  }
+]

@@ -23,13 +23,18 @@ from pathlib import Path
 
 import pytest
 from shapely.ops import unary_union
+from tests._fixtures import load_growth_fixture, to_auto_fixture
 from tests._golden import assert_golden
 
 from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.corridor import carve_corridors
+from room_layout.stages.growth_partition import region_partition_growth
+from room_layout.stages.growth_seed import auto_place_seeds_by_cells
 from room_layout.stages.region_graph import RegionGraph, build_region_graph
 from room_layout.stages.regionize import Region, regionize
+from room_layout.stages.territory import resolve_territories
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 
@@ -72,6 +77,7 @@ def _pipeline(case_dir: Path) -> dict:
             "atoms": atoms,
             "regions": regions,
             "region_graph": region_graph,
+            "territories": resolve_territories(floor),
         }
         _PIPELINE_CACHE[case_dir] = cached
     return cached
@@ -160,3 +166,130 @@ def test_regionize_golden(case_dir: Path, update_goldens: bool):
 def test_region_graph_golden(case_dir: Path, update_goldens: bool):
     record = region_graph_golden(_pipeline(case_dir)["region_graph"])
     assert_golden(record, case_dir / "region_graph.json", update_goldens=update_goldens)
+
+
+def layout_golden(result) -> dict:
+    """Region-id digest golden for region_partition_growth (S04-D5).
+
+    Per room: name, role, the seed region (``region_ids[0]`` by construction —
+    catches regionize boundary shifts that move a manual seed, consideration B),
+    the **sorted** region-id membership + count, and area. Membership is sorted
+    because insertion order is immaterial downstream (only the seed identity
+    matters). Plus the unassigned regions (Phase 8 corridor candidates) and the
+    min-area / hub diagnostics.
+    """
+    return {
+        "rooms": [
+            {
+                "name": gr.name,
+                "role": gr.role,
+                "seed_region_id": gr.region_ids[0],
+                "region_ids": sorted(gr.region_ids),
+                "n_regions": len(gr.region_ids),
+                "area_m2": round(gr.area_m2, 6),
+            }
+            for gr in result.rooms
+        ],
+        "unassigned_region_ids": list(result.unassigned_region_ids),
+        "below_min_area": list(result.diagnostics.get("below_min_area", ())),
+        "hub_room_index": result.diagnostics.get("hub_room_index"),
+    }
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_layout_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = load_growth_fixture(case_dir)
+    result = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    assert_golden(layout_golden(result), case_dir / "layout.json", update_goldens=update_goldens)
+
+
+# --- Auto seed-placement goldens (S04-D7: the production path; seeds computed,
+# not Cell's manual coords). Driven by the seed-stripped fixture. ---
+
+
+def auto_seed_golden(placements) -> list[dict]:
+    """Auto seed-placement digest: region_id + phase, in placement order."""
+    return [{"region_id": sp.region.region_id, "phase": sp.phase} for sp in placements]
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_seed_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    placements = auto_place_seeds_by_cells(
+        p["floor"],
+        p["region_graph"],
+        p["territories"],
+        K=fixture.K,
+        has_public=fixture.hub_room_index is not None,
+    )
+    assert_golden(
+        auto_seed_golden(placements), case_dir / "seed.json", update_goldens=update_goldens
+    )
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_layout_auto_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    result = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    assert_golden(
+        layout_golden(result), case_dir / "layout_auto.json", update_goldens=update_goldens
+    )
+
+
+# --- Corridor carving golden (Phase 8 — Step 04 terminal output, S04-D2).
+# Driven by the manual-seed growth (algorithm-faithful path, S04-D7 a1). ---
+
+
+def corridor_golden(cl) -> dict:
+    """Region-id digest for carve_corridors (S04-D5): post-carve room membership
+    + base / shortcut / leftover corridor region sets + connectivity diagnostics.
+    """
+    return {
+        "rooms": [
+            {
+                "name": r.name,
+                "role": r.role,
+                "region_ids": sorted(r.region_ids),
+                "n_regions": len(r.region_ids),
+                "area_m2": round(r.area_m2, 6),
+            }
+            for r in cl.rooms
+        ],
+        "base_corridor_region_ids": list(cl.base_corridor_region_ids),
+        "shortcut_corridor_region_ids": list(cl.shortcut_corridor_region_ids),
+        "leftover_region_ids": list(cl.leftover_region_ids),
+        "disconnected_rooms": list(cl.diagnostics.get("disconnected_rooms", ())),
+        "emptied_rooms": list(cl.diagnostics.get("emptied_rooms", ())),
+    }
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_corridor_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = load_growth_fixture(case_dir)
+    growth = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    cl = carve_corridors(p["floor"], growth, regions=p["regions"], region_graph=p["region_graph"])
+    assert_golden(corridor_golden(cl), case_dir / "corridor.json", update_goldens=update_goldens)
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_corridor_auto_golden(case_dir: Path, update_goldens: bool):
+    """Corridor on the auto-seed layout — production path end-to-end (S04-D7)."""
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    growth = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    cl = carve_corridors(p["floor"], growth, regions=p["regions"], region_graph=p["region_graph"])
+    assert_golden(
+        corridor_golden(cl), case_dir / "corridor_auto.json", update_goldens=update_goldens
+    )

@@ -1,0 +1,40 @@
+{
+  "rooms": [
+    {
+      "name": "space_1",
+      "role": "private",
+      "seed_region_id": 11,
+      "region_ids": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "n_regions": 8,
+      "area_m2": 24.0
+    },
+    {
+      "name": "space_2",
+      "role": "wet",
+      "seed_region_id": 5,
+      "region_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "n_regions": 7,
+      "area_m2": 21.074818
+    }
+  ],
+  "unassigned_region_ids": [],
+  "below_min_area": [],
+  "hub_room_index": null
+}

@@ -1,0 +1,69 @@
+{
+  "case_index": 20,
+  "case_name": "ㄱ자 rotated 30°",
+  "footprint_area_m2": 95.0,
+  "rooms": [
+    {
+      "name": "space_1",
+      "role": "public",
+      "seed_position": [
+        4.5,
+        4.0
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_2",
+      "role": "private",
+      "seed_position": [
+        4.0,
+        6.0
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_3",
+      "role": "private",
+      "seed_position": [
+        3.5,
+        6.5
+      ],
+      "target_aspect_range": null
+    },
+    {
+      "name": "space_4",
+      "role": "wet",
+      "seed_position": [
+        6.0,
+        2.5
+      ],
+      "target_aspect_range": null
+    }
+  ],
+  "role_min_areas": {
+    "public": 8.0,
+    "private": 4.0,
+    "wet": 2.0,
+    "service": 3.0
+  },
+  "role_aspect_ranges": {
+    "public": [
+      1.0,
+      4.0
+    ],
+    "private": [
+      1.0,
+      4.0
+    ],
+    "wet": [
+      1.0,
+      4.0
+    ],
+    "service": [
+      1.0,
+      4.0
+    ]
+  },
+  "max_l_rooms": 2,
+  "detour_threshold": 2.0
+}

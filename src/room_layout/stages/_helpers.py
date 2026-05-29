@@ -20,6 +20,7 @@ internals are not re-exported from the public surface).
 """
 
 from math import atan2, degrees, hypot, pi
+from typing import TypeVar, cast
 
 import shapely.affinity as sa
 import shapely.geometry as sg
@@ -27,6 +28,8 @@ from shapely.geometry.base import BaseGeometry
 from shapely.geometry.polygon import orient
 
 from room_layout.schema import ShapePart
+
+_GeomT = TypeVar("_GeomT", bound=BaseGeometry)
 
 
 def to_shapely(part: ShapePart) -> sg.Polygon:
@@ -81,20 +84,23 @@ def line_length(geom: BaseGeometry) -> float:
 
 
 def rotate_radians(
-    geom: BaseGeometry,
+    geom: _GeomT,
     theta_rad: float,
     *,
     sign: int = 1,
     origin: tuple[float, float] | str = (0, 0),
-) -> BaseGeometry:
+) -> _GeomT:
     """Rotate ``geom`` by ``sign * theta_rad`` (radians) about ``origin``.
 
+    Generic over the geometry type — a rotated ``Polygon`` is still a
+    ``Polygon`` — so callers keep their concrete type. (``sa.rotate`` itself
+    returns the broad ``BaseGeometry``, hence the internal ``cast``.)
     No-op (returns the input unchanged) for rotations below 1e-12 rad, so
     axis-aligned parts skip the shapely round-trip.
     """
     if abs(theta_rad) < 1e-12:
         return geom
-    return sa.rotate(geom, sign * degrees(theta_rad), origin=origin)
+    return cast(_GeomT, sa.rotate(geom, sign * degrees(theta_rad), origin=origin))
 
 
 def part_theta(part: ShapePart) -> float:

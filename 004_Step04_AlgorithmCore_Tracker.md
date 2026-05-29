@@ -15,8 +15,8 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.2** ~~Scaffold~~ **RETIRED** — Step 03 infra already covers it; `assert_golden` is generic, digest builders move to 4.11/4.13 (no empty stubs)
 - [x] **4.3** `shape_gate.py` + unit tests (leaf, S03-D16) — 11 tests green, ruff clean
 - [x] **4.4** `anchors.py` ① donut-hole preprocessing (`subtract_anchors` / `anchors_on_floor`) + 5 tests; validated via atomize/regionize — clean ~2–4 m² regions, no slivers around the hole (S04-D4/D5)
-- [x] **4.5** `seed_placement.py` helpers (`SeedPlacement` / `region_degree` / `region_area` / `pick_top_centrality` / `_bfs_all_distances`) + 7 tests
-- [ ] **4.6** `room_growth.py` result types + `LayoutFixture`/`RoomSpec` + Cell role-table constants (S04-D3/D7)
+- [x] **4.5** `seed_placement.py` helpers (`SeedPlacement` / `region_degree` / `region_area` / `pick_top_centrality` / `_bfs_all_distances`) + 7 tests — commit `18994cc`
+- [x] **4.6** `room_growth.py` result types (`GrownRoom`/`GrowthResult`) + `LayoutFixture`/`RoomSpec` (`GrowthRole` 4-class) + Cell `DEFAULT_ROLE_*` constants (S04-D3/D7) — 17 tests
 - [ ] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) into golden fixture data (S04-D7 a1)
 - [ ] **4.8** `growth_cells.py` + unit tests
 - [ ] **4.9** `growth_seed.py` (auto placement) + port Cell seed-placement tests (auto coverage, S04-D7)
@@ -67,6 +67,13 @@ _Mirrors Plan §1 — checked off at Step close._
   via `to_shapely`, `Iterable` from `collections.abc` per repo ruff). 7
   tests on a synthetic line graph (degree, area tie-break, BFS distances,
   unreachable). Green + ruff clean.
+- 2026-05-29 — **4.6 `room_growth.py`** ported (faithful types + validations).
+  Cell's 4-class `Role` renamed **`GrowthRole`** to avoid clashing with the
+  7-class public `schema.Role` (identifier-only change; algorithm untouched).
+  `GrownRoom.role` is the collapsed 4-class label, not the output source of
+  truth (Step 07 recovers role/usage from `name = SpaceUnitSpec.id`, S04-D3).
+  Cell's `DEFAULT_ROLE_MIN_AREAS` / `DEFAULT_ROLE_ASPECT_RANGES` ported here
+  (used by both the 33-case golden fixtures and the adapter). 17 tests.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

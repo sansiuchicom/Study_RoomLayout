@@ -29,6 +29,7 @@ from tests._golden import assert_golden
 from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.corridor import carve_corridors
 from room_layout.stages.growth_partition import region_partition_growth
 from room_layout.stages.growth_seed import auto_place_seeds_by_cells
 from room_layout.stages.region_graph import RegionGraph, build_region_graph
@@ -239,4 +240,56 @@ def test_layout_auto_golden(case_dir: Path, update_goldens: bool):
     )
     assert_golden(
         layout_golden(result), case_dir / "layout_auto.json", update_goldens=update_goldens
+    )
+
+
+# --- Corridor carving golden (Phase 8 — Step 04 terminal output, S04-D2).
+# Driven by the manual-seed growth (algorithm-faithful path, S04-D7 a1). ---
+
+
+def corridor_golden(cl) -> dict:
+    """Region-id digest for carve_corridors (S04-D5): post-carve room membership
+    + base / shortcut / leftover corridor region sets + connectivity diagnostics.
+    """
+    return {
+        "rooms": [
+            {
+                "name": r.name,
+                "role": r.role,
+                "region_ids": sorted(r.region_ids),
+                "n_regions": len(r.region_ids),
+                "area_m2": round(r.area_m2, 6),
+            }
+            for r in cl.rooms
+        ],
+        "base_corridor_region_ids": list(cl.base_corridor_region_ids),
+        "shortcut_corridor_region_ids": list(cl.shortcut_corridor_region_ids),
+        "leftover_region_ids": list(cl.leftover_region_ids),
+        "disconnected_rooms": list(cl.diagnostics.get("disconnected_rooms", ())),
+        "emptied_rooms": list(cl.diagnostics.get("emptied_rooms", ())),
+    }
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_corridor_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = load_growth_fixture(case_dir)
+    growth = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    cl = carve_corridors(p["floor"], growth, regions=p["regions"], region_graph=p["region_graph"])
+    assert_golden(corridor_golden(cl), case_dir / "corridor.json", update_goldens=update_goldens)
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_corridor_auto_golden(case_dir: Path, update_goldens: bool):
+    """Corridor on the auto-seed layout — production path end-to-end (S04-D7)."""
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    growth = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    cl = carve_corridors(p["floor"], growth, regions=p["regions"], region_graph=p["region_graph"])
+    assert_golden(
+        corridor_golden(cl), case_dir / "corridor_auto.json", update_goldens=update_goldens
     )

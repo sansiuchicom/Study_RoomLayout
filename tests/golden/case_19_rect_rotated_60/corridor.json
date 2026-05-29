@@ -1,0 +1,74 @@
+{
+  "rooms": [
+    {
+      "name": "space_1",
+      "role": "public",
+      "region_ids": [
+        2,
+        3,
+        6,
+        7,
+        12,
+        13,
+        14,
+        15
+      ],
+      "n_regions": 8,
+      "area_m2": 24.899997
+    },
+    {
+      "name": "space_2",
+      "role": "private",
+      "region_ids": [
+        0,
+        1,
+        4,
+        5,
+        8,
+        9,
+        10,
+        11
+      ],
+      "n_regions": 8,
+      "area_m2": 23.1
+    },
+    {
+      "name": "space_3",
+      "role": "private",
+      "region_ids": [
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "n_regions": 7,
+      "area_m2": 21.749996
+    },
+    {
+      "name": "space_4",
+      "role": "wet",
+      "region_ids": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "n_regions": 8,
+      "area_m2": 23.099999
+    }
+  ],
+  "base_corridor_region_ids": [
+    24
+  ],
+  "shortcut_corridor_region_ids": [],
+  "leftover_region_ids": [],
+  "disconnected_rooms": [],
+  "emptied_rooms": []
+}

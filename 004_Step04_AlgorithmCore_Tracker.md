@@ -23,7 +23,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.10** `growth_absorb.py` (3-stage absorption, `shape_gate` consumer) + 8 tests + adversarial-verification workflow (0 confirmed issues)
 - [x] **4.11** `growth_partition.py` (`region_partition_growth`, S04-D8 params) + `viz/stages/layout.py` + 33-case `layout.json` + `layout.png` sidecars + manual review ✓ (seed.json/seed.py → 4.12, consideration B)
 - [x] **4.12** Auto-placement goldens — all 33 cases: `seed.json` (phase→region) + `layout_auto.json` + `seed.png`/`layout_auto.png` sidecars + `viz/stages/seed.py` (S04-D7); reviewed → hub-dominant imbalance logged as known v1 limitation
-- [ ] **4.13** corridor stack + viz corridor + 33-case `corridor.json` + manual review
+- [x] **4.13** corridor stack (6 modules: params/index/path/stage1/stage2/corridor, S04-D8) + `viz/stages/corridor.py` (connectivity overlay) + 33-case `corridor.json` (manual) **+ `corridor_auto.json` (auto, user add)** + `corridor.png`/`corridor_auto.png` sidecars; probe 33/33 + Cell byte-match; manual review ✓
 - [ ] **4.14** `program_adapter.py` (S04-D3) + unit tests
 - [ ] **4.15** `anchors.py` ② fixed-room re-insertion + host_role=None + full-pipeline anchor test (S04-D4)
 - [ ] **4.16** Demo CLI extension (seed/layout/corridor → `outputs/step04/`)
@@ -145,6 +145,21 @@ _Mirrors Plan §1 — checked off at Step close._
   goldens as the faithful v1 baseline; imbalance = known limitation, fix
   (area-aware growth / room size limits) deferred (Plan §5). Full suite **569
   passed + 3 xfail**, ruff clean.
+- 2026-05-29 — **4.13 corridor stack** (Phase 8, Step 04 terminal output S04-D2).
+  6 modules ported (corridor_params / index / path / stage1 / stage2 / corridor);
+  S04-D8: `carve_corridors` + `_build_region_index` take regions+region_graph
+  (no recompute); shape→floor. Probe: 33/33 carve, 0 nondeterminism, **Cell
+  live byte-match 0 mismatch**. Both Stage 1 (hub-radial base) + Stage 2 (detour
+  shortcut) confirmed live — Stage 2 evaluates every case but only commits when
+  detour ratio > threshold 2.0 (only case_33 fires: ratio 4.0 around the donut
+  hole). corridor.json (manual) + **corridor_auto.json (auto, user requested
+  end-to-end auto path)** + sidecar PNGs. `viz/stages/corridor.py` with a
+  **connectivity overlay** (solid base/shortcut/hub adjacency + dotted
+  via-room-entrance bridges) — added after a user catch: shortcuts DO attach to
+  hub/corridor at their entrance endpoints (e.g. case_33 path 36→hub … 14→base);
+  my first carved-regions-only trace had wrongly implied disconnection. case_22
+  "missing room" was a tab20 palette confusion (space_3/4 same hue), not data —
+  all rooms present; palette→tab10 deferred (user skipped).
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

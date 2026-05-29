@@ -22,7 +22,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.9** `growth_seed.py` (`auto_place_seeds_by_cells` — hub/coverage/fps) + 4 integration tests (distinct K seeds, no-public→no hub, K>0, determinism)
 - [x] **4.10** `growth_absorb.py` (3-stage absorption, `shape_gate` consumer) + 8 tests + adversarial-verification workflow (0 confirmed issues)
 - [x] **4.11** `growth_partition.py` (`region_partition_growth`, S04-D8 params) + `viz/stages/layout.py` + 33-case `layout.json` + `layout.png` sidecars + manual review ✓ (seed.json/seed.py → 4.12, consideration B)
-- [ ] **4.12** Auto-placement golden coverage — auto-driven cases, freshly-reviewed goldens (S04-D7)
+- [x] **4.12** Auto-placement goldens — all 33 cases: `seed.json` (phase→region) + `layout_auto.json` + `seed.png`/`layout_auto.png` sidecars + `viz/stages/seed.py` (S04-D7); reviewed → hub-dominant imbalance logged as known v1 limitation
 - [ ] **4.13** corridor stack + viz corridor + 33-case `corridor.json` + manual review
 - [ ] **4.14** `program_adapter.py` (S04-D3) + unit tests
 - [ ] **4.15** `anchors.py` ② fixed-room re-insertion + host_role=None + full-pipeline anchor test (S04-D4)
@@ -132,6 +132,19 @@ _Mirrors Plan §1 — checked off at Step close._
   good seeds*, NOT auto seed-placement quality. The phase-colored seed renderer
   + `seed.json` + auto-driven goldens are 4.12. User noted auto placement may
   look *more* natural — to be eyeballed at 4.12.
+- 2026-05-29 — **4.12 auto-placement goldens** (all 33, user upgraded scope
+  from "subset" → "all"). `viz/stages/seed.py` (phase-colored seed markers);
+  `to_auto_fixture` (strips manual seeds → `auto_seed=True`); driver +
+  `test_seed_golden` (phase→region_id digest) + `test_layout_auto_golden` ×33
+  + `seed.png`/`layout_auto.png` sidecars. Auto probe: 33/33 success, 0
+  nondeterminism, sane phase sequences. **Finding (answers "is auto more
+  natural?"): NO** — auto is hub-dominant (case_01 public 69 m²; case_06
+  public 57 m² + a 6 m² room) vs balanced manual. Root: central hub + FPS
+  corners + target-agnostic growth (S04-D3). Faithful Cell behavior, not a
+  port bug (Cell's showcase used manual seeds too). Decision: commit auto
+  goldens as the faithful v1 baseline; imbalance = known limitation, fix
+  (area-aware growth / room size limits) deferred (Plan §5). Full suite **569
+  passed + 3 xfail**, ruff clean.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

@@ -224,6 +224,16 @@ sample of the 33 cases before the golden is frozen.
 - **Adding a `seed_position` field to the new schema** — not done. The
   production path is auto-placement (S04-D7); manual seeds live only in
   the ported 33-case golden fixture data.
+- **Area-balanced growth** — deferred. Observed at 4.12: the *auto* path
+  (hub at the highest-centrality region + FPS corners + target-agnostic
+  growth, S04-D3) yields **hub-dominant** layouts (e.g. case_01 public
+  69 m², case_06 public 57 m² with one 6 m² room) — markedly less balanced
+  than Cell's hand-tuned manual seeds. This is faithful Cell behavior, not
+  a port bug (Cell's showcase used manual seeds for the same reason). The
+  `layout_auto.json` goldens capture it as the v1 baseline. Balancing —
+  via area-aware growth (consume `area_target_m2` / min-dimension) or
+  better auto placement — is a future concern (Step 07 area wiring, or a
+  dedicated enhancement), out of this faithful-port Step's scope.
 - **Canonical SVG renderer + `pipeline.gif`** → **Step 08**; this Step's
   matplotlib renderers are the throwaway dev-bridge (carry S03-D4).
 - **`ResearchBIM_synthetic-bim` adapter** → **Step 09**, post-v1.

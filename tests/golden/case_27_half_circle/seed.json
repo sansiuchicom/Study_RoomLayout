@@ -1,0 +1,10 @@
+[
+  {
+    "region_id": 12,
+    "phase": "coverage"
+  },
+  {
+    "region_id": 0,
+    "phase": "fps"
+  }
+]

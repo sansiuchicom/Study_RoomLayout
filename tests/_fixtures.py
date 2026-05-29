@@ -8,6 +8,7 @@ Seeded by ``scripts/cell_growth_fixtures_to_json.py``.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from room_layout.stages.room_growth import LayoutFixture, RoomSpec
@@ -39,3 +40,14 @@ def load_growth_fixture(case_dir: Path) -> LayoutFixture:
         max_l_rooms=d["max_l_rooms"],
         detour_threshold=d["detour_threshold"],
     )
+
+
+def to_auto_fixture(fixture: LayoutFixture) -> LayoutFixture:
+    """Same program with all seeds stripped → ``auto_seed=True`` (S04-D7).
+
+    Models the production path (the new schema has no ``seed_position``): same
+    rooms / roles / role tables, but seed placement is computed by
+    ``auto_place_seeds_by_cells`` instead of taken from Cell's manual coords.
+    """
+    auto_rooms = tuple(replace(r, seed_position=None) for r in fixture.rooms)
+    return replace(fixture, rooms=auto_rooms)

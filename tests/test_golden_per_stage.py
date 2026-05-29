@@ -23,15 +23,17 @@ from pathlib import Path
 
 import pytest
 from shapely.ops import unary_union
-from tests._fixtures import load_growth_fixture
+from tests._fixtures import load_growth_fixture, to_auto_fixture
 from tests._golden import assert_golden
 
 from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
 from room_layout.stages.growth_partition import region_partition_growth
+from room_layout.stages.growth_seed import auto_place_seeds_by_cells
 from room_layout.stages.region_graph import RegionGraph, build_region_graph
 from room_layout.stages.regionize import Region, regionize
+from room_layout.stages.territory import resolve_territories
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 
@@ -74,6 +76,7 @@ def _pipeline(case_dir: Path) -> dict:
             "atoms": atoms,
             "regions": regions,
             "region_graph": region_graph,
+            "territories": resolve_territories(floor),
         }
         _PIPELINE_CACHE[case_dir] = cached
     return cached
@@ -200,3 +203,40 @@ def test_layout_golden(case_dir: Path, update_goldens: bool):
         p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
     )
     assert_golden(layout_golden(result), case_dir / "layout.json", update_goldens=update_goldens)
+
+
+# --- Auto seed-placement goldens (S04-D7: the production path; seeds computed,
+# not Cell's manual coords). Driven by the seed-stripped fixture. ---
+
+
+def auto_seed_golden(placements) -> list[dict]:
+    """Auto seed-placement digest: region_id + phase, in placement order."""
+    return [{"region_id": sp.region.region_id, "phase": sp.phase} for sp in placements]
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_seed_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    placements = auto_place_seeds_by_cells(
+        p["floor"],
+        p["region_graph"],
+        p["territories"],
+        K=fixture.K,
+        has_public=fixture.hub_room_index is not None,
+    )
+    assert_golden(
+        auto_seed_golden(placements), case_dir / "seed.json", update_goldens=update_goldens
+    )
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_layout_auto_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = to_auto_fixture(load_growth_fixture(case_dir))
+    result = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    assert_golden(
+        layout_golden(result), case_dir / "layout_auto.json", update_goldens=update_goldens
+    )

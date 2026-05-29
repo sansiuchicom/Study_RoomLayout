@@ -26,7 +26,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.13** corridor stack (6 modules: params/index/path/stage1/stage2/corridor, S04-D8) + `viz/stages/corridor.py` (connectivity overlay) + 33-case `corridor.json` (manual) **+ `corridor_auto.json` (auto, user add)** + `corridor.png`/`corridor_auto.png` sidecars; probe 33/33 + Cell byte-match; manual review ✓
 - [x] **4.14** `program_adapter.py` (`program_to_fixture`, S04-D3) + 7 tests — incl. integration proof that case_01 via adapter == `to_auto_fixture` (same GrowthResult)
 - [x] **4.15** ~~`anchors.py` ② fixed-room re-insertion + full anchor pipeline~~ **DEFERRED → Step 07** (scope split: anchors are the only non-Cell-port piece; fixed room is polygon-based = Step 07 labeling. `subtract_anchors` (4.4) stays as a tested forward helper.) — see Plan §7 anchor/connectivity cluster
-- [ ] **4.16** Demo CLI extension (seed/layout/corridor → `outputs/step04/`)
+- [x] **4.16** Demo CLI extension — `viz/demo.py` adds seed/layout/corridor stages (production/auto path via `program_to_fixture`) → `outputs/step04/`; verified case_33 all-stages + case_05 corridor
 - [ ] **4.17** Step close + `git merge --no-ff` → `main`
 
 ---

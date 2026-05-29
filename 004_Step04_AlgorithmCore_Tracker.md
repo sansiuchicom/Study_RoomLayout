@@ -21,7 +21,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.8** `growth_cells.py` (`reflex_vertices_local` / `vertex_cells_of_piece` / `_assign_to_cells` / `_snap_to_region_edge` / `_guillotine_partition`) + 10 tests
 - [x] **4.9** `growth_seed.py` (`auto_place_seeds_by_cells` — hub/coverage/fps) + 4 integration tests (distinct K seeds, no-public→no hub, K>0, determinism)
 - [x] **4.10** `growth_absorb.py` (3-stage absorption, `shape_gate` consumer) + 8 tests + adversarial-verification workflow (0 confirmed issues)
-- [ ] **4.11** `growth_partition.py` (params per S04-D8) + viz seed/layout + 33-case `seed.json`/`layout.json` + manual review
+- [x] **4.11** `growth_partition.py` (`region_partition_growth`, S04-D8 params) + `viz/stages/layout.py` + 33-case `layout.json` + `layout.png` sidecars + manual review ✓ (seed.json/seed.py → 4.12, consideration B)
 - [ ] **4.12** Auto-placement golden coverage — auto-driven cases, freshly-reviewed goldens (S04-D7)
 - [ ] **4.13** corridor stack + viz corridor + 33-case `corridor.json` + manual review
 - [ ] **4.14** `program_adapter.py` (S04-D3) + unit tests
@@ -111,6 +111,27 @@ _Mirrors Plan §1 — checked off at Step close._
   line-diff vs Cell / adaptation completeness / test correctness / edge-case
   hunt → independent skeptical verify of each finding) — 5 raw findings, **0
   confirmed** (all were the sanctioned adaptations, correctly refuted).
+- 2026-05-29 — **4.11 `growth_partition.py`** (orchestrator: seeds → vertex-cell
+  allocation → 3-stage absorb → `GrowthResult`). **S04-D8** materialized:
+  signature takes `regions` + `region_graph` (atoms/policy dropped — verified
+  unused in the Cell body; territories resolved internally). `shape`→`floor`,
+  unused Cell imports dropped, `room_growth` import hoisted.
+  + `viz/stages/layout.py` (rooms by color, seed ★, leftovers hatched).
+  De-risk **probe** over all 33 manual fixtures: 0 seed-resolution failures
+  (risk A), 0 nondeterminism (risk D), sane assignment (29/33 full; 29/31/33
+  leave 1–3 corridor-candidate leftovers). Golden driver extended →
+  `test_layout_golden` × 33 (region-id digest: seed_region_id + sorted
+  membership + area + unassigned + diagnostics) + `layout.png` sidecars.
+  **Verification workflow** (10 agents: faithfulness line-diff / S04-D8
+  atoms-policy-drop safety / golden digest) — 7 raw findings, **0 confirmed**.
+  Manual review: 4 representative cases inspected (flat / cross / circle /
+  donut+wing-with-holes-and-leftovers) all architecturally sound; user
+  approved. Full suite **503 passed + 3 xfail**, ruff clean.
+  NB (consideration B): the 33-case `layout.json` rides on Cell's **hand-placed
+  manual seeds** (4.7) — it validates the partition/absorb *algorithm given
+  good seeds*, NOT auto seed-placement quality. The phase-colored seed renderer
+  + `seed.json` + auto-driven goldens are 4.12. User noted auto placement may
+  look *more* natural — to be eyeballed at 4.12.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

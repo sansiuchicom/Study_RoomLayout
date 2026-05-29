@@ -23,11 +23,13 @@ from pathlib import Path
 
 import pytest
 from shapely.ops import unary_union
+from tests._fixtures import load_growth_fixture
 from tests._golden import assert_golden
 
 from room_layout.schema import ShapeInput, from_dict, to_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.growth_partition import region_partition_growth
 from room_layout.stages.region_graph import RegionGraph, build_region_graph
 from room_layout.stages.regionize import Region, regionize
 
@@ -160,3 +162,41 @@ def test_regionize_golden(case_dir: Path, update_goldens: bool):
 def test_region_graph_golden(case_dir: Path, update_goldens: bool):
     record = region_graph_golden(_pipeline(case_dir)["region_graph"])
     assert_golden(record, case_dir / "region_graph.json", update_goldens=update_goldens)
+
+
+def layout_golden(result) -> dict:
+    """Region-id digest golden for region_partition_growth (S04-D5).
+
+    Per room: name, role, the seed region (``region_ids[0]`` by construction —
+    catches regionize boundary shifts that move a manual seed, consideration B),
+    the **sorted** region-id membership + count, and area. Membership is sorted
+    because insertion order is immaterial downstream (only the seed identity
+    matters). Plus the unassigned regions (Phase 8 corridor candidates) and the
+    min-area / hub diagnostics.
+    """
+    return {
+        "rooms": [
+            {
+                "name": gr.name,
+                "role": gr.role,
+                "seed_region_id": gr.region_ids[0],
+                "region_ids": sorted(gr.region_ids),
+                "n_regions": len(gr.region_ids),
+                "area_m2": round(gr.area_m2, 6),
+            }
+            for gr in result.rooms
+        ],
+        "unassigned_region_ids": list(result.unassigned_region_ids),
+        "below_min_area": list(result.diagnostics.get("below_min_area", ())),
+        "hub_room_index": result.diagnostics.get("hub_room_index"),
+    }
+
+
+@pytest.mark.parametrize("case_dir", CASE_DIRS, ids=_CASE_IDS)
+def test_layout_golden(case_dir: Path, update_goldens: bool):
+    p = _pipeline(case_dir)
+    fixture = load_growth_fixture(case_dir)
+    result = region_partition_growth(
+        p["floor"], fixture, regions=p["regions"], region_graph=p["region_graph"]
+    )
+    assert_golden(layout_golden(result), case_dir / "layout.json", update_goldens=update_goldens)

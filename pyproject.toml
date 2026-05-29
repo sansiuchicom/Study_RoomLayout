@@ -29,9 +29,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-# Put the repo root on sys.path so the shared `tests._golden` helper imports
-# under bare `pytest` (CI), not just `python -m pytest` (which adds CWD).
-pythonpath = ["."]
+# Put the repo root + src/ on sys.path so bare `pytest` (no editable install)
+# resolves both the `tests._golden` helper (repo root) and the `room_layout`
+# package (src/), not just `python -m pytest` after `pip install -e .`.
+pythonpath = [".", "src"]
 
 [tool.ruff]
 target-version = "py310"

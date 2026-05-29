@@ -11,8 +11,14 @@ import pytest
 
 from room_layout.schema import FloorShape, ShapePart
 from room_layout.stages._helpers import to_shapely
-from room_layout.stages.atomize import atomize
-from room_layout.stages.regionize import MIN_AREA, Region, _lattice_cuts, regionize
+from room_layout.stages.atomize import Atom, atomize
+from room_layout.stages.regionize import (
+    MIN_AREA,
+    Region,
+    _lattice_cuts,
+    _union_atoms_to_shape_part,
+    regionize,
+)
 
 
 def _rect(x0, y0, x1, y1) -> ShapePart:
@@ -137,3 +143,24 @@ def test_lattice_cuts_conserves_atom_whose_centroid_is_on_the_cut():
     _, _, left, right = cuts[0]
     # the atom centred exactly at x = 2.0 must land on one side, not vanish
     assert len(left) + len(right) == len(aws)
+
+
+@pytest.mark.xfail(
+    reason="B6 latent: _union_atoms_to_shape_part keeps only the largest piece when the "
+    "atom union is a MultiPolygon (disconnected group), silently dropping the rest — while "
+    "the caller still lists every atom in region.atom_ids, desyncing shape from atom_ids. "
+    "Not triggered by the 33 fixtures (Pass A pre-splits at reflex vertices); minimal trigger.",
+    strict=True,
+)
+def test_union_atoms_conserves_area_when_group_is_disconnected():
+    # Two atoms with a gap → unary_union is a MultiPolygon; the region shape must
+    # still account for all the atom area, not just the largest piece.
+    def _atom(aid, sp):
+        return Atom(
+            atom_id=aid, shape=sp, part_id=0, piece_id=0, theta=0.0, is_feature_sliver=False
+        )
+
+    atoms = [_atom(0, _rect(0, 0, 1, 1)), _atom(1, _rect(3, 0, 4, 1))]
+    shape = _union_atoms_to_shape_part(atoms)
+    assert shape is not None
+    assert to_shapely(shape).area == pytest.approx(2.0, abs=1e-9)

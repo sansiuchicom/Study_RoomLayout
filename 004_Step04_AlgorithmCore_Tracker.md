@@ -11,9 +11,9 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 
 ## 1. Plan §4 work items
 
-- [ ] **4.1** Plan + Tracker land + `git mv` Step 03 docs to `legacy/step03/` + §5 Step-map renumber (+1 shift)
-- [ ] **4.2** Scaffold — `stages/` + `viz/stages/` stubs + `_golden.py` seed/layout/corridor digest comparators
-- [ ] **4.3** `shape_gate.py` + unit tests (leaf, S03-D16)
+- [x] **4.1** Plan + Tracker land + `git mv` Step 03 docs to `legacy/step03/` + §5 Step-map renumber (+1 shift) — commit `6b2c525`
+- [x] **4.2** ~~Scaffold~~ **RETIRED** — Step 03 infra already covers it; `assert_golden` is generic, digest builders move to 4.11/4.13 (no empty stubs)
+- [x] **4.3** `shape_gate.py` + unit tests (leaf, S03-D16) — 11 tests green, ruff clean
 - [ ] **4.4** `anchors.py` ① donut-hole preprocessing + anchor fixture; validate via Step 03 atomize/regionize (S04-D4/D5)
 - [ ] **4.5** `seed_placement.py` helpers + unit tests
 - [ ] **4.6** `room_growth.py` result types + `LayoutFixture`/`RoomSpec` + Cell role-table constants (S04-D3/D7)
@@ -47,6 +47,14 @@ _Mirrors Plan §1 — checked off at Step close._
   line.
 - S04-D6 (flat vs nested `stages/`) resolved → **flat** (Cell-faithful,
   zero churn on shipped Step 03 modules).
+- 2026-05-29 — **4.2 retired** (execution finding): Step 03 already ships
+  `stages/` / `viz/stages/` / `tests/golden/` + a *generic* `assert_golden`
+  (digest dicts work as-is, per atomize). Nothing to scaffold; per-stage
+  digest builders move to 4.11 / 4.13 with their stages. Empty stubs avoided.
+- 2026-05-29 — **4.3 `shape_gate.py`** ported (faithful; imports swapped to
+  `_helpers` + `regionize.Region`). `count_reflex_vertices` /
+  `_reflex_of_union` unchanged. 11 unit tests (known-good values mined from
+  Cell `test_shape_gate.py`, S03-D11). Green + ruff clean.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

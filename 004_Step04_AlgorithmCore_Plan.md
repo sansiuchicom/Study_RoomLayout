@@ -181,7 +181,7 @@ Mirrors into Tracker §1 (proto3:D016).
 | # | Work item | Verify |
 |---|---|---|
 | **4.1** | Plan + Tracker land + `git mv` Step 03 docs → `legacy/step03/` + §5 Step-map renumber (+1 shift) | docs review; working tree staged |
-| **4.2** | Scaffold — `stages/` module stubs + `viz/stages/` stubs + extend `tests/_golden.py` with seed / layout / corridor digest comparators (S04-D5) | `pytest -q` collects; stubs import |
+| **4.2** | ~~Scaffold — `stages/` / `viz/stages/` stubs + `_golden.py` digest comparators~~ **RETIRED** — Step 03 already ships the dirs + golden infra, and `assert_golden` is **generic** (handles digest dicts, not just full geometry). The per-stage digest *builders* (seed / layout / corridor) live in the test driver and need their stages to exist → added with 4.11 / 4.13. No empty stubs (numbering preserved, cf. S03-D16's 4.11). | n/a |
 | **4.3** | `shape_gate.py` (`count_reflex_vertices` / `_reflex_of_union`) + unit tests — leaf, no deps (S03-D16) | unit tests pass |
 | **4.4** | `anchors.py` ① donut-hole preprocessing (`FloorShape` − anchor footprints → holed `FloorShape`; generic `difference`, S04-D4) + 1 new anchor fixture; **validate regions via existing Step 03 `atomize`/`regionize` + viz eyeball** (S04-D4/D5 validate-early) | anchor fixture → sane atoms/regions; PNG review |
 | **4.5** | `seed_placement.py` (`SeedPlacement` + centrality / BFS helpers) + unit tests | unit tests pass |

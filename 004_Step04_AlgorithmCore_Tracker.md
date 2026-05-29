@@ -24,7 +24,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.11** `growth_partition.py` (`region_partition_growth`, S04-D8 params) + `viz/stages/layout.py` + 33-case `layout.json` + `layout.png` sidecars + manual review ✓ (seed.json/seed.py → 4.12, consideration B)
 - [x] **4.12** Auto-placement goldens — all 33 cases: `seed.json` (phase→region) + `layout_auto.json` + `seed.png`/`layout_auto.png` sidecars + `viz/stages/seed.py` (S04-D7); reviewed → hub-dominant imbalance logged as known v1 limitation
 - [x] **4.13** corridor stack (6 modules: params/index/path/stage1/stage2/corridor, S04-D8) + `viz/stages/corridor.py` (connectivity overlay) + 33-case `corridor.json` (manual) **+ `corridor_auto.json` (auto, user add)** + `corridor.png`/`corridor_auto.png` sidecars; probe 33/33 + Cell byte-match; manual review ✓
-- [ ] **4.14** `program_adapter.py` (S04-D3) + unit tests
+- [x] **4.14** `program_adapter.py` (`program_to_fixture`, S04-D3) + 7 tests — incl. integration proof that case_01 via adapter == `to_auto_fixture` (same GrowthResult)
 - [ ] **4.15** `anchors.py` ② fixed-room re-insertion + host_role=None + full-pipeline anchor test (S04-D4)
 - [ ] **4.16** Demo CLI extension (seed/layout/corridor → `outputs/step04/`)
 - [ ] **4.17** Step close + `git merge --no-ff` → `main`
@@ -171,6 +171,16 @@ _Mirrors Plan §1 — checked off at Step close._
   + Plan §5 (when: Step 07 with access-guarantee; how: post-Stage-2
   bridge-carve, damage-guarded). User chose (a) defer over (b) implement-now —
   (b) would forfeit the Cell byte-match verification anchor.
+- 2026-05-29 — **4.14 `program_adapter.py`** (`program_to_fixture`, S04-D3): new
+  7-class `ProgramRequest` → Cell 4-class `LayoutFixture`. hub→public placed
+  first (so `hub_room_index` lands on it); `vertical_circulation`/`corridor`
+  excluded; `RoomSpec.name = SpaceUnitSpec.id` (identity preserved for Step 07);
+  all seeds None → auto; `area_target`/`area_min`/`min_dimension` dropped
+  (Step 07 gates, target-agnostic growth); role tables default to Cell
+  constants (target_rules override = Step 06 hook). 7 tests; **integration
+  proof**: case_01 via adapter (from_dict ProgramRequest) == `to_auto_fixture`
+  → identical GrowthResult, so the production input path
+  (input.json.program → adapter → growth) matches the auto goldens.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

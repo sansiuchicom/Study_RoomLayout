@@ -18,7 +18,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.5** `seed_placement.py` helpers (`SeedPlacement` / `region_degree` / `region_area` / `pick_top_centrality` / `_bfs_all_distances`) + 7 tests — commit `18994cc`
 - [x] **4.6** `room_growth.py` result types (`GrownRoom`/`GrowthResult`) + `LayoutFixture`/`RoomSpec` (`GrowthRole` 4-class) + Cell `DEFAULT_ROLE_*` constants (S04-D3/D7) — 17 tests
 - [x] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) → `growth_fixture.json` per case + `tests/_fixtures.py` loader (S04-D7 a1) — 35 tests
-- [ ] **4.8** `growth_cells.py` + unit tests
+- [x] **4.8** `growth_cells.py` (`reflex_vertices_local` / `vertex_cells_of_piece` / `_assign_to_cells` / `_snap_to_region_edge` / `_guillotine_partition`) + 10 tests
 - [ ] **4.9** `growth_seed.py` (auto placement) + port Cell seed-placement tests (auto coverage, S04-D7)
 - [ ] **4.10** `growth_absorb.py` (shape_gate consumer) + unit tests
 - [ ] **4.11** `growth_partition.py` (params per S04-D8) + viz seed/layout + 33-case `seed.json`/`layout.json` + manual review
@@ -84,6 +84,17 @@ _Mirrors Plan §1 — checked off at Step close._
   loader + 35 tests (all 33 load; case_01 matches Cell). Manual/auto split
   now physical: `growth_fixture.json` (manual, 4.11) vs `input.json.program`
   (auto, 4.12/4.14).
+- 2026-05-29 — **4.8 `growth_cells.py`** ported (faithful; only geometry-helper
+  imports swapped, inline `Counter` hoisted, `piece: ShapePart` annotated).
+  reflex-vertex cell decomposition + aspect-minimizing guillotine partition.
+  Sole deps are `_helpers` (no other stage). 10 tests: rect→0 reflex / L→1
+  reflex at (2,2); rect→1 cell / L→3 cells (area 12 conserved); cell assign
+  by `covers`; snap to region edge in-range / midpoint fallback; guillotine
+  1-seed + 2-seed vertical split. Also made `_helpers.rotate_radians`
+  **generic** (`TypeVar` bound `BaseGeometry` + internal `cast`) so rotate
+  preserves the concrete geometry type — clears the `list[Polygon]` Pylance
+  warning here + future rotate callers. Runtime-identical (CI = ruff + pytest,
+  no type-check gate).
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

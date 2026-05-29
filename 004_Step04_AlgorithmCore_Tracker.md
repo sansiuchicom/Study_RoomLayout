@@ -17,7 +17,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.4** `anchors.py` ① donut-hole preprocessing (`subtract_anchors` / `anchors_on_floor`) + 5 tests; validated via atomize/regionize — clean ~2–4 m² regions, no slivers around the hole (S04-D4/D5)
 - [x] **4.5** `seed_placement.py` helpers (`SeedPlacement` / `region_degree` / `region_area` / `pick_top_centrality` / `_bfs_all_distances`) + 7 tests — commit `18994cc`
 - [x] **4.6** `room_growth.py` result types (`GrownRoom`/`GrowthResult`) + `LayoutFixture`/`RoomSpec` (`GrowthRole` 4-class) + Cell `DEFAULT_ROLE_*` constants (S04-D3/D7) — 17 tests
-- [ ] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) into golden fixture data (S04-D7 a1)
+- [x] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) → `growth_fixture.json` per case + `tests/_fixtures.py` loader (S04-D7 a1) — 35 tests
 - [ ] **4.8** `growth_cells.py` + unit tests
 - [ ] **4.9** `growth_seed.py` (auto placement) + port Cell seed-placement tests (auto coverage, S04-D7)
 - [ ] **4.10** `growth_absorb.py` (shape_gate consumer) + unit tests
@@ -74,6 +74,16 @@ _Mirrors Plan §1 — checked off at Step close._
   truth (Step 07 recovers role/usage from `name = SpaceUnitSpec.id`, S04-D3).
   Cell's `DEFAULT_ROLE_MIN_AREAS` / `DEFAULT_ROLE_ASPECT_RANGES` ported here
   (used by both the 33-case golden fixtures and the adapter). 17 tests.
+- 2026-05-29 — **4.7 33-case growth fixtures**. Found: Step 03's
+  `cell_fixtures_to_json.py` already wrote `input.json` (shape + 7-class
+  `ProgramRequest`) but **dropped manual seeds** → input.json is the *auto*
+  path. So added `scripts/cell_growth_fixtures_to_json.py` emitting a
+  separate `growth_fixture.json` per case (Cell `LayoutFixture` verbatim,
+  manual seeds + role tables) for the (a1) algorithm-faithful goldens;
+  `input.json` left as the auto/adapter path input. `tests/_fixtures.py`
+  loader + 35 tests (all 33 load; case_01 matches Cell). Manual/auto split
+  now physical: `growth_fixture.json` (manual, 4.11) vs `input.json.program`
+  (auto, 4.12/4.14).
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

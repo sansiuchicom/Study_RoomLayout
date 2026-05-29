@@ -160,6 +160,17 @@ _Mirrors Plan §1 — checked off at Step close._
   my first carved-regions-only trace had wrongly implied disconnection. case_22
   "missing room" was a tab20 palette confusion (space_3/4 same hue), not data —
   all rooms present; palette→tab10 deferred (user skipped).
+- 2026-05-29 — **Deferred-gap PoC added** (after user investigation): PHASE8
+  §11 goal "corridor single connected component" is unmet — a Stage 2 shortcut
+  attaches via a room entrance (Cell §4.6, faithful), so case_33's
+  base∪shortcut∪hub isn't one adjacency component. Investigated thoroughly:
+  Cell git history shows no add-then-remove of connection logic; the §11 item
+  is an aspirational *goal* with no enforcing Cell test (only per-room
+  `test_w2_every_room_single_component`). Pinned by `xfail` (strict)
+  `tests/test_stages_corridor.py::test_corridor_network_is_single_component_case_33`
+  + Plan §5 (when: Step 07 with access-guarantee; how: post-Stage-2
+  bridge-carve, damage-guarded). User chose (a) defer over (b) implement-now —
+  (b) would forfeit the Cell byte-match verification anchor.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

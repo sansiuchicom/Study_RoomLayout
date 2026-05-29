@@ -243,6 +243,21 @@ sample of the 33 cases before the golden is frozen.
 - **Access guarantee** (corridor ↔ `vertical_circulation` room
   connectivity) → deferred, documented v1 limitation (S04-D4). The fixed
   anchor room may be geometrically isolated by its own donut-hole.
+- **Corridor as a single connected component** (PHASE8 §11 goal) →
+  deferred. A Stage 2 detour shortcut attaches to the network *through a
+  room entrance* (Cell §4.6 excludes src/tgt regions from carving), so
+  `base ∪ shortcut ∪ hub` is not one adjacency component (case_33). This
+  is faithful to Cell — the §11 goal was stated but never implemented and
+  has no Cell test. Pinned by an `xfail` PoC
+  (`test_stages_corridor.py::test_corridor_network_is_single_component_case_33`,
+  `strict=True`). **When**: Step 07, bundled with the access-guarantee
+  cluster (both are corridor connectivity), once `corridor_polygons`
+  become real output. **How**: a post-Stage-2 bridge-carve — for each
+  shortcut component not adjacent to `base ∪ hub`, carve the minimal
+  room-entrance bridge region, guarded by the existing
+  `corridor_path._path_damages_any_room` simulation (no room split /
+  emptied); then flip the `xfail`. Implemented directly here (Cell is
+  archived once Step 04 closes; byte-match was a one-time port check).
 - **Pathological anchor geometries** (boundary-touching notch, part-
   splitting span, thin slivers) → interior-hole case first; weird cases
   deferred (S04-D4).

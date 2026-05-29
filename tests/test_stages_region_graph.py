@@ -5,7 +5,9 @@ networkx), edge metadata, neighbors / edge_between methods, linear-chain
 adjacency, empty handling, atoms/regions-param consistency.
 """
 
-from room_layout.schema import FloorShape, ShapePart
+import json
+
+from room_layout.schema import FloorShape, ShapePart, from_dict, to_dict
 from room_layout.stages.atomize import atomize
 from room_layout.stages.region_graph import RegionEdge, RegionGraph, build_region_graph
 from room_layout.stages.regionize import regionize
@@ -38,6 +40,23 @@ def test_region_graph_linear_chain_adjacency():
     g = build_region_graph(_floor(_rect(0, 0, 6, 2)))
     assert len(g.regions) == 4
     assert len(g.edges) == 3
+
+
+def test_region_graph_serializes_via_to_dict_round_trip():
+    # region_graph.py documents "serializes via to_dict with no adapter". The
+    # init=False adjacency indexes must NOT leak into the serialized form — they
+    # would break JSON (tuple-keyed dict) and round-trip reconstruction.
+    g = build_region_graph(_floor(_rect(0, 0, 6, 2)))
+    d = to_dict(g)
+    assert set(d.keys()) == {"regions", "edges"}  # derived indexes excluded
+    json.dumps(d)  # JSON-safe (no tuple keys)
+    rt = from_dict(RegionGraph, d)
+    assert rt.regions == g.regions
+    assert rt.edges == g.edges
+    # the O(1) index is rebuilt by __post_init__ after reconstruction
+    e = g.edges[0]
+    assert rt.edge_between(e.region_a, e.region_b) == e
+    assert e.region_b in rt.neighbors(e.region_a)
 
 
 def test_region_graph_edge_metadata_positive():

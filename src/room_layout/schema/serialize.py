@@ -75,7 +75,11 @@ def to_dict(obj: Any) -> Any:
     if isinstance(obj, Polygon):
         return polygon_to_coords(obj)
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-        return {f.name: to_dict(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
+        # Skip init=False fields: they are derived/cached state rebuilt in
+        # __post_init__ (e.g. graph adjacency indexes), not part of the
+        # serializable model — emitting them breaks round-trip and JSON
+        # (e.g. tuple-keyed lookup dicts).
+        return {f.name: to_dict(getattr(obj, f.name)) for f in dataclasses.fields(obj) if f.init}
     if isinstance(obj, (list, tuple)):
         return [to_dict(x) for x in obj]
     if isinstance(obj, dict):
@@ -185,6 +189,8 @@ def from_dict(cls: Any, data: Any) -> Any:
             raise ValueError(f"from_dict: {cls.__name__} extra keys not in schema: {sorted(extra)}")
         kwargs: dict[str, Any] = {}
         for f in dataclasses.fields(cls):
+            if not f.init:
+                continue  # derived/cached field — rebuilt by __post_init__
             field_type = hints[f.name]
             if f.name in data:
                 kwargs[f.name] = from_dict(field_type, data[f.name])

@@ -25,7 +25,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.12** Auto-placement goldens — all 33 cases: `seed.json` (phase→region) + `layout_auto.json` + `seed.png`/`layout_auto.png` sidecars + `viz/stages/seed.py` (S04-D7); reviewed → hub-dominant imbalance logged as known v1 limitation
 - [x] **4.13** corridor stack (6 modules: params/index/path/stage1/stage2/corridor, S04-D8) + `viz/stages/corridor.py` (connectivity overlay) + 33-case `corridor.json` (manual) **+ `corridor_auto.json` (auto, user add)** + `corridor.png`/`corridor_auto.png` sidecars; probe 33/33 + Cell byte-match; manual review ✓
 - [x] **4.14** `program_adapter.py` (`program_to_fixture`, S04-D3) + 7 tests — incl. integration proof that case_01 via adapter == `to_auto_fixture` (same GrowthResult)
-- [ ] **4.15** `anchors.py` ② fixed-room re-insertion + host_role=None + full-pipeline anchor test (S04-D4)
+- [x] **4.15** ~~`anchors.py` ② fixed-room re-insertion + full anchor pipeline~~ **DEFERRED → Step 07** (scope split: anchors are the only non-Cell-port piece; fixed room is polygon-based = Step 07 labeling. `subtract_anchors` (4.4) stays as a tested forward helper.) — see Plan §7 anchor/connectivity cluster
 - [ ] **4.16** Demo CLI extension (seed/layout/corridor → `outputs/step04/`)
 - [ ] **4.17** Step close + `git merge --no-ff` → `main`
 
@@ -181,6 +181,16 @@ _Mirrors Plan §1 — checked off at Step close._
   proof**: case_01 via adapter (from_dict ProgramRequest) == `to_auto_fixture`
   → identical GrowthResult, so the production input path
   (input.json.program → adapter → growth) matches the auto goldens.
+- 2026-05-29 — **4.15 deferred → Step 07** (user decision). Rationale: anchors
+  are the only non-Cell-port piece of Step 04 (new design, no Cell cross-check,
+  0 of 33 goldens), and the fixed `vertical_circulation` room is polygon-based —
+  it only becomes a real `LabeledRoom` at Step 07 labeling (Pipeline §2.4/§3.8
+  already say labeling sources it from the anchor footprint). So Step 04 closes
+  as a clean **faithful-port baseline** (4.3–4.14, all Cell byte-matched) plus
+  `subtract_anchors` (4.4) as a tested forward helper. The fixed-room
+  re-insertion + full anchor-aware pipeline + first anchor fixture join the
+  **Step 07 anchor/connectivity cluster** (with corridor-single-component +
+  access-guarantee) — Plan §7. S04-D4 revised in place.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

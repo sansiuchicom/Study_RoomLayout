@@ -20,7 +20,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) → `growth_fixture.json` per case + `tests/_fixtures.py` loader (S04-D7 a1) — 35 tests
 - [x] **4.8** `growth_cells.py` (`reflex_vertices_local` / `vertex_cells_of_piece` / `_assign_to_cells` / `_snap_to_region_edge` / `_guillotine_partition`) + 10 tests
 - [x] **4.9** `growth_seed.py` (`auto_place_seeds_by_cells` — hub/coverage/fps) + 4 integration tests (distinct K seeds, no-public→no hub, K>0, determinism)
-- [ ] **4.10** `growth_absorb.py` (shape_gate consumer) + unit tests
+- [x] **4.10** `growth_absorb.py` (3-stage absorption, `shape_gate` consumer) + 8 tests + adversarial-verification workflow (0 confirmed issues)
 - [ ] **4.11** `growth_partition.py` (params per S04-D8) + viz seed/layout + 33-case `seed.json`/`layout.json` + manual review
 - [ ] **4.12** Auto-placement golden coverage — auto-driven cases, freshly-reviewed goldens (S04-D7)
 - [ ] **4.13** corridor stack + viz corridor + 33-case `corridor.json` + manual review
@@ -102,6 +102,15 @@ _Mirrors Plan §1 — checked off at Step close._
   integration tests over case_06 (K distinct valid seeds + hub-first;
   no-public → no hub phase; K>0 guard; **determinism** — same seeds across
   runs, critical for reproducibility). Broad auto golden coverage → 4.12.
+- 2026-05-29 — **4.10 `growth_absorb.py`** ported (3-stage W10 absorption;
+  sole `shape_gate._reflex_of_union` consumer). Adaptations: imports swapped +
+  inline shape_gate import hoisted (no cycle), `to_shapely` for the union
+  build, `shape`→`floor`. 8 tests (aspect helpers + case_06 integration:
+  single-seed bulk absorb takes all under ∞ aspect; tight gate restricts).
+  **Ultracode**: ran a 9-agent adversarial-verification workflow (faithfulness
+  line-diff vs Cell / adaptation completeness / test correctness / edge-case
+  hunt → independent skeptical verify of each finding) — 5 raw findings, **0
+  confirmed** (all were the sanctioned adaptations, correctly refuted).
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

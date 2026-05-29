@@ -39,7 +39,7 @@ fixture) and `anchors.subtract_anchors` (S04-D4 donut-hole half).
 corridor cross-checked) — the strongest correctness anchor. Goldens in
 `tests/golden/`: layout / seed / layout_auto / corridor / corridor_auto
 region-id digests + PNG sidecars; growth driven both by ported manual
-seeds (S04-D7 a1) and the auto production path. 636 pytest passing + 4
+seeds (S04-D7 a1) and the auto production path. 643 pytest passing + 5
 xfailed under the canonical runtime (conda `IfcOpenHouse`, GEOS 3.14.1);
 ruff clean.
 
@@ -87,7 +87,7 @@ Next: open Step 05 (Program layer port) per Pipeline §5.1.
 | 2026-05-25 | Step 02 Core schema port — completed (9 work-item commits incl. chore close; 92 pytest passing; ruff clean; latent 4.3 LinearRing.area bug surfaced + fixed in 4.6) |
 | 2026-05-28 | Step 03 Geometry pipeline port — completed (territory / atomize / regionize / atom_graph / region_graph + dev-bridge viz + 33×3 goldens; 371 pytest passing under GEOS 3.14.1 (IfcOpenHouse); ruff clean; S03-D13..D16 course-corrections; shape_gate deferred to Step 04) |
 | 2026-05-28..29 | Post-Step-03 review hardening (on `main`, 4 commits) — CI repinned to conda-forge + `geos=3.14.1` (regionize goldens are GEOS-version-sensitive); atom/region graph `neighbors`/`edge_between` made O(1) + atom edges keyed by `atom_id` not list index; `xfail` PoCs for three latent geometry bugs (B5 regionize Pass-B atom loss; B6 region shape↔atom_ids desync; C10 territory 3-way-overlap hole); pytest `pythonpath` += `src` (bare run w/o install); `to_dict`/`from_dict` skip `init=False` derived fields (the new graph indexes had broken `RegionGraph` serialization); README/tracker doc sync. 373 passing + 3 xfailed |
-| 2026-05-29 | Step 04 Algorithm core port — completed on `step04-algorithmcore` (22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 636 pytest + 4 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). Pending no-ff merge to `main`. |
+| 2026-05-29 | Step 04 Algorithm core port — completed on `step04-algorithmcore` (22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). Pending no-ff merge to `main`. |
 
 ---
 

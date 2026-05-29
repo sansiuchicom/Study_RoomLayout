@@ -34,8 +34,11 @@ The final `corridor` stage emits a `CorridoredLayout`-equivalent
 
 After Step 04 closes:
 
-- `from room_layout.stages import seed_placement, growth, carve_corridors,
-  shape_gate` works.
+- The Phase 6–8 stages import cleanly (module-qualified, matching the
+  Step 03 convention — there is no `stages/__init__` re-export):
+  `from room_layout.stages.growth_partition import region_partition_growth`,
+  `from room_layout.stages.corridor import carve_corridors`,
+  `from room_layout.stages.shape_gate import count_reflex_vertices`, etc.
 - A `FloorShape` + `floor_programs[level]` (+ `vertical_anchors`) can be
   carried through seed placement → partition growth → corridor carving;
   intermediate outputs are typed Python dataclasses.
@@ -66,8 +69,10 @@ Cross-references:
 
 ## 1. Definition of Done
 
-- `from room_layout.stages import seed_placement, growth, carve_corridors,
-  shape_gate` imports cleanly.
+- The Phase 6–8 stage modules import cleanly module-qualified
+  (`room_layout.stages.{seed_placement, growth_seed, growth_cells,
+  growth_partition, growth_absorb, room_growth, shape_gate, corridor,
+  corridor_*}`) — no `stages/__init__` re-export (Step 03 convention).
 - 33 Cell showcase cases reproduce **semantically equivalent** seed /
   layout / corridor outputs against region-id digest goldens (S04-D5),
   driven by the Step 03 golden infrastructure (`tests/_golden.py` +

@@ -12,17 +12,23 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 03 (Geometry pipeline port) done, merged to `main` 2026-05-28. The
-geometry stages live in `src/room_layout/stages/` — territory / atomize /
-regionize / atom_graph / region_graph (+ dimensions, `_helpers`) — against
-the D001 schema (S03-D13 floor-scoped). Per-stage golden regression covers
-33 Cell showcase cases. Tests pass under the canonical runtime (conda env
-`IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1); CI pins `geos=3.14.1` because
-the regionize goldens are GEOS-version-sensitive.
+Step 04 (Algorithm core port) done on `step04-algorithmcore` (2026-05-29,
+pending merge to `main`). The full algorithm now lives in
+`src/room_layout/stages/` — Cell **Phase 3–8**: territory / atomize /
+regionize / atom_graph / region_graph (Step 03) + seed_placement / growth_* /
+room_growth / shape_gate / corridor stack (Step 04) — plus `program_adapter`
+(new-schema `ProgramRequest` → growth fixture) and `anchors.subtract_anchors`
+(donut-hole). Ported growth + corridor are **byte-identical to the predecessor
+`Study_RoomLayout_Cell` across all 33 cases**. Per-stage golden regression
+(layout / seed / corridor digests + PNG sidecars). 643 pytest + 4 xfail under
+the canonical runtime (conda `IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1).
 
-**Next**: Step 04 (Algorithm core port) — Cell Phase 6–8 (`growth_*` /
-`corridor*`) plus `shape_gate` (the reflex helper deferred from Step 03 per
-S03-D16), against the new schema.
+Step 04 ends at a region-based `CorridoredLayout` (S04-D2); polygonization +
+`LabeledRoomLayout` + the deferred anchor / corridor-connectivity cluster are
+**Step 07**.
+
+**Next**: Step 05 (Program layer port) — program instantiation + the 4 domain
+gates.
 
 Canonical docs live under `docs/`:
 
@@ -40,14 +46,21 @@ python -m pip install -e .[dev]      # tests + lint
 python -m pip install -e .[dev,viz]  # + matplotlib for stage viz
 ```
 
-Run tests / lint locally:
+Run tests / lint locally **under the canonical runtime** (conda env
+`IfcOpenHouse`, GEOS 3.14.1):
 
 ```bash
+conda activate IfcOpenHouse   # GEOS 3.14.1 — required for the goldens
 python -m pytest
 ruff check .
 ruff format --check .
 ```
 
+> ⚠️ The geometry goldens are **GEOS-version-pinned (3.14.1)**. On a different
+> GEOS build (e.g. base conda 3.13.1) ~60+ `atomize`/`regionize`/`region_graph`
+> golden tests show spurious diffs — **run under `IfcOpenHouse`**. (The
+> layout/corridor goldens are region-id digests and stay GEOS-stable.)
+>
 > The `regionize` / `region_graph` goldens are pinned to GEOS 3.14.x (the
 > `IfcOpenHouse` runtime). On a different GEOS build they may show spurious
 > diffs — see the GEOS-pin note in `tests/_golden.py`.

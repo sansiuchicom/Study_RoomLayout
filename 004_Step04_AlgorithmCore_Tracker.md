@@ -191,6 +191,18 @@ _Mirrors Plan §1 — checked off at Step close._
   re-insertion + full anchor-aware pipeline + first anchor fixture join the
   **Step 07 anchor/connectivity cluster** (with corridor-single-component +
   access-guarantee) — Plan §7. S04-D4 revised in place.
+- 2026-05-29 — **Pre-merge review response** (external review of the branch).
+  Fixed real doc/accuracy bugs: DoD import line was broken
+  (`from room_layout.stages import growth, carve_corridors` → ImportError) →
+  corrected to module-qualified + `stages/__init__` docstring refreshed to
+  Phase 3–8; Pipeline §5.1 "corridor emits LabeledRoomLayout" → `CorridoredLayout`
+  (S04-D2); README status → Step 04 done / Next Step 05 + GEOS-3.14.1 run note;
+  Progress-tracker test count 636→643. Pinned a 4th latent-gap xfail:
+  K > seedable regions → `IndexError` (faithful Cell; graceful program-gate
+  handling → Step 07) in `test_stages_growth_partition.py`. The review's other
+  items were already-deferred-by-design (gates→validity = Step 07 S04-D2; anchor
+  half = 4.15 deferred; auto hub-dominant = S04-D7; B5/B6/C10 pinned) or noted
+  decisions (golden PNG volume — keep as-is, user call). Now 643 + **5** xfail.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens
@@ -223,7 +235,7 @@ adversarial-verification workflows (growth_absorb, growth_partition: 0
 confirmed of 12 raw findings) and a 33-case auto probe. Goldens: layout /
 seed / layout_auto / corridor / corridor_auto region-id digests (S04-D5) +
 PNG sidecars; the adapter reproduces the auto path exactly
-(`test_adapter_reproduces_auto_path_case_01`). Final: **643 passed + 4
+(`test_adapter_reproduces_auto_path_case_01`). Final: **643 passed + 5
 xfailed** under GEOS 3.14.1; ruff clean.
 
 Decisions S04-D1..D8 (Plan §2). Work items 4.1–4.14 + 4.16 done; **4.2**

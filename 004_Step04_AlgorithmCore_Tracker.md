@@ -19,7 +19,7 @@ Mirrors Plan §4 work items 1:1 in §1 checklist (per `proto3:D016`).
 - [x] **4.6** `room_growth.py` result types (`GrownRoom`/`GrowthResult`) + `LayoutFixture`/`RoomSpec` (`GrowthRole` 4-class) + Cell `DEFAULT_ROLE_*` constants (S04-D3/D7) — 17 tests
 - [x] **4.7** Port Cell `layout_fixtures.py` 33-case programs (manual seeds) → `growth_fixture.json` per case + `tests/_fixtures.py` loader (S04-D7 a1) — 35 tests
 - [x] **4.8** `growth_cells.py` (`reflex_vertices_local` / `vertex_cells_of_piece` / `_assign_to_cells` / `_snap_to_region_edge` / `_guillotine_partition`) + 10 tests
-- [ ] **4.9** `growth_seed.py` (auto placement) + port Cell seed-placement tests (auto coverage, S04-D7)
+- [x] **4.9** `growth_seed.py` (`auto_place_seeds_by_cells` — hub/coverage/fps) + 4 integration tests (distinct K seeds, no-public→no hub, K>0, determinism)
 - [ ] **4.10** `growth_absorb.py` (shape_gate consumer) + unit tests
 - [ ] **4.11** `growth_partition.py` (params per S04-D8) + viz seed/layout + 33-case `seed.json`/`layout.json` + manual review
 - [ ] **4.12** Auto-placement golden coverage — auto-driven cases, freshly-reviewed goldens (S04-D7)
@@ -95,6 +95,13 @@ _Mirrors Plan §1 — checked off at Step close._
   preserves the concrete geometry type — clears the `list[Polygon]` Pylance
   warning here + future rotate callers. Runtime-identical (CI = ruff + pytest,
   no type-check gate).
+- 2026-05-29 — **4.9 `growth_seed.py`** ported (auto placement: hub →
+  piece-coverage → load-balanced FPS extras). `shape`→`floor` rename
+  (S03-D13); inline `_min_dist` closure lifted to module-level
+  `_min_centroid_dist` (avoids loop-closure lint, behavior identical). 4
+  integration tests over case_06 (K distinct valid seeds + hub-first;
+  no-public → no hub phase; K>0 guard; **determinism** — same seeds across
+  runs, critical for reproducibility). Broad auto golden coverage → 4.12.
 - 2026-05-29 — **Pre-implementation re-review** (code-verified). Findings
   folded into Plan: **(#1)** all 33 Cell fixtures use *manual* seeds but
   the new schema is auto-only → S04-D7 strategy (a1): manual-seed goldens

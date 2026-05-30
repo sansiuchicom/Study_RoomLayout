@@ -2,7 +2,7 @@
 
 Status: Current working status only
 Scope: active work item, completed work, next actions, blockers
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ---
 
@@ -28,42 +28,39 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Step 04 (Algorithm core port) done on branch `step04-algorithmcore`
-(2026-05-29), pending no-ff merge to `main`. Cell Phase 6–8 ported to
-`src/room_layout/stages/`: seed_placement / growth_seed / growth_cells /
-growth_partition / growth_absorb / room_growth / shape_gate + the corridor
-stack (corridor + corridor_params/index/path/stage1/stage2). Plus two
-new-to-this-repo bridges: `program_adapter` (S04-D3, ProgramRequest→Cell
-fixture) and `anchors.subtract_anchors` (S04-D4 donut-hole half).
-**Verified byte-identical to Cell live across all 33 cases** (growth +
-corridor cross-checked) — the strongest correctness anchor. Goldens in
-`tests/golden/`: layout / seed / layout_auto / corridor / corridor_auto
-region-id digests + PNG sidecars; growth driven both by ported manual
-seeds (S04-D7 a1) and the auto production path. 643 pytest passing + 5
-xfailed under the canonical runtime (conda `IfcOpenHouse`, GEOS 3.14.1);
-ruff clean.
+Step 04 (Algorithm core port) merged to `main` 2026-05-29
+(`969c4f0`, --no-ff). Step 05 (Program layer port) **open** on branch
+`step05-programlayer` (2026-05-30) — kickoff (4.1) in progress.
 
-Key Step-04 decisions (Plan §2 S04-D1..D8): algorithm follows Cell,
-interface follows the new schema (D1); Step 04 ends at region-set rooms
-(`CorridoredLayout`), labeling/run() = Step 07 (D2); target-agnostic
-growth + 7→4 role collapse + id-identity preservation (D3); anchors =
-footprint donut-hole (D4); region-id digest goldens (D5); flat `stages/`
-(D6); manual-seed goldens + separate auto coverage (D7); growth takes
-Step 03 outputs as params, no recompute (D8).
+Step 04 recap: Cell Phase 6–8 ported to `src/room_layout/stages/`
+(seed_placement / growth_* / room_growth / shape_gate + corridor stack)
++ `program_adapter` (S04-D3) + `anchors.subtract_anchors` (S04-D4
+donut-hole half). **Verified byte-identical to Cell across all 33
+cases.** Goldens: layout / seed / layout_auto / corridor / corridor_auto
+region-id digests + PNG sidecars. 643 pytest + 5 xfail (conda
+`IfcOpenHouse`, GEOS 3.14.1); ruff clean.
 
-Finding (S04-D7 / 4.12): the auto seed path is hub-dominant (less balanced
-than hand-tuned manual) — faithful Cell behavior, area-balance deferred.
+Step 05 scope (Plan §1 / §2 S05-D1..D7, settled in chat 2026-05-30):
+port proto3 `stage01_program` + `stage02_gate` + 4 domain gates onto the
+new schema. **Boundary (S05-D2): Step 05 = gate machinery + rule *type*
+(`TargetRules`); Step 06 = rule *values + loading* (JSON/adapter).**
+Gates are pure functions taking primitive domain values by injection.
+Schema reshape (S05-D1): `area_min_m2` → required (gate input);
+`area_target_m2` → optional, kept as the Step 11 diffusion-priority hook
+(growth is target-agnostic so it has no consumer yet — S04-D3). No
+`ProgramInstance` type (S05-D5 — nothing to concretize). 33 golden
+inputs regenerate (`area_target` placeholder → null); region-id digests
+asserted unchanged (the S04-D3 target-agnostic regression guard).
 
-Deferred to Step 07 — the anchor / connectivity cluster: anchor fixed-room
-re-insertion (4.15, polygon room = labeling concern; anchors are the lone
-non-Cell-port piece), corridor single-connected-component (PHASE8 §11,
-xfail PoC pinned), access guarantee (S04-D4). All converge where the
-region result becomes the polygon `LabeledRoomLayout`.
+Deferred to Step 07 — the anchor / connectivity cluster (S04 carry):
+anchor fixed-room re-insertion, corridor single-connected-component
+(xfail PoC pinned), access guarantee. Plus the program-side join:
+per-room post-growth area/dim check (1.5 m² rejection — distinct from
+Step 05's aggregate admission gate), `run()`, `LabeledRoomLayout`.
 
 D-series cumulative state: D001-D006 accepted; proto3:D001-D023 audited;
-S02-D1..D13 + S03-D1..D16 + S04-D1..D8 logged in their Step Plans.
-
-Next: open Step 05 (Program layer port) per Pipeline §5.1.
+S02-D1..D13 + S03-D1..D16 + S04-D1..D8 logged in their Step Plans;
+S05-D1..D7 in `005_Step05_ProgramLayer_Plan.md` §2.
 ```
 
 ---
@@ -87,25 +84,25 @@ Next: open Step 05 (Program layer port) per Pipeline §5.1.
 | 2026-05-25 | Step 02 Core schema port — completed (9 work-item commits incl. chore close; 92 pytest passing; ruff clean; latent 4.3 LinearRing.area bug surfaced + fixed in 4.6) |
 | 2026-05-28 | Step 03 Geometry pipeline port — completed (territory / atomize / regionize / atom_graph / region_graph + dev-bridge viz + 33×3 goldens; 371 pytest passing under GEOS 3.14.1 (IfcOpenHouse); ruff clean; S03-D13..D16 course-corrections; shape_gate deferred to Step 04) |
 | 2026-05-28..29 | Post-Step-03 review hardening (on `main`, 4 commits) — CI repinned to conda-forge + `geos=3.14.1` (regionize goldens are GEOS-version-sensitive); atom/region graph `neighbors`/`edge_between` made O(1) + atom edges keyed by `atom_id` not list index; `xfail` PoCs for three latent geometry bugs (B5 regionize Pass-B atom loss; B6 region shape↔atom_ids desync; C10 territory 3-way-overlap hole); pytest `pythonpath` += `src` (bare run w/o install); `to_dict`/`from_dict` skip `init=False` derived fields (the new graph indexes had broken `RegionGraph` serialization); README/tracker doc sync. 373 passing + 3 xfailed |
-| 2026-05-29 | Step 04 Algorithm core port — completed on `step04-algorithmcore` (22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). Pending no-ff merge to `main`. |
+| 2026-05-29 | Step 04 Algorithm core port — completed + **merged to `main`** (`969c4f0`, --no-ff; 22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). |
+| 2026-05-30 | Step 05 Program layer port — **kickoff** on `step05-programlayer`. Plan/Tracker landed; Step 04 docs archived → `legacy/step04/`. §1/§2 settled over chat (S05-D1..D7): area-field realignment + Step05/06 type-value boundary + no `ProgramInstance`. |
 
 ---
 
 # 3. Next actions
 
-Step 04 is complete on `step04-algorithmcore` (22 commits). Remaining:
+Step 05 (Program layer port) open on `step05-programlayer`. Work items
+(Plan §4): 4.1 kickoff (in progress) → 4.2 schema realign → 4.3
+`TargetRules` → 4.4 `ProgramInstantiationFailure` → 4.5 gates → 4.6
+stage01 → 4.7 stage02 → 4.8 golden regen → 4.9 close + merge.
 
-1. **Merge Step 04 to `main`** — `git merge --no-ff step04-algorithmcore`
-   (proto3:D015 no-squash). Then archive Step 04 docs at the Step 05 §4.1
-   commit (`git mv 004_Step04_*.md legacy/step04/`, proto3:D016 H011).
+Immediate: finish 4.1 (commit Plan/Tracker + archived Step 04 docs +
+this tracker cleanup), then start 4.2 (`schema/program.py` area-field
+realignment, S05-D1).
 
-2. **Open Step 05 (Program layer port)** per Pipeline §5.1 — proto3
-   `stages/stage01_program.py` + `stage02_gate.py`; the 4 domain gates
-   (`check_min_area` / `check_min_dim` / `check_access_schema` /
-   `check_multi_floor_feasibility`) in `constraints/gates.py`;
-   `proto3:D020` / `D023` carry. (Steps 03→04 and 05→06 are parallelizable
-   per Pipeline §5.3; Step 07 is the join + where the Step-04-deferred
-   anchor/connectivity cluster lands.)
+(Steps 03→04 and 05→06 are parallelizable per Pipeline §5.3; Step 07 is
+the join + where the Step-04-deferred anchor/connectivity cluster lands,
+alongside the program-side per-room post-growth check.)
 
 ---
 

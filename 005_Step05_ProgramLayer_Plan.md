@@ -51,7 +51,9 @@ After Step 05 closes:
   success (S05-D5 — no separate `ProgramInstance` type; nothing to
   concretize since `area_min_m2` is now required).
 - `stages/stage02_gate.py` computes footprint area / bbox from a
-  `FloorShape` and runs the 3 active gates, unpacking `TargetRules`.
+  `FloorShape` and runs the two floor-scoped gates (`check_min_area` /
+  `check_min_dim`), unpacking `TargetRules` (S05-D6 — the building-level
+  `check_multi_floor_feasibility` is the Step 07 caller's job).
 - The 33 golden `input.json` are regenerated with the realigned schema
   (`area_target_m2: null`, the placeholder heuristic dropped); region-id
   digest goldens are unchanged (input shape changes, growth output does not).
@@ -110,8 +112,11 @@ Step 05 closes when:
    unchanged on success (S05-D5). No role-default fill (area_min required).
 
 6. stages/stage02_gate.py (NEW) — fail-only orchestration: derives
-   footprint area + bbox short side from FloorShape, calls the 3 active
-   gates by unpacking rules. Returns the program unchanged on accept.
+   footprint area + bbox short side from a single FloorShape, calls the two
+   FLOOR-scoped gates (check_min_area, check_min_dim) by unpacking rules.
+   Returns the specs unchanged on accept. The building-level
+   check_multi_floor_feasibility gate is hoisted to the Step 07 run()
+   caller (S05-D6 — different altitude), not called here.
 
 7. Tests: each gate unit-tested with inline primitives (pass + each fail
    branch); stage01/stage02 with small hand-built TargetRules;
@@ -142,9 +147,9 @@ Predecessor decisions referenced as `S04-Dxx` / `proto3:Dxxx`.
 | **S05-D1** | Area-field realignment | `SpaceUnitSpec`'s area fields get their first real consumer here, which exposed a mismatch: growth is target-agnostic (S04-D3) so `area_target_m2` is read by **nobody**, yet it was required while `area_min_m2` — the field the gates need — was optional. **Realign**: `area_min_m2` → required (gate primary input); `area_target_m2` → `float \| None = None`, **kept** (not dropped) and documented as a **diffusion-priority hook for a possible future area-aware growth pass** (which would weight expansion by it). No committed Step owns that pass yet — it may never land. Rationale for keeping over dropping (chat 2026-05-30): a "required-but-unused" field is a genuine wart, but the value plausibly returns as diffusion priority — `Optional` removes the wart while preserving the hook at near-zero churn. If the pass never materializes, the optional field costs nothing. The 33 goldens already carry valid `area_min_m2`, so the required promotion needs no data backfill — only the fixture generator's `area_target` placeholder (`footprint/num_rooms`, an honest fake) is dropped to `null`. |
 | **S05-D2** | Step 05 ↔ Step 06 boundary | **Step 05 = gate machinery + rule *type*; Step 06 = rule *values + loading*.** Gates are pure functions taking primitive domain values by injection (leaf functions depend only on what they use — `check_min_area` takes `density_factor: float`, not a `rules` object). The `TargetRules` dataclass that groups those values is defined **now** (a type is defined where first needed; `stage01` is the first consumer), but only as a hand-constructable bundle. The JSON loader / `TargetAdapter` / multi-typology registry that *populates* `TargetRules` from `data/target_rules/<t>.json` is **Step 06**. This refines Pipeline §5.1's one-liner ("TargetRules carry to Step 06") into a type/value split. |
 | **S05-D3** | `TargetRules` fields | Three fields only: `density_factor` (float, area-gate capacity), `min_cardinality` (`dict[Role, int]`, cardinality gate), `requires_single_floor` (bool, multi-floor gate). proto3's `default_min_area_m2` map is **omitted** — it existed for role-default fill, which S05-D1 eliminates (`area_min_m2` now required, nothing to fill). Fewer fields than proto3's `TargetRules`; Step 06 adds loading, not necessarily more fields (revisit if a real consumer appears). |
-| **S05-D4** | Gate units & access stub | Gates ported from proto3 with **mm → m unit swap** (new schema is m: `area_min_m2`, `min_dimension_m`; proto3 was `min_dimension_mm`). 3 active gates wired into `stage02`; `check_access_schema` is a **documented no-op stub** — current schema has no `AccessPolicy` concept, so there is nothing to validate; activation lands at Step 09-10 (honest-fix: stub over a speculative guard). |
+| **S05-D4** | Gate units & access stub | Gates ported from proto3 with **mm → m unit swap** (new schema is m: `area_min_m2`, `min_dimension_m`; proto3 was `min_dimension_mm`). All 4 gate *functions* land in `constraints/gates.py`; of these `stage02` wires the two floor-scoped ones (area + dim — see S05-D6 for why multi-floor is hoisted), and `check_access_schema` is a **documented no-op stub** (current schema has no `AccessPolicy` concept; activation Step 09-10 — honest-fix: stub over a speculative guard). |
 | **S05-D5** | No `ProgramInstance` type | proto3 split `ProgramRequest` (input) → `ProgramInstance` (concretized output of fill). Our schema makes `area_min_m2` required, so Stage 01 has **nothing to concretize** — it validates and returns the **same `ProgramRequest`** (S05-D5 option b). A separate `ProgramInstance` type would be an empty wrapper. Cluster / access separation, if ever needed, can introduce it then. |
-| **S05-D6** | Stage 02 single-floor scope | `stage02` evaluates one floor (Pipeline single-floor v1, D001). It derives `footprint_area_m2` + bbox short side from the `FloorShape` (shapely union of parts) and runs the 3 gates. Multi-floor area aggregation is deferred to the **Step 10** multi-floor orchestrator (Pipeline §5.2). Fail-only (proto3:D020). |
+| **S05-D6** | Stage 02 = floor-scoped gates only (area + dim) | Revised during 4.7 (chat 2026-06-02). `stage02` takes a single `FloorShape`, derives `footprint_area_m2` + bbox short side (shapely union of parts), and runs the **two floor-scoped** gates (`check_min_area`, `check_min_dim`). It is fail-only (proto3:D020) and returns the specs unchanged on accept. **`check_multi_floor_feasibility` is intentionally NOT called here** — it is a *building*-level check (is the whole building single-floor?), a different altitude from stage02's *floor*-level question (does this floor hold this program?). proto3 bundled it into stage02 only because it assumed `floors[0]`; we hoist it to the building-level caller (Step 07 `run()`), which is the natural owner of `n_floors`. The gate function already exists (4.5); only its call site moves. Keeps stage02's signature to one `FloorShape` (no `ShapeInput`/`n_floors` leakage). |
 | **S05-D7** | Golden regen scope | The 33 `input.json` are regenerated (S05-D1 schema change: `area_target_m2` 25.0-placeholder → `null`). The **region-id digest goldens are asserted unchanged** — input *shape* changes but growth is target-agnostic so its output cannot move. This is the regression guard for S05-D1: if a digest golden shifts, the "target-agnostic" claim is false. Generator (`cell_fixtures_to_json.py`) also adds an `area_min` fallback for roles outside Cell's 4-role `role_min_areas` table (defensive; current goldens only use the 4 roles). |
 | **S05-D8** | Stage 01 responsibility = cardinality only | Decided during 4.6 (chat 2026-06-02). proto3's Stage 01 bundled structural (empty/invalid id, role), duplicate-id, and cardinality checks. In this repo the first two are **already owned** by `SpaceUnitSpec.__post_init__` (Step 02 structural) and `validators.validate_input` (Step 02 cross-ref — duplicate id is checked **cross-floor** there, more correctly than a per-floor re-check). So `stage01_program.run(specs, *, rules)` owns **only** the rules-based required-only cardinality gate, and returns `specs` unchanged on pass (S05-D5). proto3 re-checked structure "to be callable in isolation"; dropped as YAGNI insurance — `run()` always calls `validate_input` first (honest-fix, single source of truth). Diverges from proto3 because proto3 lacked our separate Step 02 cross-ref layer. |
 
@@ -214,6 +219,7 @@ Mirrors into Tracker §1 (proto3:D016).
 | `run()` join / `LabeledRoomLayout` assembly | **Step 07** (D001). |
 | `check_access_schema` activation + `AccessPolicy` schema | **Step 09-10** (S05-D4 — no AccessPolicy concept yet). |
 | Multi-floor area aggregation across floors | Deferred with the multi-floor outer loop (D001). `stage02` is single-floor (S05-D6). |
+| `check_multi_floor_feasibility` **call site** (the gate function ships in 4.5) | **Step 07** `run()` — building-level altitude owns `n_floors` (S05-D6). The function is built + unit-tested here; only its invocation is hoisted. |
 | Area-aware growth (consuming `area_target_m2` as diffusion priority) | Possible future pass, **no committed Step** (S05-D1 — the hook the demoted field reserves; may never land). |
 | `usage` field population / propagation | Currently null in all goldens; Step 07 labeling concern. |
 

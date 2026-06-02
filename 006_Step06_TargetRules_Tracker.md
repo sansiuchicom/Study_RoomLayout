@@ -16,7 +16,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 |---|---|---|---|
 | 4.1 | Kickoff — Plan/Tracker + `git mv` Step 05 → `legacy/step05/` + canonical fixes (DoD role↔usage + anchor slot; Arch L90-91) + Progress Tracker | Done | `0126714` |
 | 4.2 | `schema/target.py` + `default_min_area_m2` (S06-D1) + tests | Done | `21a2a52` |
-| 4.3 | `target/rules_loader.py` (NEW) — `load_target_rules` + strict validation (S06-D4) + tests | Not started | — |
+| 4.3 | `target/rules_loader.py` (NEW) — `load_target_rules` + strict validation (S06-D4) + tests | Done | `20c1ba7` |
 | 4.4 | `target/adapter.py` (NEW) — `TargetAdapter` single generic (S06-D5) + `__init__` + tests | Not started | — |
 | 4.5 | `data/target_rules/apartment.json` + `README.md` (NEW) | Not started | — |
 | 4.6 | `target/expand_program.py` (NEW) — `expand_program` (S06-D1/D2/D3) + tests | Not started | — |
@@ -63,6 +63,10 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   enforced so expand[role] can't KeyError; corridor included (0.0 ok). 5 test
   helpers needed a full map (the field is now mandatory — confirms "no
   half-built TargetRules"). NaN/inf deferred to loader (S06-D4). 697 + 5 xfail.
+- 2026-06-02 — 4.3 landed. rules_loader thin: from_dict already rejects
+  extra/missing/bad-Role keys + __post_init__ owns domain invariants, so the
+  loader adds only file+parse+recursive-finite-check (S06-D4) and re-raises
+  domain errors with the path (S06-D2 가, no duplication). 12 tests. 709 + 5.
 
 ---
 

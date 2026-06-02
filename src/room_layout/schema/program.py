@@ -2,7 +2,9 @@
 
 Plan reference: ``002_Step02_CoreSchema_Plan.md`` §4.4 + S02-D9
 (single-Role design) / S02-D6 (structural-only `__post_init__`) +
-Pipeline §2.2 (TargetType Literal, Optional area_min / min_dimension).
+Pipeline §2.2 (TargetType Literal) + ``005_Step05_ProgramLayer_Plan.md``
+S05-D1 (area-field realignment: required `area_min_m2`, optional
+`area_target_m2`).
 
 The `Role` Literal is the **single source of truth** for the 7-class
 taxonomy (D004). Both `SpaceUnitSpec.role` (input) and
@@ -52,18 +54,32 @@ class SpaceUnitSpec:
     "vertical_circulation"` must reference a `VerticalAnchor.id` via
     `anchor_id` so carving can place the room on the anchor footprint.
 
-    `area_min_m2` and `min_dimension_m` are `None`-able per Pipeline §2.2
-    — rooms without strict minimums (e.g., flexible utility) can elide
-    them. `area_target_m2` is always required.
+    Area fields (realigned in Step 05, S05-D1 — this Step is their first
+    real consumer):
+
+    - `area_min_m2` is **required** — it is the primary input to the Step 05
+      admission gate (`check_min_area`) and the Step 07 per-room check.
+    - `area_target_m2` is **optional** (`None` by default). It is the
+      *diffusion-priority hook* for a possible future area-aware growth pass
+      (which would weight expansion by it); v1 growth is target-agnostic
+      (S04-D3), so nothing consumes it yet. No committed Step owns that pass —
+      it may never land; the optional field then costs nothing.
+    - `min_dimension_m` is `None`-able per Pipeline §2.2 — rooms without a
+      strict short-side minimum (e.g., flexible utility) elide it.
+
+    `__post_init__` keeps **minimal** value guards only (S05-D1, honest-fix —
+    no NaN/inf/type hardening): non-empty `id`; `area_min_m2 >= 0`;
+    `area_target_m2 >= area_min_m2` when both set; `min_dimension_m > 0` when
+    set. Plus the role/corridor/anchor structural checks (S02-D9).
     """
 
     id: str
     role: Role
     usage: str | None
-    area_target_m2: float
-    area_min_m2: float | None
-    min_dimension_m: float | None
+    area_min_m2: float
     required: bool
+    area_target_m2: float | None = None
+    min_dimension_m: float | None = None
     anchor_id: str | None = None
 
     def __post_init__(self) -> None:
@@ -81,6 +97,24 @@ class SpaceUnitSpec:
             raise ValueError(
                 f"SpaceUnitSpec {self.id!r}: role='vertical_circulation' requires "
                 "anchor_id (must reference a VerticalAnchor.id)"
+            )
+        # Minimal value guards (S05-D1).
+        if not self.id:
+            raise ValueError("SpaceUnitSpec: id must be a non-empty identifier")
+        if self.area_min_m2 < 0:
+            raise ValueError(
+                f"SpaceUnitSpec {self.id!r}: area_min_m2 must be >= 0, "
+                f"got {self.area_min_m2}"
+            )
+        if self.area_target_m2 is not None and self.area_target_m2 < self.area_min_m2:
+            raise ValueError(
+                f"SpaceUnitSpec {self.id!r}: area_target_m2 ({self.area_target_m2}) "
+                f"must be >= area_min_m2 ({self.area_min_m2})"
+            )
+        if self.min_dimension_m is not None and self.min_dimension_m <= 0:
+            raise ValueError(
+                f"SpaceUnitSpec {self.id!r}: min_dimension_m must be > 0 when set, "
+                f"got {self.min_dimension_m}"
             )
 
 

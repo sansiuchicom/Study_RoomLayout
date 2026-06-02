@@ -19,7 +19,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.2 | `schema/program.py` area-field realignment (S05-D1) + schema/serialize tests | Done | `15fc806` |
 | 4.3 | `schema/target.py` `TargetRules` (S05-D3) + `__init__` re-export + tests | Done | `79ced8d` |
 | 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Done | `b7d6405` |
-| 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Not started | — |
+| 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Done | `06a2db3` |
 | 4.6 | `stages/stage01_program.py` validation + cardinality (S05-D5) + tests | Not started | — |
 | 4.7 | `stages/stage02_gate.py` fail-only orchestration (S05-D6) + tests | Not started | — |
 | 4.8 | Generator + 33 golden `input.json` regen (S05-D7); digests asserted unchanged | Not started | — |
@@ -75,6 +75,11 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   of DomainGateFailure — pinned `not isinstance(_, DomainGateFailure)` so
   the feasibility-catch can't swallow an input-validation failure. 661
   passed + 5 xfail; ruff clean.
+- 2026-06-02 — 4.5 landed. constraints/gates.py — 4 pure gates (3 active +
+  access no-op stub), m units. Injection split confirmed in code: domain
+  scalars as kwargs, list[SpaceUnitSpec] direct (가). FailureRecord mapped
+  proto3's failure_type/evidence → our code/data. 14 tests cover pass +
+  each fail branch + D023 required-only + None-skip. 675 passed + 5 xfail.
 
 ---
 

@@ -86,6 +86,14 @@ def check_min_dim(
     unlike the now-required `area_min_m2`). LIR-aware refinement is deferred
     (Step 07).
 
+    The caller passes the short side of the **whole footprint's** bbox. For a
+    disconnected floor (disjoint parts) that combined bbox can span the gap
+    between parts, so this gate is *optimistic* there — it may admit a room
+    that no single part can host. This is consistent with the aggregate-
+    admission stance (the area gate likewise sums disjoint parts); the
+    per-part / LIR-tight check is Step 07's job. The 33 v1 goldens are all
+    single connected footprints, so the gap case is untriggered in v1.
+
     Raises:
         DimGateFailure: if any required space's `min_dimension_m` exceeds the
             bbox short side.
@@ -138,7 +146,7 @@ def check_multi_floor_feasibility(
                 f"{n_floors} floors (Step 10 territory)"
             ),
             data={
-                "requires_single_floor": True,
+                "requires_single_floor": requires_single_floor,
                 "actual_floor_count": n_floors,
             },
         ))

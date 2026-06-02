@@ -35,7 +35,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [ ] `schema/target.py` `TargetRules` (3 fields) + re-export + tests
 - [ ] `ProgramInstantiationFailure` added + round-trips through FailureRecord
 - [ ] `constraints/gates.py` — 4 gates (3 active + access stub), m units
-- [ ] `stage01_program` validates + returns input unchanged (no ProgramInstance)
+- [ ] `stage01_program` cardinality gate over one floor's specs, returns them unchanged (S05-D8; no ProgramInstance)
 - [ ] `stage02_gate` fail-only, single-floor, 3 active gates
 - [ ] gate / stage / failure unit tests pass
 - [ ] 33 golden `input.json` regenerated; region-id digests verified unchanged

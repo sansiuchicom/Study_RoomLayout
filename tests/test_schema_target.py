@@ -1,7 +1,8 @@
 """Tests for `room_layout.schema.target` — Plan §4.3 / S05-D3.
 
 Covers `TargetRules` construction, the minimal `__post_init__` guards
-(density_factor > 0; valid Role keys; non-negative int counts), the empty
+(density_factor > 0; requestable Role keys, not corridor; non-negative int
+counts), the empty
 `min_cardinality` default, frozen contract, and serialize round-trip
 (incl. the `dict[Role, int]` field).
 """
@@ -55,7 +56,7 @@ def test_rejects_nonpositive_density_factor(bad):
 
 
 def test_rejects_unknown_role_key():
-    with pytest.raises(ValueError, match="Role Literal"):
+    with pytest.raises(ValueError, match="not a valid cardinality key"):
         _rules(min_cardinality={"bedroom": 1})
 
 
@@ -65,11 +66,19 @@ def test_rejects_negative_count():
 
 
 def test_rejects_corridor_role_key():
-    """`corridor` is a Role Literal member but still a valid cardinality key
-    here — it is rejected only as a *space input* (S02-D9), not as a rule
-    key. This documents that TargetRules does not re-apply that asymmetry."""
-    r = _rules(min_cardinality={"corridor": 0})
-    assert r.min_cardinality["corridor"] == 0
+    """`corridor` is not user-requestable (S02-D9), so a corridor cardinality
+    rule is unsatisfiable by construction — reject it as a rule-authoring
+    mistake (review 4.8), even at count 0, for a single clear contract."""
+    with pytest.raises(ValueError, match="corridor"):
+        _rules(min_cardinality={"corridor": 0})
+    with pytest.raises(ValueError, match="corridor"):
+        _rules(min_cardinality={"corridor": 1})
+
+
+def test_accepts_vertical_circulation_key():
+    """vertical_circulation IS requestable (anchor-bound) → valid key."""
+    r = _rules(min_cardinality={"vertical_circulation": 1})
+    assert r.min_cardinality["vertical_circulation"] == 1
 
 
 # --- serialize ---

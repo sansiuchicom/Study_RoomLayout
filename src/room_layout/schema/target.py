@@ -36,8 +36,18 @@ immutable type is a separate cross-cutting concern, not a Step 05 item.
 """
 
 from dataclasses import dataclass, field
+from typing import get_args
 
-from room_layout.schema.program import _VALID_ROLES, Role
+from room_layout.schema.program import Role
+
+# Roles valid as a `min_cardinality` key. Derived from the public `Role`
+# Literal, minus `corridor`: corridor is never a user-requestable input role
+# (S02-D9 — it is produced by carving), so a `SpaceUnitSpec` can never carry
+# it. A `min_cardinality["corridor"] >= 1` rule would therefore be
+# unsatisfiable by construction; reject it as a rule-authoring mistake rather
+# than letting it silently make a whole typology infeasible (review 4.8).
+# `vertical_circulation` stays valid — it IS requestable (anchor-bound).
+_CARDINALITY_ROLES = frozenset(get_args(Role)) - {"corridor"}
 
 
 @dataclass(frozen=True)
@@ -45,8 +55,9 @@ class TargetRules:
     """Per-typology admission knobs consumed by the Step 05 program gates.
 
     `__post_init__` keeps minimal structural guards (S05-D3, honest-fix):
-    `density_factor > 0`; every `min_cardinality` key is a valid `Role`;
-    every count is a non-negative int. Population from JSON is Step 06.
+    `density_factor > 0`; every `min_cardinality` key is a requestable `Role`
+    (i.e. not `corridor`); every count is a non-negative int. Population from
+    JSON is Step 06.
     """
 
     density_factor: float
@@ -59,10 +70,11 @@ class TargetRules:
                 f"TargetRules: density_factor must be > 0, got {self.density_factor}"
             )
         for role, count in self.min_cardinality.items():
-            if role not in _VALID_ROLES:
+            if role not in _CARDINALITY_ROLES:
                 raise ValueError(
-                    f"TargetRules: min_cardinality role={role!r} not in "
-                    f"Role Literal: {sorted(_VALID_ROLES)}"
+                    f"TargetRules: min_cardinality role={role!r} is not a valid "
+                    f"cardinality key (must be a requestable Role, not 'corridor'): "
+                    f"{sorted(_CARDINALITY_ROLES)}"
                 )
             if not isinstance(count, int) or count < 0:
                 raise ValueError(

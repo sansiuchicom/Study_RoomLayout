@@ -46,10 +46,12 @@ After Step 05 closes:
   `DomainGateFailure` subclass.
 - `from room_layout.schema.target import TargetRules` — a frozen value
   bundle with `density_factor` / `min_cardinality` / `requires_single_floor`.
-- `stages/stage01_program.py` validates a `ProgramRequest` (structural +
-  required-only cardinality) and returns the **same `ProgramRequest`** on
+- `stages/stage01_program.py` runs the required-only **cardinality** gate
+  over one floor's `list[SpaceUnitSpec]` and returns that list unchanged on
   success (S05-D5 — no separate `ProgramInstance` type; nothing to
-  concretize since `area_min_m2` is now required).
+  concretize since `area_min_m2` is now required). Structural + cross-ref
+  validation is **not** repeated here — it is already owned by
+  `SpaceUnitSpec.__post_init__` + `validators.validate_input` (S05-D8).
 - `stages/stage02_gate.py` computes footprint area / bbox from a
   `FloorShape` and runs the two floor-scoped gates (`check_min_area` /
   `check_min_dim`), unpacking `TargetRules` (S05-D6 — the building-level
@@ -106,10 +108,11 @@ Step 05 closes when:
      current schema; activation = Step 09-10)
    each raises the matching DomainGateFailure subclass; returns None on pass.
 
-5. stages/stage01_program.py (NEW) — ProgramRequest validation:
-   structural (empty/duplicate id, role-in-Literal) + required-only
-   cardinality. Takes rules: TargetRules. Returns the input ProgramRequest
-   unchanged on success (S05-D5). No role-default fill (area_min required).
+5. stages/stage01_program.py (NEW) — required-only **cardinality** gate
+   over one floor's list[SpaceUnitSpec]. Takes rules: TargetRules. Returns
+   the list unchanged on success (S05-D5). No role-default fill (area_min
+   required). Structural/cross-ref validation is NOT here — owned by
+   __post_init__ + validate_input (S05-D8).
 
 6. stages/stage02_gate.py (NEW) — fail-only orchestration: derives
    footprint area + bbox short side from a single FloorShape, calls the two
@@ -148,7 +151,7 @@ Predecessor decisions referenced as `S04-Dxx` / `proto3:Dxxx`.
 | **S05-D2** | Step 05 ↔ Step 06 boundary | **Step 05 = gate machinery + rule *type*; Step 06 = rule *values + loading*.** Gates are pure functions taking primitive domain values by injection (leaf functions depend only on what they use — `check_min_area` takes `density_factor: float`, not a `rules` object). The `TargetRules` dataclass that groups those values is defined **now** (a type is defined where first needed; `stage01` is the first consumer), but only as a hand-constructable bundle. The JSON loader / `TargetAdapter` / multi-typology registry that *populates* `TargetRules` from `data/target_rules/<t>.json` is **Step 06**. This refines Pipeline §5.1's one-liner ("TargetRules carry to Step 06") into a type/value split. |
 | **S05-D3** | `TargetRules` fields | Three fields only: `density_factor` (float, area-gate capacity), `min_cardinality` (`dict[Role, int]`, cardinality gate), `requires_single_floor` (bool, multi-floor gate). proto3's `default_min_area_m2` map is **omitted** — it existed for role-default fill, which S05-D1 eliminates (`area_min_m2` now required, nothing to fill). Fewer fields than proto3's `TargetRules`; Step 06 adds loading, not necessarily more fields (revisit if a real consumer appears). |
 | **S05-D4** | Gate units & access stub | Gates ported from proto3 with **mm → m unit swap** (new schema is m: `area_min_m2`, `min_dimension_m`; proto3 was `min_dimension_mm`). All 4 gate *functions* land in `constraints/gates.py`; of these `stage02` wires the two floor-scoped ones (area + dim — see S05-D6 for why multi-floor is hoisted), and `check_access_schema` is a **documented no-op stub** (current schema has no `AccessPolicy` concept; activation Step 09-10 — honest-fix: stub over a speculative guard). |
-| **S05-D5** | No `ProgramInstance` type | proto3 split `ProgramRequest` (input) → `ProgramInstance` (concretized output of fill). Our schema makes `area_min_m2` required, so Stage 01 has **nothing to concretize** — it validates and returns the **same `ProgramRequest`** (S05-D5 option b). A separate `ProgramInstance` type would be an empty wrapper. Cluster / access separation, if ever needed, can introduce it then. |
+| **S05-D5** | No `ProgramInstance` type | proto3 split `ProgramRequest` (input) → `ProgramInstance` (concretized output of fill). Our schema makes `area_min_m2` required, so Stage 01 has **nothing to concretize** — it gates and returns its input unchanged (option b). A separate `ProgramInstance` type would be an empty wrapper. Cluster / access separation, if ever needed, can introduce it then. **Note (per S05-D8):** the concrete signature is `run(specs: list[SpaceUnitSpec], *, rules) -> list[SpaceUnitSpec]` (one floor's specs in/out), not `ProgramRequest` in/out — the caller (Step 07 `run()`) extracts `floor_programs[level]`. |
 | **S05-D6** | Stage 02 = floor-scoped gates only (area + dim) | Revised during 4.7 (chat 2026-06-02). `stage02` takes a single `FloorShape`, derives `footprint_area_m2` + bbox short side (shapely union of parts), and runs the **two floor-scoped** gates (`check_min_area`, `check_min_dim`). It is fail-only (proto3:D020) and returns the specs unchanged on accept. **`check_multi_floor_feasibility` is intentionally NOT called here** — it is a *building*-level check (is the whole building single-floor?), a different altitude from stage02's *floor*-level question (does this floor hold this program?). proto3 bundled it into stage02 only because it assumed `floors[0]`; we hoist it to the building-level caller (Step 07 `run()`), which is the natural owner of `n_floors`. The gate function already exists (4.5); only its call site moves. Keeps stage02's signature to one `FloorShape` (no `ShapeInput`/`n_floors` leakage). |
 | **S05-D7** | Golden regen scope | The 33 `input.json` are regenerated (S05-D1 schema change: `area_target_m2` 25.0-placeholder → `null`). The **region-id digest goldens are asserted unchanged** — input *shape* changes but growth is target-agnostic so its output cannot move. This is the regression guard for S05-D1: if a digest golden shifts, the "target-agnostic" claim is false. Generator (`cell_fixtures_to_json.py`) also adds an `area_min` fallback for roles outside Cell's 4-role `role_min_areas` table (defensive; current goldens only use the 4 roles). |
 | **S05-D8** | Stage 01 responsibility = cardinality only | Decided during 4.6 (chat 2026-06-02). proto3's Stage 01 bundled structural (empty/invalid id, role), duplicate-id, and cardinality checks. In this repo the first two are **already owned** by `SpaceUnitSpec.__post_init__` (Step 02 structural) and `validators.validate_input` (Step 02 cross-ref — duplicate id is checked **cross-floor** there, more correctly than a per-floor re-check). So `stage01_program.run(specs, *, rules)` owns **only** the rules-based required-only cardinality gate, and returns `specs` unchanged on pass (S05-D5). proto3 re-checked structure "to be callable in isolation"; dropped as YAGNI insurance — `run()` always calls `validate_input` first (honest-fix, single source of truth). Diverges from proto3 because proto3 lacked our separate Step 02 cross-ref layer. |
@@ -171,7 +174,7 @@ src/room_layout/
     __init__.py
     gates.py         # NEW: 4 pure gate functions (S05-D4)
   stages/
-    stage01_program.py   # NEW: ProgramRequest validation (S05-D5)
+    stage01_program.py   # NEW: cardinality gate (S05-D5 / S05-D8)
     stage02_gate.py      # NEW: fail-only gate orchestration (S05-D6)
     ...                  # (Step 03/04 modules unchanged)
 
@@ -203,7 +206,7 @@ Mirrors into Tracker §1 (proto3:D016).
 | **4.3** | `schema/target.py` (NEW) — `TargetRules` frozen dataclass + `__post_init__` guards (S05-D3) + `schema/__init__` re-export + `__all__`; `test_schema_target.py` (hand-built + serialize round-trip) | target tests pass |
 | **4.4** | `schema/failure.py` — `ProgramInstantiationFailure` (S05-D5) + `test_schema_failure.py` extension (FailureRecord round-trip) | failure tests pass |
 | **4.5** | `constraints/gates.py` (NEW) — 4 pure gates (S05-D4): area / dim / multi-floor active + access no-op stub; `test_constraints_gates.py` (inline primitives, pass + each fail branch) | gate tests pass |
-| **4.6** | `stages/stage01_program.py` (NEW) — structural validation + required-only cardinality, returns input unchanged (S05-D5); `test_stages_stage01_program.py` | stage01 tests pass |
+| **4.6** | `stages/stage01_program.py` (NEW) — required-only cardinality gate over one floor's specs, returns them unchanged (S05-D5 / S05-D8); `test_stages_stage01_program.py` | stage01 tests pass |
 | **4.7** | `stages/stage02_gate.py` (NEW) — footprint area/bbox from FloorShape + 3-gate fail-only orchestration (S05-D6); `test_stages_stage02_gate.py` | stage02 tests pass |
 | **4.8** | Generator + golden regen (S05-D7) — `cell_fixtures_to_json.py` (`area_target` → null, `area_min` role-miss fallback); regenerate 33 `input.json`; **assert region-id digest goldens unchanged** | 33 inputs regen; digests stable; full pytest green |
 | **4.9** | Step close — `docs/000_Progress_Tracker.md` (Step 05 closed) + Plan/Tracker close + S05-D1..D7 finalize + `git merge --no-ff step05-programlayer` → `main` | CI green; tracker updated |

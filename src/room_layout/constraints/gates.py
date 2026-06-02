@@ -55,22 +55,24 @@ def check_min_area(
     capacity = footprint_area_m2 * density_factor
 
     if total_min_area > capacity:
-        raise AreaGateFailure(FailureRecord(
-            code="DOMAIN_AREA_GATE_FAIL",
-            stage="02",
-            message=(
-                f"required spaces sum to {total_min_area:.2f} m² but usable "
-                f"capacity is {capacity:.2f} m² "
-                f"(footprint {footprint_area_m2:.2f} × density {density_factor})"
-            ),
-            data={
-                "total_required_area_m2": round(total_min_area, 4),
-                "footprint_area_m2": round(footprint_area_m2, 4),
-                "density_factor": density_factor,
-                "usable_capacity_m2": round(capacity, 4),
-                "required_space_count": len(required),
-            },
-        ))
+        raise AreaGateFailure(
+            FailureRecord(
+                code="DOMAIN_AREA_GATE_FAIL",
+                stage="02",
+                message=(
+                    f"required spaces sum to {total_min_area:.2f} m² but usable "
+                    f"capacity is {capacity:.2f} m² "
+                    f"(footprint {footprint_area_m2:.2f} × density {density_factor})"
+                ),
+                data={
+                    "total_required_area_m2": round(total_min_area, 4),
+                    "footprint_area_m2": round(footprint_area_m2, 4),
+                    "density_factor": density_factor,
+                    "usable_capacity_m2": round(capacity, 4),
+                    "required_space_count": len(required),
+                },
+            )
+        )
 
 
 def check_min_dim(
@@ -105,20 +107,22 @@ def check_min_dim(
 
     worst = max(candidates, key=lambda s: s.min_dimension_m)
     if worst.min_dimension_m > footprint_bbox_short_side_m:
-        raise DimGateFailure(FailureRecord(
-            code="DOMAIN_DIM_GATE_FAIL",
-            stage="02",
-            message=(
-                f"space {worst.id!r} requires min_dimension "
-                f"{worst.min_dimension_m} m but footprint bbox short side is "
-                f"{footprint_bbox_short_side_m} m"
-            ),
-            data={
-                "space_id": worst.id,
-                "min_dimension_m": worst.min_dimension_m,
-                "footprint_bbox_short_side_m": footprint_bbox_short_side_m,
-            },
-        ))
+        raise DimGateFailure(
+            FailureRecord(
+                code="DOMAIN_DIM_GATE_FAIL",
+                stage="02",
+                message=(
+                    f"space {worst.id!r} requires min_dimension "
+                    f"{worst.min_dimension_m} m but footprint bbox short side is "
+                    f"{footprint_bbox_short_side_m} m"
+                ),
+                data={
+                    "space_id": worst.id,
+                    "min_dimension_m": worst.min_dimension_m,
+                    "footprint_bbox_short_side_m": footprint_bbox_short_side_m,
+                },
+            )
+        )
 
 
 def check_multi_floor_feasibility(
@@ -138,18 +142,20 @@ def check_multi_floor_feasibility(
         DomainGateFailure: if `requires_single_floor` and `n_floors != 1`.
     """
     if requires_single_floor and n_floors != 1:
-        raise DomainGateFailure(FailureRecord(
-            code="DOMAIN_MULTI_FLOOR_NOT_SUPPORTED",
-            stage="02",
-            message=(
-                f"typology requires a single floor but building has "
-                f"{n_floors} floors (Step 10 territory)"
-            ),
-            data={
-                "requires_single_floor": requires_single_floor,
-                "actual_floor_count": n_floors,
-            },
-        ))
+        raise DomainGateFailure(
+            FailureRecord(
+                code="DOMAIN_MULTI_FLOOR_NOT_SUPPORTED",
+                stage="02",
+                message=(
+                    f"typology requires a single floor but building has "
+                    f"{n_floors} floors (Step 10 territory)"
+                ),
+                data={
+                    "requires_single_floor": requires_single_floor,
+                    "actual_floor_count": n_floors,
+                },
+            )
+        )
 
 
 def check_access_schema(specs: list[SpaceUnitSpec]) -> None:

@@ -65,18 +65,20 @@ def run(
 
     for role, min_required in rules.min_cardinality.items():
         if actual[role] < min_required:
-            raise ProgramInstantiationFailure(FailureRecord(
-                code="PROGRAM_CARDINALITY_INSUFFICIENT",
-                stage="01",
-                message=(
-                    f"role {role!r} has {actual[role]} required space(s) "
-                    f"but the typology needs at least {min_required}"
-                ),
-                data={
-                    "role": role,
-                    "required_min": min_required,
-                    "actual": actual[role],
-                },
-            ))
+            raise ProgramInstantiationFailure(
+                FailureRecord(
+                    code="PROGRAM_CARDINALITY_INSUFFICIENT",
+                    stage="01",
+                    message=(
+                        f"role {role!r} has {actual[role]} required space(s) "
+                        f"but the typology needs at least {min_required}"
+                    ),
+                    data={
+                        "role": role,
+                        "required_min": min_required,
+                        "actual": actual[role],
+                    },
+                )
+            )
 
     return specs

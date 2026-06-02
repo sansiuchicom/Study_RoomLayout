@@ -15,9 +15,7 @@ from room_layout.stages import stage01_program
 
 
 def _sus(id, role, required=True) -> SpaceUnitSpec:
-    return SpaceUnitSpec(
-        id=id, role=role, usage=None, area_min_m2=5.0, required=required
-    )
+    return SpaceUnitSpec(id=id, role=role, usage=None, area_min_m2=5.0, required=required)
 
 
 def _rules(min_cardinality) -> TargetRules:

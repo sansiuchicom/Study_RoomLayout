@@ -103,8 +103,7 @@ class SpaceUnitSpec:
             raise ValueError("SpaceUnitSpec: id must be a non-empty identifier")
         if self.area_min_m2 < 0:
             raise ValueError(
-                f"SpaceUnitSpec {self.id!r}: area_min_m2 must be >= 0, "
-                f"got {self.area_min_m2}"
+                f"SpaceUnitSpec {self.id!r}: area_min_m2 must be >= 0, got {self.area_min_m2}"
             )
         if self.area_target_m2 is not None and self.area_target_m2 < self.area_min_m2:
             raise ValueError(

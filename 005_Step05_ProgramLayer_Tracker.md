@@ -18,7 +18,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.1b | Doc-drift fixes from external review (stale Step 11/14 refs, README, `__init__`) | Done | `59ed170` |
 | 4.2 | `schema/program.py` area-field realignment (S05-D1) + schema/serialize tests | Done | `15fc806` |
 | 4.3 | `schema/target.py` `TargetRules` (S05-D3) + `__init__` re-export + tests | Done | `79ced8d` |
-| 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Not started | — |
+| 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Done | `b7d6405` |
 | 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Not started | — |
 | 4.6 | `stages/stage01_program.py` validation + cardinality (S05-D5) + tests | Not started | — |
 | 4.7 | `stages/stage02_gate.py` fail-only orchestration (S05-D6) + tests | Not started | — |
@@ -71,6 +71,10 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   (no serialize change needed). Re-exported at both __init__ levels (note:
   top-level room_layout/__init__ has its OWN export list — must edit both,
   not just schema/__init__). 659 passed + 5 xfail; ruff clean.
+- 2026-06-02 — 4.4 landed. ProgramInstantiationFailure as a sibling (가)
+  of DomainGateFailure — pinned `not isinstance(_, DomainGateFailure)` so
+  the feasibility-catch can't swallow an input-validation failure. 661
+  passed + 5 xfail; ruff clean.
 
 ---
 

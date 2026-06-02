@@ -22,7 +22,7 @@ either::
     # or equivalently
     from room_layout.schema import ShapeInput
 
-The algorithm entry point `run(...)` lands in Step 06.
+The algorithm entry point `run(...)` lands in Step 07.
 """
 
 from room_layout.schema import (
@@ -39,12 +39,14 @@ from room_layout.schema import (
     LabeledRoom,
     LabeledRoomLayout,
     Point,
+    ProgramInstantiationFailure,
     ProgramRequest,
     Ring,
     Role,
     ShapeInput,
     ShapePart,
     SpaceUnitSpec,
+    TargetRules,
     TargetType,
     VerticalAnchor,
     VerticalAnchorHostRole,
@@ -73,12 +75,14 @@ __all__ = [
     "LabeledRoom",
     "LabeledRoomLayout",
     "Point",
+    "ProgramInstantiationFailure",
     "ProgramRequest",
     "Ring",
     "Role",
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "TargetRules",
     "TargetType",
     "VerticalAnchor",
     "VerticalAnchorHostRole",

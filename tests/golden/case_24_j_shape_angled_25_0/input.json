@@ -61,20 +61,20 @@
           "id": "space_1",
           "role": "private",
           "usage": null,
-          "area_target_m2": 24.0,
           "area_min_m2": 4.0,
-          "min_dimension_m": null,
           "required": true,
+          "area_target_m2": null,
+          "min_dimension_m": null,
           "anchor_id": null
         },
         {
           "id": "space_2",
           "role": "wet",
           "usage": null,
-          "area_target_m2": 24.0,
           "area_min_m2": 2.0,
-          "min_dimension_m": null,
           "required": true,
+          "area_target_m2": null,
+          "min_dimension_m": null,
           "anchor_id": null
         }
       ]

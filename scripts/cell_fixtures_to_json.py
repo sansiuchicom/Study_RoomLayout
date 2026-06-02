@@ -30,10 +30,16 @@ Schema mapping:
 - Cell ``RoomSpec.seed_position`` is **dropped**: seed placement is a
   Phase 6+ concern, not part of the current schema. Step 04 will
   re-introduce it via a stage-internal type or via ``target_rules``.
-- ``area_target_m2`` heuristic: ``footprint_area_m2 / num_rooms``. Cell
-  fixtures don't carry a per-room target; Phase 6 growth will refine.
+- ``area_target_m2``: ``None`` (S05-D1/D7). Cell fixtures carry no per-room
+  target; growth is target-agnostic (S04-D3) so nothing consumes it. The
+  former ``footprint_area_m2 / num_rooms`` placeholder was an honest fake
+  (uniform per case) and is dropped — the field is now the optional
+  diffusion-priority hook, populated only if/when an area-aware growth pass
+  lands.
 - ``area_min_m2``: from Cell's ``role_min_areas`` (public=8 / private=4 /
-  wet=2 / service=3); roles outside that dict map to ``None``.
+  wet=2 / service=3). The field is **required** (S05-D1); roles outside
+  Cell's 4-role table fall back to ``0.0`` ("no minimum") — defensive only,
+  since all 33 fixtures use exactly those 4 roles.
 - ``min_dimension_m``: ``None`` (Cell doesn't track; Step 04+ may
   populate from ``DimensionPolicy``).
 - ``required=True`` for every room (all Cell fixture rooms are required).
@@ -152,15 +158,14 @@ def _convert_program(cell_fixture) -> ProgramRequest:
     n = len(cell_fixture.rooms)
     if n == 0:
         raise ValueError(f"case {cell_fixture.case_index}: zero rooms")
-    target_per_room = cell_fixture.footprint_area_m2 / n
     min_areas = cell_fixture.role_min_areas
     specs = [
         SpaceUnitSpec(
             id=room.name,
             role=room.role,
             usage=None,
-            area_target_m2=target_per_room,
-            area_min_m2=min_areas.get(room.role),
+            area_min_m2=min_areas.get(room.role, 0.0),  # required (S05-D1); 0.0 fallback
+            area_target_m2=None,  # S05-D1/D7: dropped honest-fake placeholder
             min_dimension_m=None,
             required=True,
             anchor_id=None,

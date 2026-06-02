@@ -200,7 +200,7 @@ def test_from_dict_rejects_extra_key():
 
 def test_from_dict_rejects_missing_required():
     src = to_dict(_space_unit_spec())
-    bad = {k: v for k, v in src.items() if k != "area_target_m2"}
+    bad = {k: v for k, v in src.items() if k != "area_min_m2"}
     with pytest.raises(ValueError, match="missing required"):
         from_dict(SpaceUnitSpec, bad)
 
@@ -245,19 +245,20 @@ def test_from_dict_accepts_int_as_float():
 
 
 def test_optional_numeric_fields_round_trip_with_none():
-    """Close-time cleanup: `area_min_m2` / `min_dimension_m` / `FloorShape.
-    floor_to_floor_height` are all `float | None` per Pipeline §2.1/§2.2."""
-    sus_no_mins = SpaceUnitSpec(
+    """`area_target_m2` / `min_dimension_m` / `FloorShape.floor_to_floor_height`
+    are all `float | None` (S05-D1 realignment + Pipeline §2.1/§2.2).
+    `area_min_m2` is now required (S05-D1) so it carries a value."""
+    sus_no_opts = SpaceUnitSpec(
         id="flex",
         role="service",
         usage=None,
-        area_target_m2=10.0,
-        area_min_m2=None,
-        min_dimension_m=None,
+        area_min_m2=3.0,
         required=False,
+        area_target_m2=None,
+        min_dimension_m=None,
     )
-    sus2 = from_dict(SpaceUnitSpec, to_dict(sus_no_mins))
-    assert sus2.area_min_m2 is None
+    sus2 = from_dict(SpaceUnitSpec, to_dict(sus_no_opts))
+    assert sus2.area_target_m2 is None
     assert sus2.min_dimension_m is None
 
     fs_no_height = FloorShape(level=1, parts=[_shape_part()], floor_to_floor_height=None)

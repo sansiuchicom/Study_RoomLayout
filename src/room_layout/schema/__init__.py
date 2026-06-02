@@ -32,6 +32,7 @@ from room_layout.schema.failure import (
     DimGateFailure,
     DomainGateFailure,
     FailureRecord,
+    ProgramInstantiationFailure,
 )
 from room_layout.schema.geometry import (
     FloorShape,
@@ -64,6 +65,9 @@ from room_layout.schema.serialize import (
     to_dict,
     to_json,
 )
+from room_layout.schema.target import (
+    TargetRules,
+)
 from room_layout.schema.validators import (
     WARN_PREFIX,
     validate_input,
@@ -82,12 +86,14 @@ __all__ = [
     "LabeledRoom",
     "LabeledRoomLayout",
     "Point",
+    "ProgramInstantiationFailure",
     "ProgramRequest",
     "Ring",
     "Role",
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "TargetRules",
     "TargetType",
     "VerticalAnchor",
     "VerticalAnchorHostRole",

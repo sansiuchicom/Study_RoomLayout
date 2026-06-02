@@ -88,9 +88,11 @@ D-series cumulative: D001-D006 accepted; proto3:D001-D023 audited;
 S02-D1..D13 + S03-D1..D16 + S04-D1..D8 + S05-D1..D8 in their Step Plans;
 S06-D1..D6 in `006_Step06_TargetRules_Plan.md` §2.
 
-Next: open Step 07 (Entry point + labeling) — the join of the geometry
-half (03/04) and the program half (05/06). Archive Step 06 docs at its
-§4.1 kickoff.
+Step 07 (Entry point + labeling) **opened** 2026-06-02 on
+`step07-entrypoint` (D005 — integration + regression risk triggers fired) —
+the join of geometry (03/04) + program (05/06): `run()` + polygonization
+(S04-D2) + labeling (§3.8) + the deferred anchor/per-room/connectivity
+cluster. Live status: `007_Step07_EntryPoint_Tracker.md`.
 ```
 
 ---
@@ -122,19 +124,20 @@ half (03/04) and the program half (05/06). Archive Step 06 docs at its
 
 # 3. Next actions
 
-Steps 03/04 (geometry half) and 05/06 (program half) are both complete.
-**Open Step 07 (Entry point + labeling)** per Pipeline §5.1 — the join:
+**Step 07 (Entry point + labeling) in progress** on `step07-entrypoint`
+(opened 2026-06-02). The join of geometry (03/04) + program (05/06). Live
+work-item status + decisions:
+`007_Step07_EntryPoint_Tracker.md` (§1) / `007_Step07_EntryPoint_Plan.md`
+(§4 work items, §2 S07-D1..D4).
 
-1. `run(shape, program, *, seed) -> LabeledRoomLayout` assembled (D001):
-   per-floor loop runs geometry (atomize→corridor) + program
-   (expand?/stage01/stage02), then the §3.8 labeling stage.
-2. The Step-04/05-deferred cluster lands here: `vertical_circulation`
-   anchor fixed-room re-insertion (S04-D4); `check_multi_floor_feasibility`
-   call site (S05-D6); per-room post-growth area/dim check (the 1.5 m²
-   rejection — distinct from Step 05's aggregate admission); corridor
-   single-connected-component (xfail PoC); `usage` set on output rooms.
-3. At the Step 07 §4.1 kickoff commit, archive Step 06 docs
-   (`git mv 006_Step06_*.md legacy/step06/`, proto3:D016 H011).
+Scope highlights: `run()` (D001); polygonization (S04-D2 —
+`CorridoredLayout` region-id sets → polygons); labeling (§3.8, role/usage
+recovery + `area_m2`); the deferred cluster (vc anchor re-insertion S04-D4,
+per-room post-growth area/dim gate, `check_multi_floor_feasibility` call
+site S05-D6, `valid=False ⇒ failure_records` proto3:D018); trace infra
+(D006 — hook + `StageOutput` + JSON + `manifest.json`); final-layout
+matplotlib renderer (S01-D10). Test corpus = **both** (33-case run-goldens
++ realistic apartment fixtures + failure-injection — S07-D2).
 
 (Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
 warehouse rules + US/EU/KR is in flight. Those typologies may not fit the

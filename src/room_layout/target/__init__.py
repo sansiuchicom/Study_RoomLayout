@@ -10,6 +10,7 @@ The value+loading half of the S05-D2 boundary (Step 05 shipped the
 See ``006_Step06_TargetRules_Plan.md``.
 """
 
+from room_layout.target.adapter import TargetAdapter
 from room_layout.target.rules_loader import load_target_rules
 
-__all__ = ["load_target_rules"]
+__all__ = ["TargetAdapter", "load_target_rules"]

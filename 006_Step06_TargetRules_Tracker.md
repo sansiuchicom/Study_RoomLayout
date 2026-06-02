@@ -14,8 +14,8 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 | # | Work item | Status | Commit |
 |---|---|---|---|
-| 4.1 | Kickoff — Plan/Tracker + `git mv` Step 05 → `legacy/step05/` + canonical fixes (DoD role↔usage + anchor slot; Arch L90-91) + Progress Tracker | In progress | — |
-| 4.2 | `schema/target.py` + `default_min_area_m2` (S06-D1) + tests | Not started | — |
+| 4.1 | Kickoff — Plan/Tracker + `git mv` Step 05 → `legacy/step05/` + canonical fixes (DoD role↔usage + anchor slot; Arch L90-91) + Progress Tracker | Done | `0126714` |
+| 4.2 | `schema/target.py` + `default_min_area_m2` (S06-D1) + tests | Done | `21a2a52` |
 | 4.3 | `target/rules_loader.py` (NEW) — `load_target_rules` + strict validation (S06-D4) + tests | Not started | — |
 | 4.4 | `target/adapter.py` (NEW) — `TargetAdapter` single generic (S06-D5) + `__init__` + tests | Not started | — |
 | 4.5 | `data/target_rules/apartment.json` + `README.md` (NEW) | Not started | — |
@@ -58,6 +58,11 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   "anchor host_role slot" line is a kickoff doc-fix, not a work item.
   Staying on `main` (D005 — weak triggers: mostly new files, no golden regen,
   TargetRules field add is non-breaking).
+- 2026-06-02 — 4.2 landed. default_min_area_m2 added as a REQUIRED full Role
+  map (placed before defaulted min_cardinality — no invalid default). Full-map
+  enforced so expand[role] can't KeyError; corridor included (0.0 ok). 5 test
+  helpers needed a full map (the field is now mandatory — confirms "no
+  half-built TargetRules"). NaN/inf deferred to loader (S06-D4). 697 + 5 xfail.
 
 ---
 

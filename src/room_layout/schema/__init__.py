@@ -64,6 +64,9 @@ from room_layout.schema.serialize import (
     to_dict,
     to_json,
 )
+from room_layout.schema.target import (
+    TargetRules,
+)
 from room_layout.schema.validators import (
     WARN_PREFIX,
     validate_input,
@@ -88,6 +91,7 @@ __all__ = [
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "TargetRules",
     "TargetType",
     "VerticalAnchor",
     "VerticalAnchorHostRole",

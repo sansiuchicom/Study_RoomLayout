@@ -12,16 +12,17 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 04 (Algorithm core port) done on `step04-algorithmcore` (2026-05-29,
-pending merge to `main`). The full algorithm now lives in
-`src/room_layout/stages/` — Cell **Phase 3–8**: territory / atomize /
-regionize / atom_graph / region_graph (Step 03) + seed_placement / growth_* /
-room_growth / shape_gate / corridor stack (Step 04) — plus `program_adapter`
-(new-schema `ProgramRequest` → growth fixture) and `anchors.subtract_anchors`
-(donut-hole). Ported growth + corridor are **byte-identical to the predecessor
-`Study_RoomLayout_Cell` across all 33 cases**. Per-stage golden regression
-(layout / seed / corridor digests + PNG sidecars). 643 pytest + 4 xfail under
-the canonical runtime (conda `IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1).
+Step 04 (Algorithm core port) merged to `main` (2026-05-29, `969c4f0`).
+Step 05 (Program layer port) open on `step05-programlayer`. The full
+algorithm now lives in `src/room_layout/stages/` — Cell **Phase 3–8**:
+territory / atomize / regionize / atom_graph / region_graph (Step 03) +
+seed_placement / growth_* / room_growth / shape_gate / corridor stack
+(Step 04) — plus `program_adapter` (new-schema `ProgramRequest` → growth
+fixture) and `anchors.subtract_anchors` (donut-hole). Ported growth + corridor
+are **byte-identical to the predecessor `Study_RoomLayout_Cell` across all 33
+cases**. Per-stage golden regression (layout / seed / corridor digests + PNG
+sidecars). 643 pytest + 5 xfail under the canonical runtime (conda
+`IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1).
 
 Step 04 ends at a region-based `CorridoredLayout` (S04-D2); polygonization +
 `LabeledRoomLayout` + the deferred anchor / corridor-connectivity cluster are

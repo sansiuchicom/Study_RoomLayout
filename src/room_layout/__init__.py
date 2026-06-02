@@ -22,7 +22,7 @@ either::
     # or equivalently
     from room_layout.schema import ShapeInput
 
-The algorithm entry point `run(...)` lands in Step 06.
+The algorithm entry point `run(...)` lands in Step 07.
 """
 
 from room_layout.schema import (

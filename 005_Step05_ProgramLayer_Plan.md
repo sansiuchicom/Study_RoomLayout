@@ -30,7 +30,8 @@ real use** — and that use surfaced a schema mismatch (S05-D1): growth is
 target-agnostic (S04-D3), so `area_target_m2` is consumed by *nobody* today,
 while `area_min_m2` (the field the gates actually need) was optional. The
 fields are realigned: `area_min_m2` becomes required, `area_target_m2` is
-demoted to optional and documented as the Step 11 diffusion-priority hook.
+demoted to optional and documented as a diffusion-priority hook for a
+possible future area-aware growth pass (no committed Step — may never land).
 
 Step 05 stops at the **admission verdict** — `stage02` is fail-only (D020):
 it accepts the program unchanged or raises a `DomainGateFailure`. Wiring the
@@ -79,7 +80,8 @@ Step 05 closes when:
 1. schema/program.py — SpaceUnitSpec area fields realigned (S05-D1):
    - area_min_m2: required (default removed; the gate's primary input)
    - area_target_m2: float | None = None (demoted) + docstring naming it
-     the Step 11 diffusion-priority hook (live field, not dead)
+     a diffusion-priority hook for a possible future area-aware growth
+     pass (live field, not dead; no committed Step)
    - min_dimension_m: optional, unchanged (Step 07 per-room dim check)
    - __post_init__: MINIMAL value guards only (S05-D wart-min): area_min ≥ 0;
      area_target ≥ area_min when both set. No NaN/inf hardening (honest-fix).
@@ -137,12 +139,12 @@ Predecessor decisions referenced as `S04-Dxx` / `proto3:Dxxx`.
 
 | # | Topic | Decision |
 |---|---|---|
-| **S05-D1** | Area-field realignment | `SpaceUnitSpec`'s area fields get their first real consumer here, which exposed a mismatch: growth is target-agnostic (S04-D3) so `area_target_m2` is read by **nobody**, yet it was required while `area_min_m2` — the field the gates need — was optional. **Realign**: `area_min_m2` → required (gate primary input); `area_target_m2` → `float \| None = None`, **kept** (not dropped) and documented as the **Step 11 diffusion-priority hook** (area-aware growth will weight expansion by it). Rationale for keeping over dropping (chat 2026-05-30): a "required-but-unused" field is a genuine wart, but the value will return as diffusion priority — `Optional` removes the wart while preserving the hook at near-zero churn. The 33 goldens already carry valid `area_min_m2`, so the required promotion needs no data backfill — only the fixture generator's `area_target` placeholder (`footprint/num_rooms`, an honest fake) is dropped to `null`. |
+| **S05-D1** | Area-field realignment | `SpaceUnitSpec`'s area fields get their first real consumer here, which exposed a mismatch: growth is target-agnostic (S04-D3) so `area_target_m2` is read by **nobody**, yet it was required while `area_min_m2` — the field the gates need — was optional. **Realign**: `area_min_m2` → required (gate primary input); `area_target_m2` → `float \| None = None`, **kept** (not dropped) and documented as a **diffusion-priority hook for a possible future area-aware growth pass** (which would weight expansion by it). No committed Step owns that pass yet — it may never land. Rationale for keeping over dropping (chat 2026-05-30): a "required-but-unused" field is a genuine wart, but the value plausibly returns as diffusion priority — `Optional` removes the wart while preserving the hook at near-zero churn. If the pass never materializes, the optional field costs nothing. The 33 goldens already carry valid `area_min_m2`, so the required promotion needs no data backfill — only the fixture generator's `area_target` placeholder (`footprint/num_rooms`, an honest fake) is dropped to `null`. |
 | **S05-D2** | Step 05 ↔ Step 06 boundary | **Step 05 = gate machinery + rule *type*; Step 06 = rule *values + loading*.** Gates are pure functions taking primitive domain values by injection (leaf functions depend only on what they use — `check_min_area` takes `density_factor: float`, not a `rules` object). The `TargetRules` dataclass that groups those values is defined **now** (a type is defined where first needed; `stage01` is the first consumer), but only as a hand-constructable bundle. The JSON loader / `TargetAdapter` / multi-typology registry that *populates* `TargetRules` from `data/target_rules/<t>.json` is **Step 06**. This refines Pipeline §5.1's one-liner ("TargetRules carry to Step 06") into a type/value split. |
 | **S05-D3** | `TargetRules` fields | Three fields only: `density_factor` (float, area-gate capacity), `min_cardinality` (`dict[Role, int]`, cardinality gate), `requires_single_floor` (bool, multi-floor gate). proto3's `default_min_area_m2` map is **omitted** — it existed for role-default fill, which S05-D1 eliminates (`area_min_m2` now required, nothing to fill). Fewer fields than proto3's `TargetRules`; Step 06 adds loading, not necessarily more fields (revisit if a real consumer appears). |
 | **S05-D4** | Gate units & access stub | Gates ported from proto3 with **mm → m unit swap** (new schema is m: `area_min_m2`, `min_dimension_m`; proto3 was `min_dimension_mm`). 3 active gates wired into `stage02`; `check_access_schema` is a **documented no-op stub** — current schema has no `AccessPolicy` concept, so there is nothing to validate; activation lands at Step 09-10 (honest-fix: stub over a speculative guard). |
 | **S05-D5** | No `ProgramInstance` type | proto3 split `ProgramRequest` (input) → `ProgramInstance` (concretized output of fill). Our schema makes `area_min_m2` required, so Stage 01 has **nothing to concretize** — it validates and returns the **same `ProgramRequest`** (S05-D5 option b). A separate `ProgramInstance` type would be an empty wrapper. Cluster / access separation, if ever needed, can introduce it then. |
-| **S05-D6** | Stage 02 single-floor scope | `stage02` evaluates one floor (Pipeline single-floor v1, D001). It derives `footprint_area_m2` + bbox short side from the `FloorShape` (shapely union of parts) and runs the 3 gates. Multi-floor area aggregation is deferred (proto3 deferred it to Step 14; here it lands wherever the multi-floor outer loop does). Fail-only (proto3:D020). |
+| **S05-D6** | Stage 02 single-floor scope | `stage02` evaluates one floor (Pipeline single-floor v1, D001). It derives `footprint_area_m2` + bbox short side from the `FloorShape` (shapely union of parts) and runs the 3 gates. Multi-floor area aggregation is deferred to the **Step 10** multi-floor orchestrator (Pipeline §5.2). Fail-only (proto3:D020). |
 | **S05-D7** | Golden regen scope | The 33 `input.json` are regenerated (S05-D1 schema change: `area_target_m2` 25.0-placeholder → `null`). The **region-id digest goldens are asserted unchanged** — input *shape* changes but growth is target-agnostic so its output cannot move. This is the regression guard for S05-D1: if a digest golden shifts, the "target-agnostic" claim is false. Generator (`cell_fixtures_to_json.py`) also adds an `area_min` fallback for roles outside Cell's 4-role `role_min_areas` table (defensive; current goldens only use the 4 roles). |
 
 ---
@@ -211,7 +213,7 @@ Mirrors into Tracker §1 (proto3:D016).
 | `run()` join / `LabeledRoomLayout` assembly | **Step 07** (D001). |
 | `check_access_schema` activation + `AccessPolicy` schema | **Step 09-10** (S05-D4 — no AccessPolicy concept yet). |
 | Multi-floor area aggregation across floors | Deferred with the multi-floor outer loop (D001). `stage02` is single-floor (S05-D6). |
-| Area-aware growth (consuming `area_target_m2` as diffusion priority) | **Step 11** (S05-D1 — the hook the demoted field reserves). |
+| Area-aware growth (consuming `area_target_m2` as diffusion priority) | Possible future pass, **no committed Step** (S05-D1 — the hook the demoted field reserves; may never land). |
 | `usage` field population / propagation | Currently null in all goldens; Step 07 labeling concern. |
 
 ---

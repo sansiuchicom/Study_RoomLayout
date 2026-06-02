@@ -1,7 +1,9 @@
-"""Tests for `room_layout.schema.failure` — work item 4.8 / Plan §4.8.
+"""Tests for `room_layout.schema.failure`.
 
 Covers: `FailureRecord` (mutability + default `data`), `DomainGateFailure`
-hierarchy + record-carrying behavior, raise/catch via base class.
+hierarchy + record-carrying behavior, raise/catch via base class, and the
+sibling `ProgramInstantiationFailure` (S05-D5 — distinct family, not a
+`DomainGateFailure` subclass).
 """
 
 import pytest
@@ -12,6 +14,7 @@ from room_layout.schema.failure import (
     DimGateFailure,
     DomainGateFailure,
     FailureRecord,
+    ProgramInstantiationFailure,
 )
 
 
@@ -59,3 +62,24 @@ def test_subclass_can_be_caught_as_base():
     with pytest.raises(DomainGateFailure) as exc_info:
         raise AreaGateFailure(fr)
     assert exc_info.value.record.code == "AREA"
+
+
+# --- ProgramInstantiationFailure (S05-D5) ---
+
+
+def test_program_instantiation_failure_carries_record():
+    fr = FailureRecord(code="PROG", stage="01", message="bad program")
+    exc = ProgramInstantiationFailure(fr)
+    assert exc.record is fr
+    assert str(exc) == "bad program"
+
+
+def test_program_instantiation_failure_is_not_a_domain_gate_failure():
+    """S05-D5 (option 가): the two families are siblings, not parent/child.
+    Catching DomainGateFailure must NOT swallow an instantiation failure."""
+    fr = FailureRecord(code="PROG", stage="01", message="m")
+    exc = ProgramInstantiationFailure(fr)
+    assert isinstance(exc, Exception)
+    assert not isinstance(exc, DomainGateFailure)
+    with pytest.raises(ProgramInstantiationFailure):
+        raise ProgramInstantiationFailure(fr)

@@ -18,10 +18,22 @@ def _sus(id, role, required=True) -> SpaceUnitSpec:
     return SpaceUnitSpec(id=id, role=role, usage=None, area_min_m2=5.0, required=required)
 
 
+_FULL_DEFAULT_AREAS = {
+    "public": 12.0,
+    "private": 7.0,
+    "service": 5.0,
+    "wet": 3.0,
+    "hub": 2.0,
+    "corridor": 0.0,
+    "vertical_circulation": 2.0,
+}
+
+
 def _rules(min_cardinality) -> TargetRules:
     return TargetRules(
         density_factor=0.7,
         requires_single_floor=True,
+        default_min_area_m2=dict(_FULL_DEFAULT_AREAS),
         min_cardinality=min_cardinality,
     )
 

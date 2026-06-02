@@ -1,21 +1,32 @@
-"""Tests for `room_layout.schema.target` — Plan §4.3 / S05-D3.
+"""Tests for `room_layout.schema.target` — Plan §4.2 / S06-D1 (+ S05-D3).
 
 Covers `TargetRules` construction, the minimal `__post_init__` guards
-(density_factor > 0; requestable Role keys, not corridor; non-negative int
-counts), the empty
-`min_cardinality` default, frozen contract, and serialize round-trip
-(incl. the `dict[Role, int]` field).
+(density_factor in (0,1]; requestable Role keys, not corridor; non-negative
+int counts; default_min_area_m2 full Role map of non-negative floats), the
+empty `min_cardinality` default, frozen contract, and serialize round-trip.
 """
 
 import pytest
 
 from room_layout.schema import TargetRules, from_dict, to_dict
 
+# A full Role map (S06-D1 requires every Role present, incl. corridor).
+_FULL_DEFAULT_AREAS = {
+    "public": 12.0,
+    "private": 7.0,
+    "service": 5.0,
+    "wet": 3.0,
+    "hub": 2.0,
+    "corridor": 0.0,
+    "vertical_circulation": 2.0,
+}
+
 
 def _rules(**kwargs) -> TargetRules:
     base = dict(
         density_factor=0.7,
         requires_single_floor=True,
+        default_min_area_m2=dict(_FULL_DEFAULT_AREAS),
         min_cardinality={"wet": 1, "private": 2},
     )
     base.update(kwargs)
@@ -34,7 +45,11 @@ def test_target_rules_basic():
 
 def test_min_cardinality_defaults_to_empty():
     """Empty dict = no cardinality constraint (S05-D3)."""
-    r = TargetRules(density_factor=0.5, requires_single_floor=False)
+    r = TargetRules(
+        density_factor=0.5,
+        requires_single_floor=False,
+        default_min_area_m2=dict(_FULL_DEFAULT_AREAS),
+    )
     assert r.min_cardinality == {}
 
 
@@ -96,5 +111,36 @@ def test_target_rules_round_trips():
 
 
 def test_target_rules_round_trips_empty_cardinality():
-    r = TargetRules(density_factor=0.6, requires_single_floor=False)
+    r = TargetRules(
+        density_factor=0.6,
+        requires_single_floor=False,
+        default_min_area_m2=dict(_FULL_DEFAULT_AREAS),
+    )
     assert from_dict(TargetRules, to_dict(r)) == r
+
+
+# --- default_min_area_m2 guards (S06-D1) ---
+
+
+def test_rejects_incomplete_default_area_map():
+    """Must cover every Role (full map) so expand_program can't KeyError."""
+    partial = {"public": 12.0}  # missing the rest
+    with pytest.raises(ValueError, match="full Role map"):
+        _rules(default_min_area_m2=partial)
+
+
+def test_rejects_unknown_role_in_default_area_map():
+    bad = {**_FULL_DEFAULT_AREAS, "bedroom": 5.0}
+    with pytest.raises(ValueError, match="full Role map"):
+        _rules(default_min_area_m2=bad)
+
+
+def test_rejects_negative_default_area():
+    bad = {**_FULL_DEFAULT_AREAS, "private": -1.0}
+    with pytest.raises(ValueError, match="default_min_area_m2"):
+        _rules(default_min_area_m2=bad)
+
+
+def test_corridor_zero_default_area_ok():
+    """corridor IS in the full map (carving emits corridor rooms); 0.0 is fine."""
+    assert _rules().default_min_area_m2["corridor"] == 0.0

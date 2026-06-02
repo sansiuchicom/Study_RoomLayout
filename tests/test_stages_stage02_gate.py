@@ -32,8 +32,23 @@ def _sus(id, area_min_m2, *, min_dimension_m=None, required=True) -> SpaceUnitSp
     )
 
 
+_FULL_DEFAULT_AREAS = {
+    "public": 12.0,
+    "private": 7.0,
+    "service": 5.0,
+    "wet": 3.0,
+    "hub": 2.0,
+    "corridor": 0.0,
+    "vertical_circulation": 2.0,
+}
+
+
 def _rules(density_factor=0.7) -> TargetRules:
-    return TargetRules(density_factor=density_factor, requires_single_floor=True)
+    return TargetRules(
+        density_factor=density_factor,
+        requires_single_floor=True,
+        default_min_area_m2=dict(_FULL_DEFAULT_AREAS),
+    )
 
 
 # --- accept path ---

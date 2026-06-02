@@ -1,20 +1,17 @@
 """Target rule values — `TargetRules`.
 
-Plan reference: ``005_Step05_ProgramLayer_Plan.md`` §2 S05-D2 / S05-D3.
+Plan reference: ``006_Step06_TargetRules_Plan.md`` §2 S06-D1 (+ legacy
+``005_Step05_ProgramLayer_Plan.md`` §2 S05-D2 / S05-D3).
 
-`TargetRules` is the **value bundle** the program-admission gates depend on
-— the per-typology knobs (`density_factor`, `min_cardinality`,
-`requires_single_floor`) that distinguish an apartment from a hotel from an
-office.
+`TargetRules` is the **value bundle** the program-admission gates + the
+`expand_program` builder depend on — the per-typology knobs that distinguish
+an apartment from a hotel from an office.
 
-Step 05 ↔ Step 06 boundary (S05-D2): this Step defines the **type** (a type
-is defined where it is first needed — `stage01_program` is the first
-consumer) and hand-constructs it in tests. The **values + loading** —
-`data/target_rules/<t>.json`, the JSON loader, and the `TargetAdapter`
-registry that produces populated `TargetRules` per `target_type` — are
-**Step 06**.
+Step 05 ↔ Step 06 boundary (S05-D2): Step 05 defined the **type** (first
+consumer `stage01_program`); Step 06 adds the **values + loading**
+(`data/target_rules/<t>.json` + `target.rules_loader` + `TargetAdapter`).
 
-Field set (S05-D3) is intentionally smaller than proto3's `TargetRules`:
+Fields:
 
 - `density_factor` — usable-area fraction of the gross footprint; the area
   gate's capacity is `footprint_area_m2 * density_factor`.
@@ -23,16 +20,19 @@ Field set (S05-D3) is intentionally smaller than proto3's `TargetRules`:
   spaces count toward it (enforced in `stage01_program`, not here).
 - `requires_single_floor` — typology forbids multi-floor layouts; the
   multi-floor gate fails when this is set and the building has != 1 floor.
+- `default_min_area_m2` — per-`Role` standard floor area (S06-D1). A **full**
+  Role-keyed map. This is the SEED `expand_program` reads to fill a fresh
+  `SpaceUnitSpec.area_min_m2`; it is **not** a stage01 None-fallback (S05-D1
+  stands — stage01 never fills, and a directly-built spec must supply its own
+  required `area_min_m2`). Full map (every `Role`, incl. `corridor`) so
+  `expand_program[role]` cannot KeyError at runtime — the loader/constructor
+  fails loud instead.
 
-proto3's `default_min_area_m2` map is **omitted** — it existed for the
-role-default fill that S05-D1 eliminates (`area_min_m2` is now required, so
-there is nothing to fill).
-
-The `min_cardinality` dict is mutable despite the frozen dataclass (S05-D3
-option 가): kept as a plain `dict` for consistency with the other schema
-containers (`ProgramRequest.floor_programs`, `ShapeInput.floors`); the
-pipeline does not mutate inputs. Tightening every schema container to an
-immutable type is a separate cross-cutting concern, not a Step 05 item.
+The `dict` fields are mutable despite the frozen dataclass (S05-D3 option 가):
+kept as plain `dict`s for consistency with the other schema containers
+(`ProgramRequest.floor_programs`, `ShapeInput.floors`); the pipeline does not
+mutate inputs. Tightening every container to an immutable type is a separate
+cross-cutting concern.
 """
 
 from dataclasses import dataclass, field
@@ -49,21 +49,28 @@ from room_layout.schema.program import Role
 # `vertical_circulation` stays valid — it IS requestable (anchor-bound).
 _CARDINALITY_ROLES = frozenset(get_args(Role)) - {"corridor"}
 
+# Roles that `default_min_area_m2` must cover: ALL of them (S06-D1). corridor
+# is included (carving emits corridor rooms; a 0.0 default is fine) so any
+# `expand_program[role]` lookup is total — no runtime KeyError.
+_ALL_ROLES = frozenset(get_args(Role))
+
 
 @dataclass(frozen=True)
 class TargetRules:
-    """Per-typology admission knobs consumed by the Step 05 program gates.
+    """Per-typology admission knobs consumed by the Step 05 gates + expand.
 
-    `__post_init__` keeps minimal structural guards (S05-D3, honest-fix):
-    `0 < density_factor <= 1` (it is a usable-area *fraction* of the gross
-    footprint, so > 1 is meaningless by definition — a domain invariant, not
-    speculative hardening); every `min_cardinality` key is a requestable
-    `Role` (i.e. not `corridor`); every count is a non-negative int.
-    Population from JSON is Step 06.
+    `__post_init__` keeps minimal structural guards (honest-fix):
+    `0 < density_factor <= 1` (a usable-area *fraction*, so > 1 is meaningless
+    by definition — a domain invariant, not speculative hardening); every
+    `min_cardinality` key is a requestable `Role` (not `corridor`) with a
+    non-negative int count; `default_min_area_m2` is a full Role map of
+    non-negative floats (S06-D1). NaN/inf rejection is the loader's job at the
+    JSON boundary (S06-D4), not here (a hand-built dataclass is trusted).
     """
 
     density_factor: float
     requires_single_floor: bool
+    default_min_area_m2: dict[Role, float]  # required full Role map (S06-D1)
     min_cardinality: dict[Role, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -83,4 +90,18 @@ class TargetRules:
                 raise ValueError(
                     f"TargetRules: min_cardinality[{role!r}] must be a "
                     f"non-negative int, got {count!r}"
+                )
+        da_keys = set(self.default_min_area_m2)
+        if da_keys != _ALL_ROLES:
+            missing = sorted(_ALL_ROLES - da_keys)
+            extra = sorted(da_keys - _ALL_ROLES)
+            raise ValueError(
+                f"TargetRules: default_min_area_m2 must be a full Role map "
+                f"(S06-D1); missing={missing}, unknown={extra}"
+            )
+        for role, area in self.default_min_area_m2.items():
+            if isinstance(area, bool) or not isinstance(area, (int, float)) or area < 0:
+                raise ValueError(
+                    f"TargetRules: default_min_area_m2[{role!r}] must be a "
+                    f"non-negative number, got {area!r}"
                 )

@@ -21,7 +21,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Done | `b7d6405` |
 | 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Done | `06a2db3` |
 | 4.6 | `stages/stage01_program.py` cardinality gate (S05-D5, **+S05-D8**) + tests | Done | `0a006a0` |
-| 4.7 | `stages/stage02_gate.py` fail-only orchestration (S05-D6) + tests | Not started | — |
+| 4.7 | `stages/stage02_gate.py` floor-scoped gates (S05-D6 **revised 다**) + tests | Done | `8b75c3c` |
 | 4.8 | Generator + 33 golden `input.json` regen (S05-D7); digests asserted unchanged | Not started | — |
 | 4.9 | Step close — Progress Tracker + Plan/Tracker close + merge --no-ff → main | Not started | — |
 
@@ -87,6 +87,11 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   rules-based required-only cardinality gate, returns specs unchanged
   (S05-D5 identity). Dropped a speculative run_program() wrapper (no caller
   yet — YAGNI). 7 tests. 682 passed + 5 xfail; ruff clean.
+- 2026-06-02 — 4.7 landed (S05-D6 revised → 다). On reflection stage02 is
+  FLOOR-scoped; check_multi_floor_feasibility is BUILDING-scoped (different
+  altitude) → hoisted its CALL SITE to Step 07 run() (gate fn itself already
+  built+tested in 4.5). stage02 takes one FloorShape, runs area+dim only.
+  Tests pin hole-subtraction (net 64 m²) + multi-part union. 689 + 5 xfail.
 
 ---
 

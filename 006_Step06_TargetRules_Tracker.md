@@ -79,11 +79,14 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   admits all 33 (footprints 100-160 m² ≫ min sums ~25-35); cardinality would
   reject 2 abstract test shapes but goldens don't hit that gate → no
   regression. Values are MIN BARRIERS not realistic sizes (user framing).
-  private=7.0 Grade-A (Korean statute); public/service/wet Grade-C (intl
-  analogue — no Korean per-room min); hub/vc Grade-D estimate. README §2 is
-  citation-ready w/ graded sources + verify-before-citing flags + 전용률≠
-  density_factor caveat (for the paper). density 0.85 kept (LLM: appropriate
-  for an err-loose gate). 4 value-pinning tests. 718 + 5 xfail.
+  private=7.0 Grade-A (Korean statute) [**later corrected → Grade-B** in the
+  post-close 2026-06-02 consolidation review — the 7 m² statute is narrow
+  (도시형생활주택 only); Korea is dwelling-level, no general per-room min];
+  public/service/wet Grade-C (intl analogue — no Korean per-room min); hub/vc
+  Grade-D estimate. README §2 is citation-ready w/ graded sources +
+  verify-before-citing flags + 전용률≠density_factor caveat (for the paper).
+  density 0.85 kept (LLM: appropriate for an err-loose gate). 4 value-pinning
+  tests. 718 + 5 xfail.
 - 2026-06-02 — 4.6 landed. expand_program pure fn, rules injected (가). Field
   policy per D1/D2/D3; target_type stamped (D6, not validated). Invalid roles
   + empty programs NOT re-screened — delegated to SpaceUnitSpec.__post_init__
@@ -112,8 +115,9 @@ S05-D2 boundary.
   `target_type` field/property (S06-D6 — nothing branches on it);
   `DEFAULT_APARTMENT_RULES_PATH`.
 - `data/target_rules/apartment.json` + `README.md` (NEW) — real apartment
-  values + **citation-ready graded provenance** (private 7.0 = Grade-A Korean
-  statute; public/service/wet = Grade-C intl analogue; hub/vc = Grade-D); the
+  values + **citation-ready graded provenance** (private 7.0 = Grade-B
+  narrow-statute proxy [corrected from A in the post-close review]; public/
+  service/wet = Grade-C intl analogue; hub/vc = Grade-D); the
   전용률≠density_factor framing flag; 3-layer extensibility model.
 - `target/expand_program.py` (NEW) — `{role:count}` → `ProgramRequest`
   (area_min from rules, area_target/usage None, target_type stamped).
@@ -130,11 +134,22 @@ ruff check + format clean. DoD test confirms `expand_program` output passes
 **Sourcing note (for the paper):** apartment values came via a search-LLM
 survey (user-run), then verified against the 33 goldens before acceptance.
 README §2 grades every source A–D and flags Grade-B/C/D as verify-before-
-citing. A follow-up survey covers house/hotel/office/warehouse + US/EU/KR —
-those typologies may NOT fit the 4-role model (office/warehouse are open-plan;
-the binding minimum may be egress/occupancy, not per-room area), so they are
-out of Step 06 scope and evaluated on return (likely data-only adds or a
-deferred design, not retrofitted here).
+citing.
+
+**Post-close consolidation (2026-06-02):** the follow-up house/hotel/office/
+warehouse + US/EU/KR survey (+ a third source-auditing pass) confirmed the
+4-role area-min gate is **residential-only** — office's real constraint is
+occupant load (~14 m²/person), warehouse's is clear-height/dock-count, hotel
+is program-%; and wet-room/​toilet minima are geometry (ADA) / fixture-count
+(OSHA), not area. Captured as a paper-grade design note
+`docs/000_typology_gate_applicability.md` (§1 role bias, §2 real constraints,
+§3 wet=geometry, §4 future paths [gate polymorphism / typology role model /
+program presets], §5 Korea-source honesty, §6 graded citations, §7 code link).
+Two README §2 corrections: `private` 7.0 Grade **A→B** (the 7 m² statute is
+narrow 도시형생활주택 scope; Korea is dwelling-level, no general per-room min)
+and a `wet` ADA/OSHA caveat (area is the wrong axis). **No code/value change**
+— values held (verified baseline); no non-apartment JSON created (honest-fix:
+no fake gate). 730 + 5 xfail unchanged.
 
 **Deferred (Plan §5):** `run()` (Step 07); role↔usage auto-mapping (none —
 S06-D3); area_target meaning (S06-D2); anchor/host_role (Step 02 schema +

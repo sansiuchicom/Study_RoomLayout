@@ -40,7 +40,7 @@ half of the S05-D2 boundary:
   `target_type` field/property (S06-D6 — nothing branches on it) +
   `DEFAULT_APARTMENT_RULES_PATH`.
 - `data/target_rules/apartment.json` + `README.md` (NEW) — real values +
-  **citation-ready graded provenance** (private 7.0 Grade-A Korean statute;
+  **citation-ready graded provenance** (private 7.0 Grade-B narrow-statute proxy;
   public/service/wet Grade-C; hub/vc Grade-D) + 전용률≠density_factor flag +
   3-layer model. For the paper.
 - `target/expand_program.py` (NEW) — `{role:count}` → `ProgramRequest`
@@ -189,7 +189,7 @@ pass. Each is either an **intended defer** (lands in a named later Step) or an
 
 | Item | Action |
 |---|---|
-| `apartment.json` value provenance: only `private`=7.0 is Grade-A (Korean statute); `public`/`service`/`wet` are Grade-C (international analogue), `hub`/`vc` Grade-D (estimate); `density_factor`=0.85 Grade-B; cardinality Grade-B | Replace Grade-B/C/D with primary sources or label as estimates before citing in the paper. Flags already in `data/target_rules/README.md` §2. |
+| `apartment.json` value provenance is mostly non-primary: `private`=7.0 is Grade-B (narrow 도시형생활주택 statute used as a proxy — downgraded from A in the 2026-06-02 review); `public`/`service`/`wet` Grade-C (international analogue, no Korean per-room min); `hub`/`vc` Grade-D (estimate); `density_factor`=0.85 + cardinality Grade-B. The Korean regime is dwelling-level, not per-room. | Replace with primary 주택법/주택건설기준 text or label as estimates before citing. Full analysis + graded source table in `docs/000_typology_gate_applicability.md` (§5/§6); per-value flags in `data/target_rules/README.md` §2. |
 
 ## 5.5 Environment (not code)
 

@@ -87,8 +87,13 @@ Sub-choices recorded here (each replaces or extends `proto3:D003` /
   pass-through)** (option D in the C3 review, with sub-options a1
   free-form `usage: str` and b2 `expand_program()` helper external to
   the core entry point). Algorithm reads `role`; `usage` is carried
-  through to `LabeledRoom.usage` untouched. Typology-specific role↔usage
-  mapping lives in `target_rules/<typology>.json` (`proto3:D021`).
+  through to `LabeledRoom.usage` untouched. `usage` is set by the
+  user/caller at labeling/BIM time, **never auto-guessed from `role`**
+  (S06-D3 — a `private` room may be a study, not a bedroom; a wrong guess
+  is harmful for BIM output). The mention of a typology-specific
+  role↔usage mapping under `target_rules/<typology>.json` (`proto3:D021`)
+  is a **location reservation** for if/when a real need for typology
+  default usages appears — not a mandate to auto-map; Step 06 ships none.
 - **Hybrid γ adapter pattern**. Core stays pure-function and
   typology- / external-pipeline-agnostic. ResearchBIM `Building` /
   `Storey` mutation integration lives in `adapters/researchbim.py`,

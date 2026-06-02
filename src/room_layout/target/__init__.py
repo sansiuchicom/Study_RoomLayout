@@ -11,6 +11,12 @@ See ``006_Step06_TargetRules_Plan.md``.
 """
 
 from room_layout.target.adapter import DEFAULT_APARTMENT_RULES_PATH, TargetAdapter
+from room_layout.target.expand_program import expand_program
 from room_layout.target.rules_loader import load_target_rules
 
-__all__ = ["DEFAULT_APARTMENT_RULES_PATH", "TargetAdapter", "load_target_rules"]
+__all__ = [
+    "DEFAULT_APARTMENT_RULES_PATH",
+    "TargetAdapter",
+    "expand_program",
+    "load_target_rules",
+]

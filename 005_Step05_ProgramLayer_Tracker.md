@@ -20,7 +20,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.3 | `schema/target.py` `TargetRules` (S05-D3) + `__init__` re-export + tests | Done | `79ced8d` |
 | 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Done | `b7d6405` |
 | 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Done | `06a2db3` |
-| 4.6 | `stages/stage01_program.py` validation + cardinality (S05-D5) + tests | Not started | — |
+| 4.6 | `stages/stage01_program.py` cardinality gate (S05-D5, **+S05-D8**) + tests | Done | `0a006a0` |
 | 4.7 | `stages/stage02_gate.py` fail-only orchestration (S05-D6) + tests | Not started | — |
 | 4.8 | Generator + 33 golden `input.json` regen (S05-D7); digests asserted unchanged | Not started | — |
 | 4.9 | Step close — Progress Tracker + Plan/Tracker close + merge --no-ff → main | Not started | — |
@@ -80,6 +80,13 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   scalars as kwargs, list[SpaceUnitSpec] direct (가). FailureRecord mapped
   proto3's failure_type/evidence → our code/data. 14 tests cover pass +
   each fail branch + D023 required-only + None-skip. 675 passed + 5 xfail.
+- 2026-06-02 — 4.6 landed (+ new decision S05-D8). Discovery: validate_input
+  (Step 02) ALREADY checks duplicate spec id cross-floor + __post_init__
+  guards empty/invalid id+role — so proto3's Stage 01 structural re-checks
+  would duplicate existing layers. stage01_program.run owns ONLY the
+  rules-based required-only cardinality gate, returns specs unchanged
+  (S05-D5 identity). Dropped a speculative run_program() wrapper (no caller
+  yet — YAGNI). 7 tests. 682 passed + 5 xfail; ruff clean.
 
 ---
 

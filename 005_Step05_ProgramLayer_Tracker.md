@@ -1,9 +1,9 @@
 # 005 Step 05 — Program Layer Port Tracker
 
-Status: Active
+Status: Completed (pending no-ff merge to `main`)
 Type: Step tracker
 Branch: `step05-programlayer`
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 Mirrors `005_Step05_ProgramLayer_Plan.md` §4 work items (proto3:D016).
 Plan = the contract; Tracker = execution state + decisions-during-build.
@@ -31,17 +31,17 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 (Plan §1 — checked at close.)
 
-- [ ] `area_min_m2` required, `area_target_m2` optional + diffusion-priority docstring, minimal guards
-- [ ] `schema/target.py` `TargetRules` (3 fields) + re-export + tests
-- [ ] `ProgramInstantiationFailure` added + round-trips through FailureRecord
-- [ ] `constraints/gates.py` — 4 gates (3 active + access stub), m units
-- [ ] `stage01_program` cardinality gate over one floor's specs, returns them unchanged (S05-D8; no ProgramInstance)
-- [ ] `stage02_gate` fail-only, single-floor, 3 active gates
-- [ ] gate / stage / failure unit tests pass
-- [ ] 33 golden `input.json` regenerated; region-id digests verified unchanged
-- [ ] no new viz (justified — non-geometric layer)
-- [ ] ruff clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1)
-- [ ] Plan/Tracker closed; S05-D1..D7 finalized; merged --no-ff
+- [x] `area_min_m2` required, `area_target_m2` optional + diffusion-priority docstring, minimal guards
+- [x] `schema/target.py` `TargetRules` (3 fields) + re-export + tests
+- [x] `ProgramInstantiationFailure` added + round-trips through FailureRecord
+- [x] `constraints/gates.py` — 4 gates (3 active + access stub), m units
+- [x] `stage01_program` cardinality gate over one floor's specs, returns them unchanged (S05-D8; no ProgramInstance)
+- [x] `stage02_gate` fail-only, single-floor (area + dim; multi-floor hoisted to Step 07 — S05-D6 revised)
+- [x] gate / stage / failure unit tests pass
+- [x] 33 golden `input.json` regenerated; region-id digests verified unchanged
+- [x] no new viz (justified — non-geometric admission layer; `src/room_layout/viz/` untouched)
+- [x] ruff clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1) — 690 passed + 5 xfail
+- [ ] Plan/Tracker closed; S05-D1..D8 finalized; merged --no-ff  ← in progress (4.9)
 
 ---
 
@@ -112,4 +112,42 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 ## 4. Close summary
 
-(Filled at 4.9.)
+Step 05 (Program layer port) complete on `step05-programlayer` — 18 commits
+(8 work items + interleaved tracker/doc + 1 review-response + 1 doc-drift).
+Pending no-ff merge to `main` (proto3:D015).
+
+**Delivered:**
+
+- `schema/program.py` — area-field realignment (S05-D1): `area_min_m2`
+  required, `area_target_m2` optional (diffusion-priority hook), + minimal
+  value guards. Field reorder (defaults last).
+- `schema/target.py` (NEW) — `TargetRules` value bundle (S05-D3): 3 fields,
+  `corridor` rejected as a cardinality key (review fix).
+- `schema/failure.py` — `ProgramInstantiationFailure` (S05-D5), sibling of
+  `DomainGateFailure` (not a subclass — pinned by test).
+- `constraints/gates.py` (NEW) — 4 pure gates, m units (S05-D4): area / dim /
+  multi-floor active + access no-op stub. Injection split: domain scalars as
+  kwargs, `list[SpaceUnitSpec]` direct (option 가).
+- `stages/stage01_program.py` (NEW) — required-only cardinality gate only
+  (S05-D8: structural/cross-ref already owned by `__post_init__` +
+  `validate_input`); returns specs unchanged (S05-D5).
+- `stages/stage02_gate.py` (NEW) — floor-scoped area + dim orchestration
+  (S05-D6 revised → 다: multi-floor gate is building-level, hoisted to
+  Step 07). Holes subtracted, m units.
+- 33 golden `input.json` regenerated (S05-D7): `area_target` honest-fake →
+  null. **Region-id digests unchanged** — the empirical S04-D3
+  target-agnostic regression guard passed.
+
+**Decisions:** S05-D1..D8 (Plan §2). New during build: S05-D8 (Stage 01 =
+cardinality only), S05-D6 revised (stage02 floor-scoped, multi-floor hoisted).
+
+**Verification:** 690 passed + 5 xfailed under the canonical runtime (conda
+`IfcOpenHouse`, GEOS 3.14.1); ruff clean. Pre-4.8 adversarial review (subagent)
+found no gate-logic bugs; 5 items fixed (`c5c06a4`). Golden regen verified
+order-independent (only `area_target` → null; shape/area_min/role identical).
+
+**Deferred (per Plan §5):** `check_multi_floor_feasibility` call site → Step 07;
+per-room post-growth area/dim check (1.5 m² rejection — distinct from this
+Step's aggregate admission) → Step 07; `check_access_schema` activation →
+Step 09-10; TargetRules JSON loader / adapter / typology values → Step 06;
+area-aware growth (consuming `area_target`) → no committed Step.

@@ -1,11 +1,11 @@
 # 005 Step 05 — Program Layer Port Plan
 
-Status: Active
+Status: Completed (pending no-ff merge to `main`)
 Type: Step plan
 Branch: `step05-programlayer` (D005 — regression risk: this Step is the
 first real consumer of `SpaceUnitSpec`'s area fields and reshapes the
 Step 02 schema artifact + regenerates the 33 golden inputs)
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 ---
 

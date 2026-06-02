@@ -26,6 +26,12 @@ viz = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Ship the per-typology target-rules data (JSON + provenance README) inside the
+# wheel/sdist so `TargetAdapter` / `DEFAULT_APARTMENT_RULES_PATH` resolve from
+# an installed package, not just the source tree (Step 06 §4.7).
+[tool.setuptools.package-data]
+room_layout = ["data/target_rules/*.json", "data/target_rules/*.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

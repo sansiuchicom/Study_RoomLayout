@@ -1,6 +1,6 @@
 # 005 Step 05 — Program Layer Port Plan
 
-Status: Completed (pending no-ff merge to `main`)
+Status: Completed (merged to `main` 2026-06-02, `f3f4906`)
 Type: Step plan
 Branch: `step05-programlayer` (D005 — regression risk: this Step is the
 first real consumer of `SpaceUnitSpec`'s area fields and reshapes the

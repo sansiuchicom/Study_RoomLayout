@@ -1,6 +1,6 @@
 # 005 Step 05 — Program Layer Port Tracker
 
-Status: Completed (pending no-ff merge to `main`)
+Status: Completed (merged to `main` 2026-06-02, `f3f4906`)
 Type: Step tracker
 Branch: `step05-programlayer`
 Last updated: 2026-06-02
@@ -41,7 +41,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [x] 33 golden `input.json` regenerated; region-id digests verified unchanged
 - [x] no new viz (justified — non-geometric admission layer; `src/room_layout/viz/` untouched)
 - [x] ruff clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1) — 690 passed + 5 xfail
-- [ ] Plan/Tracker closed; S05-D1..D8 finalized; merged --no-ff  ← in progress (4.9)
+- [x] Plan/Tracker closed; S05-D1..D8 finalized; merged --no-ff (`f3f4906`, branch deleted + pushed)
 
 ---
 
@@ -112,9 +112,12 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 ## 4. Close summary
 
-Step 05 (Program layer port) complete on `step05-programlayer` — 18 commits
-(8 work items + interleaved tracker/doc + 1 review-response + 1 doc-drift).
-Pending no-ff merge to `main` (proto3:D015).
+Step 05 (Program layer port) complete + **merged to `main`** 2026-06-02
+(`f3f4906`, --no-ff; proto3:D015; branch deleted + pushed to origin). 18
+commits (8 work items + interleaved tracker/doc + 1 review-response + 1
+doc-drift). Post-merge: 2nd external review → density_factor upper bound
+(0,1] + post-merge doc sync (the other 10 findings were intended defers or
+env, per chat triage).
 
 **Delivered:**
 

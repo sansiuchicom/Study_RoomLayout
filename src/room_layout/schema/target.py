@@ -55,9 +55,11 @@ class TargetRules:
     """Per-typology admission knobs consumed by the Step 05 program gates.
 
     `__post_init__` keeps minimal structural guards (S05-D3, honest-fix):
-    `density_factor > 0`; every `min_cardinality` key is a requestable `Role`
-    (i.e. not `corridor`); every count is a non-negative int. Population from
-    JSON is Step 06.
+    `0 < density_factor <= 1` (it is a usable-area *fraction* of the gross
+    footprint, so > 1 is meaningless by definition — a domain invariant, not
+    speculative hardening); every `min_cardinality` key is a requestable
+    `Role` (i.e. not `corridor`); every count is a non-negative int.
+    Population from JSON is Step 06.
     """
 
     density_factor: float
@@ -65,9 +67,10 @@ class TargetRules:
     min_cardinality: dict[Role, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if self.density_factor <= 0:
+        if not (0 < self.density_factor <= 1):
             raise ValueError(
-                f"TargetRules: density_factor must be > 0, got {self.density_factor}"
+                f"TargetRules: density_factor must be in (0, 1] "
+                f"(it is a usable-area fraction), got {self.density_factor}"
             )
         for role, count in self.min_cardinality.items():
             if role not in _CARDINALITY_ROLES:

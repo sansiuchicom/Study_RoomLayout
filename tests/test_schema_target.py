@@ -49,10 +49,16 @@ def test_target_rules_is_frozen():
 # --- minimal value guards (S05-D3) ---
 
 
-@pytest.mark.parametrize("bad", [0.0, -0.1])
-def test_rejects_nonpositive_density_factor(bad):
+@pytest.mark.parametrize("bad", [0.0, -0.1, 1.5, 10.0])
+def test_rejects_out_of_range_density_factor(bad):
+    """0 < density_factor <= 1 — it is a usable-area fraction (review #8)."""
     with pytest.raises(ValueError, match="density_factor"):
         _rules(density_factor=bad)
+
+
+def test_accepts_density_factor_at_one():
+    """1.0 (100% usable) is the inclusive upper bound."""
+    assert _rules(density_factor=1.0).density_factor == 1.0
 
 
 def test_rejects_unknown_role_key():

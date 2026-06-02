@@ -18,7 +18,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.2 | `schema/target.py` + `default_min_area_m2` (S06-D1) + tests | Done | `21a2a52` |
 | 4.3 | `target/rules_loader.py` (NEW) — `load_target_rules` + strict validation (S06-D4) + tests | Done | `20c1ba7` |
 | 4.4 | `target/adapter.py` (NEW) — `TargetAdapter` single generic (S06-D5, **+S06-D6**) + `__init__` + tests | Done | `ddc4e9a` |
-| 4.5 | `data/target_rules/apartment.json` + `README.md` (NEW) | Not started | — |
+| 4.5 | `data/target_rules/apartment.json` + `README.md` (NEW) | Done | `d419655` |
 | 4.6 | `target/expand_program.py` (NEW) — `expand_program` (S06-D1/D2/D3) + tests | Not started | — |
 | 4.7 | `pyproject.toml` package-data ships `data/target_rules/*` | Not started | — |
 | 4.8 | Close — Plan/Tracker + Progress Tracker + S06-D1..D5 finalize (on `main`) | Not started | — |
@@ -74,6 +74,16 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   speculative → dropped both load_fixture (D5) and the field (D6). Adapter is
   just __init__(rules_path) + target_rules(). expand will stamp the caller's
   target_type onto ProgramRequest directly. 5 tests. 714 + 5 xfail.
+- 2026-06-02 — 4.5 landed. apartment.json values sourced via a search-LLM
+  (user-run), then VERIFIED against the 33 goldens before accepting: area gate
+  admits all 33 (footprints 100-160 m² ≫ min sums ~25-35); cardinality would
+  reject 2 abstract test shapes but goldens don't hit that gate → no
+  regression. Values are MIN BARRIERS not realistic sizes (user framing).
+  private=7.0 Grade-A (Korean statute); public/service/wet Grade-C (intl
+  analogue — no Korean per-room min); hub/vc Grade-D estimate. README §2 is
+  citation-ready w/ graded sources + verify-before-citing flags + 전용률≠
+  density_factor caveat (for the paper). density 0.85 kept (LLM: appropriate
+  for an err-loose gate). 4 value-pinning tests. 718 + 5 xfail.
 
 ---
 

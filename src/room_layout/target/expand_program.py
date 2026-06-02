@@ -57,11 +57,21 @@ def expand_program(
         `SpaceUnitSpec` list (role-grouped, 1-based ids).
 
     Raises:
-        ValueError: a count is negative, or a requested role is not a valid
-            input role (the latter via `SpaceUnitSpec.__post_init__`).
+        ValueError: a count is not a non-negative int (bool/float rejected), or
+            a requested role is not a valid input role (the latter via
+            `SpaceUnitSpec.__post_init__`).
     """
     specs: list[SpaceUnitSpec] = []
     for role, count in counts.items():
+        # `count` must be a real non-negative int. `bool` is a subclass of int
+        # (`True`/`False` would silently mean 1/0) and floats raise a confusing
+        # `range()` TypeError downstream — reject both with a clear message, the
+        # same friendliness as the negative-count guard (count-contract symmetry).
+        if isinstance(count, bool) or not isinstance(count, int):
+            raise ValueError(
+                f"expand_program: count for role {role!r} must be a non-negative int, "
+                f"got {type(count).__name__} {count!r}"
+            )
         if count < 0:
             raise ValueError(f"expand_program: count for role {role!r} is negative ({count})")
         for i in range(1, count + 1):

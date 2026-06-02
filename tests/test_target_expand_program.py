@@ -70,6 +70,18 @@ def test_negative_count_rejected():
         expand_program({"public": -1}, "apartment", rules=RULES)
 
 
+def test_float_count_rejected_with_valueerror():
+    """1.5 must be a friendly ValueError, not a raw range() TypeError (M-13)."""
+    with pytest.raises(ValueError, match="non-negative int"):
+        expand_program({"public": 1.5}, "apartment", rules=RULES)
+
+
+def test_bool_count_rejected():
+    """True must not silently mean 1 (bool is an int subclass) — M-13."""
+    with pytest.raises(ValueError, match="non-negative int"):
+        expand_program({"public": True}, "apartment", rules=RULES)
+
+
 def test_invalid_input_role_delegated_to_spec():
     """corridor is not a valid input role — SpaceUnitSpec.__post_init__ rejects
     it (S02-D9); expand does not re-screen (S05-D8 spirit)."""

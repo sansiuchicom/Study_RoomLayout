@@ -146,3 +146,54 @@ adds, S06-D5, or a deferred design.)
 # 4. Blockers
 
 _None._
+
+---
+
+# 5. Known issues / accepted limitations
+
+Recurring review findings, recorded here so they are not re-discovered each
+pass. Each is either an **intended defer** (lands in a named later Step) or an
+**accepted limitation** (deliberately not fixed). Last consolidated 2026-06-02
+(after two external reviews of Steps 05–06).
+
+## 5.1 Intended defers → Step 07 (the join)
+
+| Item | Where it lands |
+|---|---|
+| No public `run(shape, program, *, seed)` entry point | Step 07 — the geometry (03/04) + program (05/06) join. |
+| Per-room post-growth area/dim check (rejects a grown room below its own `area_min` / the "1.5 m² room") | Step 07. Steps 05/06 do only **aggregate admission** (Σ fits), not per-room. |
+| Growth ignores `area_min_m2` / `area_target_m2` / `min_dimension_m` (target-agnostic, S04-D3) | Consumed at Step 07 per-room check; `area_target` meaning open (S06-D2). |
+| `stage02` area gate does not subtract anchor/shaft area (over-admits when cores are large) | Step 07 anchor cluster (anchor-aware capacity). No anchors in the 33 goldens, so untriggered today. |
+| `vertical_circulation` rooms / `host_role` fixed-room re-insertion | Step 07 (S04-D4). |
+| `check_multi_floor_feasibility` call site | Step 07 (S05-D6 — building-level). |
+| `LabeledRoomLayout(valid=False)` ⇒ non-empty `failure_records` invariant not constructor-enforced | Step 07 `run()` must uphold it (proto3:D018). |
+| `expand_program` cannot produce a `vertical_circulation` room (needs `anchor_id`, which `{role:count}` can't carry) → a typology requiring vc cardinality would be unsatisfiable via expand | Step 07 anchor work decides how expand binds anchors. corridor has the analogous trap, already blocked (S06-D6); vc is **not** blocked — latent. apartment.json doesn't require vc, so moot today. |
+
+## 5.2 Intended defers → later / no committed Step
+
+| Item | Where |
+|---|---|
+| 5 xfail latent geometry/algorithm bugs: regionize centroid-on-cut atom loss (B5) + disconnected-union area loss (B6); territory 3-way-overlap coverage hole (C10); growth `K > seedable regions` → `IndexError` not graceful; corridor network not guaranteed single-connected-component | Pinned `xfail` PoCs; none triggered by the 33 goldens. Addressed when a real input hits them (Step 07+). |
+| `check_access_schema` is a no-op stub | Step 09–10 (S05-D4 — no `AccessPolicy` concept yet). |
+| Non-apartment typologies (house/hotel/office/warehouse) | Data-only adds (S06-D5) when scoped; may not fit the 4-role model — needs evaluation. |
+
+## 5.3 Accepted limitations (deliberately not fixed)
+
+| Item | Rationale |
+|---|---|
+| **Frozen dataclasses hold mutable `list`/`dict`** (`ShapeInput.floors` / `.vertical_anchors`, `ProgramRequest.floor_programs`, `TargetRules` dicts) — mutable after construction | Accepted (flagged in 3 reviews). The pipeline never mutates inputs; tightening every container to an immutable type is a cross-cutting schema overhaul with no demonstrated need (honest-fix / YAGNI). Revisit only if a real in-place-mutation bug appears. |
+| `bool` accepted where `int` expected in `TargetRules.min_cardinality` via **direct** construction (`from_dict` rejects it) | Accepted. The dataclass is a trusted code path (S05-D1 spirit — no speculative dataclass hardening); untrusted JSON input is guarded by `from_dict` + the loader. (Note: `expand_program` *does* reject bool/float counts — that's a public caller-facing helper, M-13.) |
+| Rules-vs-`target_type` mismatch allowed (apartment rules can build a `target_type="house"` request) | Accepted (S06-D6) — nothing downstream branches on `target_type`; a cross-check guards a non-existent risk. Add when a real per-typology consumer appears. |
+
+## 5.4 Documentation / sourcing TODO (pre-publication)
+
+| Item | Action |
+|---|---|
+| `apartment.json` value provenance: only `private`=7.0 is Grade-A (Korean statute); `public`/`service`/`wet` are Grade-C (international analogue), `hub`/`vc` Grade-D (estimate); `density_factor`=0.85 Grade-B; cardinality Grade-B | Replace Grade-B/C/D with primary sources or label as estimates before citing in the paper. Flags already in `data/target_rules/README.md` §2. |
+
+## 5.5 Environment (not code)
+
+| Item | Note |
+|---|---|
+| Full `pytest` fails (~66 golden tests) outside the canonical runtime | Goldens are GEOS-version-pinned; run under conda `IfcOpenHouse` (GEOS 3.14.1). Use `-k "not golden"` elsewhere. |
+| CI Node.js 20 deprecation warning | GitHub Actions infra notice; builds pass until 2026-06-16. Bump action versions when convenient. |

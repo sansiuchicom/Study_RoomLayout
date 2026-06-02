@@ -92,6 +92,15 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   altitude) → hoisted its CALL SITE to Step 07 run() (gate fn itself already
   built+tested in 4.5). stage02 takes one FloorShape, runs area+dim only.
   Tests pin hole-subtraction (net 64 m²) + multi-part union. 689 + 5 xfail.
+- 2026-06-02 — Pre-4.8 adversarial review (subagent). Confirmed golden
+  independence: per_stage reads input.json's SHAPE only; growth digests come
+  from growth_fixture.json — so the 4.8 input regen cannot move digests
+  (S05-D7 holds structurally). Review found NO gate-logic bugs; fixed 5
+  items (commit c5c06a4): (1) Plan/code contract drift on stage01 [4 spots],
+  (2) corridor cardinality trap → reject in TargetRules, (3) private import,
+  (4) hardcoded multi-floor data, (5) dim-gate disconnected-bbox docstring.
+  Logged-only (not fixed — intended): disconnected-floor dim optimism is the
+  aggregate-admission stance (Step 07 does per-part). 690 + 5 xfail.
 
 ---
 

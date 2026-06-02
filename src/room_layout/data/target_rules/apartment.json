@@ -1,0 +1,18 @@
+{
+  "density_factor": 0.85,
+  "requires_single_floor": true,
+  "min_cardinality": {
+    "public": 1,
+    "private": 1,
+    "wet": 1
+  },
+  "default_min_area_m2": {
+    "public": 9.0,
+    "private": 7.0,
+    "service": 4.0,
+    "wet": 2.5,
+    "hub": 2.0,
+    "corridor": 0.0,
+    "vertical_circulation": 2.0
+  }
+}

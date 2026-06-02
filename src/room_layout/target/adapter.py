@@ -37,6 +37,12 @@ from pathlib import Path
 from room_layout.schema import TargetRules
 from room_layout.target.rules_loader import load_target_rules
 
+# Default rules shipped with the package. pyproject package-data (4.7) ensures
+# this file lands in the wheel/sdist so the path resolves from an install.
+DEFAULT_APARTMENT_RULES_PATH: Path = (
+    Path(__file__).resolve().parent.parent / "data" / "target_rules" / "apartment.json"
+)
+
 
 class TargetAdapter:
     """Generic typology adapter — a validated `TargetRules` provider (S06-D5).

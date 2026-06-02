@@ -22,7 +22,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Done | `06a2db3` |
 | 4.6 | `stages/stage01_program.py` cardinality gate (S05-D5, **+S05-D8**) + tests | Done | `0a006a0` |
 | 4.7 | `stages/stage02_gate.py` floor-scoped gates (S05-D6 **revised 다**) + tests | Done | `8b75c3c` |
-| 4.8 | Generator + 33 golden `input.json` regen (S05-D7); digests asserted unchanged | Not started | — |
+| 4.8 | Generator + 33 golden `input.json` regen (S05-D7); digests asserted unchanged | Done | `4214bb5` |
 | 4.9 | Step close — Progress Tracker + Plan/Tracker close + merge --no-ff → main | Not started | — |
 
 ---
@@ -101,6 +101,12 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   (4) hardcoded multi-floor data, (5) dim-gate disconnected-bbox docstring.
   Logged-only (not fixed — intended): disconnected-floor dim optimism is the
   aggregate-admission stance (Step 07 does per-part). 690 + 5 xfail.
+- 2026-06-02 — 4.8 landed. Regenerated 33 input.json. Order-independent diff
+  confirms ONLY area_target_m2 → null (area_min/role/shape identical; key
+  order also shifts cosmetically from the 4.2 reorder). S05-D7 guard PASSED:
+  690 passed + 5 xfail, byte-identical to pre-regen — digests did not move,
+  empirically proving growth is target-agnostic (changing area_target can't
+  shift output). PNG sidecars untouched (area-independent). ruff clean.
 
 ---
 

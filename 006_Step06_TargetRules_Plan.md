@@ -1,6 +1,6 @@
 # 006 Step 06 — Target Rules System Plan
 
-Status: Active
+Status: Completed (on `main`, no merge needed — D005 solo-mode)
 Type: Step plan
 Branch: `main` (D005 — triggers weak: mostly NEW files; no golden regen; the
 only touch to shipped code is a non-breaking `TargetRules` field add)
@@ -102,7 +102,7 @@ Step 06 closes when:
 9. Viz: NO new viz (non-geometric, like Step 05).
 
 10. ruff (BOTH `check` AND `format --check`) + full pytest green (conda
-    IfcOpenHouse, GEOS 3.14.1); Plan/Tracker closed; S06-D1..D5 finalized.
+    IfcOpenHouse, GEOS 3.14.1); Plan/Tracker closed; S06-D1..D6 finalized.
 ```
 
 ---
@@ -168,7 +168,7 @@ expand → packaging. Mirrors into Tracker §1 (proto3:D016).
 | **4.5** | `data/target_rules/apartment.json` + `README.md` (NEW) — real values + 3-layer model; assert it loads via 4.3 | apartment.json loads clean |
 | **4.6** | `target/expand_program.py` (NEW) — `expand_program` (S06-D1/D2/D3) + `test_target_expand_program.py` (incl. output passes stage01 + stage02) | expand tests pass |
 | **4.7** | `pyproject.toml` package-data — ship `data/target_rules/*` in wheel/sdist; verify the adapter default path resolves | build includes data |
-| **4.8** | Close — Plan/Tracker close + `docs/000_Progress_Tracker.md` + S06-D1..D5 finalize (on `main`, D005) | CI green; tracker updated |
+| **4.8** | Close — Plan/Tracker close + `docs/000_Progress_Tracker.md` + S06-D1..D6 finalize (on `main`, D005) | CI green; tracker updated |
 
 ---
 

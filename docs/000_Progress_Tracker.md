@@ -28,16 +28,26 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Step 06 (Target rules system) **open** on `main` (2026-06-02, D005 —
-weak triggers: mostly new files, no golden regen) — kickoff (4.1) in
-progress. Builds the value+loading half of the S05-D2 boundary:
-TargetRules + default_min_area_m2 (S06-D1) + rules_loader (strict JSON
-validation incl. finite, S06-D4) + single generic TargetAdapter (S06-D5)
-+ apartment.json + README (3-layer) + expand_program ({role:count} →
-ProgramRequest; area_min from rules, area_target=None S06-D2, usage=None
-S06-D3 — no role↔usage auto-map). Faithful proto3 `target/` port, two
-Step-05 reconciliations: default_min_area_m2 returns as expand's SEED
-(NOT a stage01 fill — S05-D1 stands), schema is ours not BuildingInput.
+Step 06 (Target rules system) **complete** on `main` (2026-06-02, D005 —
+stayed on main, weak triggers, no merge needed). Built the value+loading
+half of the S05-D2 boundary:
+- `schema/target.py` — `TargetRules` + `default_min_area_m2` full Role map
+  (S06-D1) — the expand-program SEED, not a stage01 fill (S05-D1 intact).
+- `target/rules_loader.py` (NEW) — thin JSON-boundary loader (file/parse/
+  recursive-finite, S06-D4); domain invariants delegated to from_dict +
+  `__post_init__`, re-raised with path (S06-D2가).
+- `target/adapter.py` (NEW) — single generic `TargetAdapter` (S06-D5), no
+  `target_type` field/property (S06-D6 — nothing branches on it) +
+  `DEFAULT_APARTMENT_RULES_PATH`.
+- `data/target_rules/apartment.json` + `README.md` (NEW) — real values +
+  **citation-ready graded provenance** (private 7.0 Grade-A Korean statute;
+  public/service/wet Grade-C; hub/vc Grade-D) + 전용률≠density_factor flag +
+  3-layer model. For the paper.
+- `target/expand_program.py` (NEW) — `{role:count}` → `ProgramRequest`
+  (area_min from rules, area_target/usage None, target_type stamped).
+- `pyproject` package-data ships the JSON+README (wheel verified).
+730 pytest + 5 xfail; ruff check + format clean. DoD test: expand output
+passes stage01 + stage02.
 
 Step 05 (Program layer port) **merged to `main`** 2026-06-02
 (`f3f4906`, --no-ff; 18 commits; branch deleted + pushed to origin).
@@ -76,10 +86,11 @@ from Step 05's aggregate admission), `run()`, `LabeledRoomLayout`.
 
 D-series cumulative: D001-D006 accepted; proto3:D001-D023 audited;
 S02-D1..D13 + S03-D1..D16 + S04-D1..D8 + S05-D1..D8 in their Step Plans;
-S06-D1..D5 in `006_Step06_TargetRules_Plan.md` §2.
+S06-D1..D6 in `006_Step06_TargetRules_Plan.md` §2.
 
-Next: execute Step 06 work items 4.2–4.8 (schema → loader → adapter →
-data → expand → packaging → close).
+Next: open Step 07 (Entry point + labeling) — the join of the geometry
+half (03/04) and the program half (05/06). Archive Step 06 docs at its
+§4.1 kickoff.
 ```
 
 ---
@@ -105,28 +116,30 @@ data → expand → packaging → close).
 | 2026-05-28..29 | Post-Step-03 review hardening (on `main`, 4 commits) — CI repinned to conda-forge + `geos=3.14.1` (regionize goldens are GEOS-version-sensitive); atom/region graph `neighbors`/`edge_between` made O(1) + atom edges keyed by `atom_id` not list index; `xfail` PoCs for three latent geometry bugs (B5 regionize Pass-B atom loss; B6 region shape↔atom_ids desync; C10 territory 3-way-overlap hole); pytest `pythonpath` += `src` (bare run w/o install); `to_dict`/`from_dict` skip `init=False` derived fields (the new graph indexes had broken `RegionGraph` serialization); README/tracker doc sync. 373 passing + 3 xfailed |
 | 2026-05-29 | Step 04 Algorithm core port — completed + **merged to `main`** (`969c4f0`, --no-ff; 22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). |
 | 2026-06-02 | Step 05 Program layer port — completed on `step05-programlayer` (18 commits; 8 work items). `constraints/gates.py` (4 pure gates, m units) + `schema/target.py` (`TargetRules`) + `ProgramInstantiationFailure` + `stage01_program` (cardinality only, S05-D8) + `stage02_gate` (floor-scoped area+dim, S05-D6 revised). `area_min_m2` → required / `area_target_m2` → optional (S05-D1); 33 golden inputs regenerated, **region-id digests unchanged** (S04-D3 target-agnostic guard, S05-D7). S05-D1..D8. Pre-close adversarial review: 0 gate-logic bugs, 5 fixes (`c5c06a4`). 690 pytest + 5 xfail under GEOS 3.14.1; ruff clean. **Merged to `main` `f3f4906` (--no-ff); branch deleted + pushed.** Post-merge: review-driven density_factor upper bound + doc sync. |
-| 2026-06-02 | Step 06 Target rules system — **kickoff** on `main` (D005, weak triggers). Plan/Tracker landed; Step 05 docs archived → `legacy/step05/`. Canonical fixes: Pipeline §5.1 DoD (drop role↔usage mapping + anchor host_role slot lines) + Arch Decisions L90-91 (role↔usage = location reservation, not auto-guess). §1/§2 settled over chat (S06-D1..D5): area_min = typology-owned (default_min_area as expand SEED, not stage01 fill — S05-D1 intact); area_target meaning open (D2); no role↔usage auto-map, usage=None (D3); finite checks at JSON loader (D4); single generic TargetAdapter (D5). |
+| 2026-06-02 | Step 06 Target rules system — completed on `main` (D005, no merge; 7 work items, ~13 commits). `TargetRules.default_min_area_m2` (full Role map, S06-D1) + `target/rules_loader` (thin JSON-boundary + finite, S06-D4, domain delegated S06-D2가) + single generic `TargetAdapter` (S06-D5, no target_type S06-D6) + `apartment.json` + citation-ready graded provenance README + `expand_program` ({role:count}→ProgramRequest) + pyproject package-data (wheel verified). Canonical fixes at kickoff (Pipeline §5.1 DoD role↔usage + anchor slot; Arch L90-91). S06-D1..D6. DoD test: expand output passes stage01+stage02; apartment.json admits all 33 goldens. 730 pytest + 5 xfail; ruff check + format clean. apartment values from a verified search-LLM survey; non-apartment typologies surveyed separately (may not fit 4-role model — out of scope). |
 
 ---
 
 # 3. Next actions
 
-Step 06 (Target rules system) open on `main`, kickoff done. Remaining
-work items (Plan §4): 4.2 `schema/target.py` +default_min_area_m2 → 4.3
-`rules_loader` → 4.4 `TargetAdapter` → 4.5 `apartment.json` + README →
-4.6 `expand_program` → 4.7 pyproject package-data → 4.8 close.
+Steps 03/04 (geometry half) and 05/06 (program half) are both complete.
+**Open Step 07 (Entry point + labeling)** per Pipeline §5.1 — the join:
 
-Resolution of the Step 05 reconciliation (now settled, S06-D1):
-`default_min_area_m2` returns to `TargetRules` — but as the **seed
-`expand_program` reads to fill `area_min_m2`**, NOT a stage01 fill
-(S05-D1 stands; stage01 still never fills). `expand_program` sets
-`area_target=None` (S06-D2) and `usage=None` (S06-D3, no role↔usage
-auto-map).
+1. `run(shape, program, *, seed) -> LabeledRoomLayout` assembled (D001):
+   per-floor loop runs geometry (atomize→corridor) + program
+   (expand?/stage01/stage02), then the §3.8 labeling stage.
+2. The Step-04/05-deferred cluster lands here: `vertical_circulation`
+   anchor fixed-room re-insertion (S04-D4); `check_multi_floor_feasibility`
+   call site (S05-D6); per-room post-growth area/dim check (the 1.5 m²
+   rejection — distinct from Step 05's aggregate admission); corridor
+   single-connected-component (xfail PoC); `usage` set on output rooms.
+3. At the Step 07 §4.1 kickoff commit, archive Step 06 docs
+   (`git mv 006_Step06_*.md legacy/step06/`, proto3:D016 H011).
 
-(Step 07 is the join: stage01/stage02 run as the program-side entry, the
-gate functions get a second binding as the per-room post-growth check,
-`check_multi_floor_feasibility` gets its call site, and the
-Step-04-deferred anchor/connectivity cluster lands.)
+(Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
+warehouse rules + US/EU/KR is in flight. Those typologies may not fit the
+4-role model — evaluate on return; likely data-only `<typology>.json`
+adds, S06-D5, or a deferred design.)
 
 ---
 

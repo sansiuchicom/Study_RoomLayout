@@ -17,7 +17,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.1 | Plan + Tracker land + `git mv` Step 04 docs → `legacy/step04/` + Progress Tracker stale-text cleanup | Done | `31205d0` |
 | 4.1b | Doc-drift fixes from external review (stale Step 11/14 refs, README, `__init__`) | Done | `59ed170` |
 | 4.2 | `schema/program.py` area-field realignment (S05-D1) + schema/serialize tests | Done | `15fc806` |
-| 4.3 | `schema/target.py` `TargetRules` (S05-D3) + `__init__` re-export + tests | Not started | — |
+| 4.3 | `schema/target.py` `TargetRules` (S05-D3) + `__init__` re-export + tests | Done | `79ced8d` |
 | 4.4 | `schema/failure.py` `ProgramInstantiationFailure` (S05-D5) + tests | Not started | — |
 | 4.5 | `constraints/gates.py` 4 pure gates (S05-D4) + tests | Not started | — |
 | 4.6 | `stages/stage01_program.py` validation + cardinality (S05-D5) + tests | Not started | — |
@@ -66,6 +66,11 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   construction sites use keywords; serialize is field-name based). Goldens
   still validate as-is (area_target present & ≥ min) — they only *change* at
   4.8 regen, they don't *break* now. 649 passed + 5 xfail; ruff clean.
+- 2026-06-02 — 4.3 landed. schema/target.py TargetRules (3 fields). New
+  file, zero ripple. Confirmed serialize already round-trips dict[Role,int]
+  (no serialize change needed). Re-exported at both __init__ levels (note:
+  top-level room_layout/__init__ has its OWN export list — must edit both,
+  not just schema/__init__). 659 passed + 5 xfail; ruff clean.
 
 ---
 

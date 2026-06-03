@@ -20,7 +20,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Done | `098a568` |
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Done | `dd62509` |
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path (**+S07-D6**) | Done | `99c0a67` |
-| 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
+| 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Done | `cfcea86` |
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Done | `5f925cc` |
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Done | `5873294` |
 | 4.10 | Test corpus B — authored fixtures (anchored / admission-fail / per-room-fail) + glob bug fix | Done | `ac185d9` |
@@ -39,7 +39,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [x] vc anchor re-insertion (S04-D4) — `vc_rooms`: polygon from `VerticalAnchor.footprint_polygon` (re-insert half; subtract half in `anchors.py`)
 - [x] Per-room post-growth area/dim check (`check_grown_rooms`; OBB short side; collect not raise; vc exempt) — distinct from Step 05 aggregate
 - [x] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
-- [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
+- [x] Trace infra (D006): `StageOutput` + `on_stage` (4.6) + `DebugRunWriter` JSON serializer + `manifest.json` + minimal `RunConfig` (4.7); per-stage rendering → Step 08
 - [x] Viz (S01-D10): final `LabeledFloorLayout` matplotlib renderer (`save_labeled_floor_figure`) + `viz/__init__.py` doc fix (kickoff)
 - [x] Test corpus A (33 cases → run-goldens) + B (anchored / admission-fail / per-room-fail fixtures)
 - [x] xfail: 2 Step-07 PoCs resolved (① K>seedable flipped to pass; ② orphan-corridor bridge shipped — connects, not dissolves; corridor xfail retained as Cell-faithfulness PoC); 3 latent (B5/B6/C10) stay
@@ -184,6 +184,16 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   conserved). The corridor xfail stays as the carve-stage
   Cell-faithfulness PoC (reason corrected). **xfail 5 → 4** (K>seedable resolved;
   B5/B6/C10 + corridor remain). 968 passed + 4 xfailed; ruff clean.
+- 2026-06-03 — 4.7 landed (trace-seam consumer; the hook + `StageOutput` were
+  4.6). `schema/run_config.py`: minimal `RunConfig` (D006 manifest config).
+  `debug_run.py`: `DebugRunWriter` (on_stage callback → `NN_<stage>.json` via
+  `to_dict`) + `write_debug_run()` → D006 `outputs/debug_runs/<run_id>/`
+  (manifest + `00_input`…`06_labeling` + `final.json`; run_id `seed<N>_<utc>`;
+  `git_commit` null when the tree is dirty). Key: `to_dict` already serializes
+  all 7 stage payloads + the final layout, so **no per-type serializers were
+  needed** (the part I'd feared). Canonical per-stage PNG/SVG rendering +
+  `make_gif` remain Step 08 (D006). Imported directly (`room_layout.debug_run`)
+  to avoid a package-init cycle. 970 passed + 4 xfailed; ruff clean.
 
 ---
 

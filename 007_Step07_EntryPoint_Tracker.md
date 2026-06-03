@@ -17,7 +17,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.1 | Kickoff — Plan/Tracker + `git mv` Step 06 → `legacy/step06/` + `viz/__init__.py` doc fix (S07-D4) + Progress Tracker | Done | `cd4bc3a` |
 | 4.2 | `stages/polygonize.py` (NEW) — region-id sets → room + corridor polygons (S04-D2, **+S07-D5**) | Done | `18bc4c6` |
 | 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Done | `175a576` |
-| 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Todo | — |
+| 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Done | `098a568` |
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Todo | — |
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path | Todo | — |
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
@@ -36,7 +36,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [ ] `run(shape, program, *, seed)` assembled (D001); per-floor loop; `on_stage` hook (default None = pure)
 - [x] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2; S07-D5 — room=single Polygon loud-guard, corridor=list)
 - [x] Labeling (§3.8): 7-class role/usage recovery (`name==id`) + `area_m2` (polygon, S07-D6); usage carried through (S06-D3)
-- [ ] vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint_polygon`
+- [x] vc anchor re-insertion (S04-D4) — `vc_rooms`: polygon from `VerticalAnchor.footprint_polygon` (re-insert half; subtract half in `anchors.py`)
 - [ ] Per-room post-growth area/dim check (1.5 m² rejection) — distinct from Step 05 aggregate
 - [ ] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
@@ -92,6 +92,15 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   (§4.4 / output role / coverage). Unit test proves recovery reads the spec
   (grown `public` + spec `hub` → role `'hub'`), not the grown role; 33-case
   `label_floor` sweep with synthesized specs. 840 passed + 5 xfailed; ruff clean.
+- 2026-06-03 — 4.4 landed. `vc_rooms(specs, anchors)` — the re-insert half of
+  the S04-D4 donut-hole (subtract half already in `anchors.py`): each
+  `vertical_circulation` spec → a fixed `LabeledRoom` with polygon =
+  `VerticalAnchor.footprint_polygon` (the punched-out hole) + area = footprint
+  area; `host_role=None` shafts get no room. `label_floor` gains `anchors=()`
+  and appends them — now the full grown+vc floor assembler (default keeps 4.3
+  callers intact). Synthetic tests only (33 goldens have no anchors); full
+  subtract→grow→re-insert tiling (overlap-free) deferred to run() (4.6) /
+  corpus B (4.10). 843 passed + 5 xfailed; ruff clean.
 
 ---
 

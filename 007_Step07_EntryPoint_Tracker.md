@@ -22,7 +22,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path (**+S07-D6**) | Done | `99c0a67` |
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Done | `5f925cc` |
-| 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Todo | — |
+| 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Done | `5873294` |
 | 4.10 | Test corpus B — realistic apartment fixtures + failure-injection | Todo | — |
 | 4.11 | xfail resolution — corridor single-component + K>seedable graceful | Todo | — |
 | 4.12 | Close — README/Tracker/Progress sync + `--no-ff` merge | Todo | — |
@@ -139,6 +139,16 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   growth (target-agnostic, S04-D3), not design proportions — geometry is sound;
   proportion tuning is area-aware growth (deferred). Canonical 12-layer SVG =
   Step 08. 926 passed + 5 xfailed; ruff clean.
+- 2026-06-03 — 4.9 landed (corpus A). `test_golden_run.py`: every case →
+  `run()` (program synthesized from its growth_fixture) → **GEOS-stable** digest
+  golden (`run.json`: valid + failure_codes + per-room id/role/usage/area_m2 +
+  corridor count/area; areas 6 dp like the layout/corridor region-id digests,
+  not coordinate-level). 33 goldens committed (with the test — first creation):
+  31 valid, **case_24 + case_27** valid=False (`PROGRAM_CARDINALITY_INSUFFICIENT`
+  — those abstract shapes lack a public/wet room; the failure path is contract).
+  Confirms run() = the corridor_auto path carried through labeling. 959 passed
+  + 5 xfailed; ruff clean. (Corpus A done; corpus B + failure-injection = 4.10
+  → then the DoD test-corpus item is fully checked.)
 
 ---
 

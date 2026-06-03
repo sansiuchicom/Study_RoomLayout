@@ -179,6 +179,7 @@ pass. Each is either an **intended defer** (lands in a named later Step) or an
 | 5 xfail latent geometry/algorithm bugs: regionize centroid-on-cut atom loss (B5) + disconnected-union area loss (B6); territory 3-way-overlap coverage hole (C10); growth `K > seedable regions` → `IndexError` not graceful; corridor network not guaranteed single-connected-component | Pinned `xfail` PoCs; none triggered by the 33 goldens. Addressed when a real input hits them (Step 07+). |
 | `check_access_schema` is a no-op stub | Step 09–10 (S05-D4 — no `AccessPolicy` concept yet). |
 | Non-apartment typologies (house/hotel/office/warehouse) | Data-only adds (S06-D5) when scoped; may not fit the 4-role model — needs evaluation. |
+| Wall thickness → clear-area room polygons (centerline → inner-face inset) | Deferred — v1 contract is **centerline** (Pipeline §2.4, ResearchBIM-aligned); wall thickness is ignored. When needed it is a *separable post-transform* on the final polygons (uniform: inward `buffer(-t/2)`; per-wall: build the shared-edge wall graph → assign thickness → subtract wall solids) — or a downstream IFC concern (`IfcWall` thickness → derived `IfcSpace`). **Not** a core-pipeline change: growth / regionize / labeling all operate in centerline space. No committed Step; revisit when IFC clear-area or a wall-thickness input is scoped. |
 
 ## 5.3 Accepted limitations (deliberately not fixed)
 

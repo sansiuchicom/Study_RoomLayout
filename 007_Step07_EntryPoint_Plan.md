@@ -209,6 +209,7 @@ Each item is one commit (proto3:D015). Mirrors into Tracker §1 (proto3:D016).
 | The 3 latent geometry xfails (B5 atom loss / B6 disconnected-union / C10 3-way overlap) | Fixed when a real input triggers them (Step 07+); none is hit by the 33 goldens. |
 | role↔usage auto-mapping | Not built (S06-D3). `usage` is carried through from `SpaceUnitSpec`, never guessed from `role`. |
 | Area-aware growth (consuming `area_target_m2`) | No consumer (S04-D3 / S06-D2); growth stays target-agnostic. Step 07 reads only `area_min`/`min_dim` (per-room gate). |
+| Wall-thickness clear-area inset (centerline → inner-face room polygons) | v1 contract is **centerline** (Pipeline §2.4, ResearchBIM-aligned), wall thickness ignored. A *separable post-transform* on the output (uniform → inward `buffer(-t/2)`; per-wall → wall-graph subtraction), or a downstream IFC concern (`IfcWall` thickness → derived `IfcSpace`) — never ripples into growth/regionize/labeling (all centerline). See Progress Tracker §5.2. |
 
 ---
 

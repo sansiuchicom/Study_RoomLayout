@@ -1,0 +1,42 @@
+{
+  "valid": true,
+  "failure_codes": [],
+  "floors": [
+    {
+      "level": 1,
+      "n_rooms": 4,
+      "rooms": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_m2": 31.124997,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_m2": 17.324998,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "private",
+          "usage": null,
+          "area_m2": 18.674997,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4",
+          "role": "wet",
+          "usage": null,
+          "area_m2": 26.175,
+          "anchor_id": null
+        }
+      ],
+      "n_corridor_polygons": 1,
+      "corridor_area_m2": 2.7
+    }
+  ]
+}

@@ -32,6 +32,7 @@ from room_layout.schema.failure import (
     DimGateFailure,
     DomainGateFailure,
     FailureRecord,
+    GeometryFailure,
     ProgramInstantiationFailure,
 )
 from room_layout.schema.geometry import (
@@ -57,6 +58,7 @@ from room_layout.schema.program import (
     SpaceUnitSpec,
     TargetType,
 )
+from room_layout.schema.run_config import RunConfig
 from room_layout.schema.serialize import (
     coords_to_polygon,
     from_dict,
@@ -68,6 +70,7 @@ from room_layout.schema.serialize import (
 from room_layout.schema.target import (
     TargetRules,
 )
+from room_layout.schema.trace import StageOutput
 from room_layout.schema.validators import (
     WARN_PREFIX,
     validate_input,
@@ -82,6 +85,7 @@ __all__ = [
     "DoorKind",
     "FailureRecord",
     "FloorShape",
+    "GeometryFailure",
     "LabeledFloorLayout",
     "LabeledRoom",
     "LabeledRoomLayout",
@@ -90,9 +94,11 @@ __all__ = [
     "ProgramRequest",
     "Ring",
     "Role",
+    "RunConfig",
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "StageOutput",
     "TargetRules",
     "TargetType",
     "VerticalAnchor",

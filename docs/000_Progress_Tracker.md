@@ -88,9 +88,31 @@ D-series cumulative: D001-D006 accepted; proto3:D001-D023 audited;
 S02-D1..D13 + S03-D1..D16 + S04-D1..D8 + S05-D1..D8 in their Step Plans;
 S06-D1..D6 in `006_Step06_TargetRules_Plan.md` §2.
 
-Next: open Step 07 (Entry point + labeling) — the join of the geometry
-half (03/04) and the program half (05/06). Archive Step 06 docs at its
-§4.1 kickoff.
+Step 07 (Entry point + labeling) **complete** on `step07-entrypoint`
+(2026-06-03; D005 — branched, integration + regression-risk triggers).
+**NOT yet merged** — pending external review, then `--no-ff` to `main`.
+
+The public `run(shape, program, *, seed) -> LabeledRoomLayout` (D001) works
+end-to-end — the join of geometry (03/04) + program (05/06):
+- `run.py` (NEW) — per-floor loop: validate_input → rules-from-`target_type`
+  (S07-D6) → multi-floor gate → admission (stage01/02) → subtract_anchors →
+  atomize/regionize/region_graph → growth → carve → orphan-corridor bridge →
+  labeling → per-room gate → assemble. Failure composition: catch the raisers +
+  collect the per-room records → `valid=False`, never crashes (proto3:D018);
+  `on_stage` hook (pure default).
+- NEW modules: `stages/polygonize.py` (S04-D2), `stages/labeling.py` (§3.8 +
+  vc re-insertion S04-D4), `constraints/room_gate.py` (per-room 1.5 m² reject),
+  `stages/corridor_bridge.py` (orphan dead-corridor → connected spine),
+  `schema/{trace,run_config}.py`, `debug_run.py` (D006 trace persistence),
+  `viz/stages/final.py` (S01-D10 renderer).
+- S07-D1..D6. Test corpus (S07-D2): 33-case end-to-end run goldens (A) +
+  authored apartment fixtures (B: anchored / admission-fail / per-room-fail).
+  4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge).
+  970 pytest + 4 xfail (conda `IfcOpenHouse`, GEOS 3.14.1); ruff clean.
+
+Two findings recorded as deferred (post-v1, paper-grade): target-agnostic
+growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
++ wall-thickness clear-area inset (§5.2).
 ```
 
 ---
@@ -117,24 +139,21 @@ half (03/04) and the program half (05/06). Archive Step 06 docs at its
 | 2026-05-29 | Step 04 Algorithm core port — completed + **merged to `main`** (`969c4f0`, --no-ff; 22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). |
 | 2026-06-02 | Step 05 Program layer port — completed on `step05-programlayer` (18 commits; 8 work items). `constraints/gates.py` (4 pure gates, m units) + `schema/target.py` (`TargetRules`) + `ProgramInstantiationFailure` + `stage01_program` (cardinality only, S05-D8) + `stage02_gate` (floor-scoped area+dim, S05-D6 revised). `area_min_m2` → required / `area_target_m2` → optional (S05-D1); 33 golden inputs regenerated, **region-id digests unchanged** (S04-D3 target-agnostic guard, S05-D7). S05-D1..D8. Pre-close adversarial review: 0 gate-logic bugs, 5 fixes (`c5c06a4`). 690 pytest + 5 xfail under GEOS 3.14.1; ruff clean. **Merged to `main` `f3f4906` (--no-ff); branch deleted + pushed.** Post-merge: review-driven density_factor upper bound + doc sync. |
 | 2026-06-02 | Step 06 Target rules system — completed on `main` (D005, no merge; 7 work items, ~13 commits). `TargetRules.default_min_area_m2` (full Role map, S06-D1) + `target/rules_loader` (thin JSON-boundary + finite, S06-D4, domain delegated S06-D2가) + single generic `TargetAdapter` (S06-D5, no target_type S06-D6) + `apartment.json` + citation-ready graded provenance README + `expand_program` ({role:count}→ProgramRequest) + pyproject package-data (wheel verified). Canonical fixes at kickoff (Pipeline §5.1 DoD role↔usage + anchor slot; Arch L90-91). S06-D1..D6. DoD test: expand output passes stage01+stage02; apartment.json admits all 33 goldens. 730 pytest + 5 xfail; ruff check + format clean. apartment values from a verified search-LLM survey; non-apartment typologies surveyed separately (may not fit 4-role model — out of scope). |
+| 2026-06-03 | Step 07 Entry point + labeling — completed on `step07-entrypoint` (12 work items; **not merged** — pending external review, then `--no-ff` to `main`). The public `run()` (D001) end-to-end: `run.py` join + `polygonize` (S04-D2) + `labeling` (§3.8, 7-class role/usage recovery) + vc anchor re-insertion (S04-D4) + per-room `room_gate` (1.5 m² reject) + `corridor_bridge` (orphan dead-corridor → connected spine) + failure composition (proto3:D018, never crashes out) + `on_stage`/`debug_run` D006 trace + final-layout matplotlib renderer (S01-D10). S07-D1..D6. Corpus A (33 end-to-end run goldens) + B (authored apartment fixtures). 4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge). Geometry stays byte-identical to Cell (bridge is a post-step over the unchanged carve). 970 pytest + 4 xfail (GEOS 3.14.1); ruff clean. 2 deferred findings: area-aware growth (`docs/000_area_aware_growth.md`) + wall-thickness clear-area inset (§5.2). |
 
 ---
 
 # 3. Next actions
 
-Steps 03/04 (geometry half) and 05/06 (program half) are both complete.
-**Open Step 07 (Entry point + labeling)** per Pipeline §5.1 — the join:
+**Step 07 (Entry point + labeling) complete** on `step07-entrypoint`
+(2026-06-03) — `run()` works end-to-end (see §1). **NOT merged** — pending
+external review, then `--no-ff` to `main` (S07-D1).
 
-1. `run(shape, program, *, seed) -> LabeledRoomLayout` assembled (D001):
-   per-floor loop runs geometry (atomize→corridor) + program
-   (expand?/stage01/stage02), then the §3.8 labeling stage.
-2. The Step-04/05-deferred cluster lands here: `vertical_circulation`
-   anchor fixed-room re-insertion (S04-D4); `check_multi_floor_feasibility`
-   call site (S05-D6); per-room post-growth area/dim check (the 1.5 m²
-   rejection — distinct from Step 05's aggregate admission); corridor
-   single-connected-component (xfail PoC); `usage` set on output rooms.
-3. At the Step 07 §4.1 kickoff commit, archive Step 06 docs
-   (`git mv 006_Step06_*.md legacy/step06/`, proto3:D016 H011).
+Next: **Step 08 (SVG visualization)** — the v1 ship gate (Pipeline §5.1): the
+canonical 12-layer SVG renderer + `make_gif()`, consuming the `StageOutput`
+trace + `debug_run` layout that Step 07 (4.6 / 4.7) landed. At the Step 08
+§4.1 kickoff, archive the Step 07 docs (`git mv 007_*.md legacy/step07/`,
+proto3:D016 H011).
 
 (Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
 warehouse rules + US/EU/KR is in flight. Those typologies may not fit the
@@ -176,6 +195,8 @@ pass. Each is either an **intended defer** (lands in a named later Step) or an
 | 5 xfail latent geometry/algorithm bugs: regionize centroid-on-cut atom loss (B5) + disconnected-union area loss (B6); territory 3-way-overlap coverage hole (C10); growth `K > seedable regions` → `IndexError` not graceful; corridor network not guaranteed single-connected-component | Pinned `xfail` PoCs; none triggered by the 33 goldens. Addressed when a real input hits them (Step 07+). |
 | `check_access_schema` is a no-op stub | Step 09–10 (S05-D4 — no `AccessPolicy` concept yet). |
 | Non-apartment typologies (house/hotel/office/warehouse) | Data-only adds (S06-D5) when scoped; may not fit the 4-role model — needs evaluation. |
+| Wall thickness → clear-area room polygons (centerline → inner-face inset) | Deferred — v1 contract is **centerline** (Pipeline §2.4, ResearchBIM-aligned); wall thickness is ignored. When needed it is a *separable post-transform* on the final polygons (uniform: inward `buffer(-t/2)`; per-wall: build the shared-edge wall graph → assign thickness → subtract wall solids) — or a downstream IFC concern (`IfcWall` thickness → derived `IfcSpace`). **Not** a core-pipeline change: growth / regionize / labeling all operate in centerline space. No committed Step; revisit when IFC clear-area or a wall-thickness input is scoped. |
+| Realistic program → target-agnostic growth → per-room reject (a realistic apartment can grow `valid=False`; implausible proportions, e.g. kitchen > living) | Deferred — the real fix is **area-aware growth** (post-v1 Step; the consumer `area_target_m2`/S06-D2 reserved). Full analysis: solution space (A area-aware growth / B gate-split stopgap / C v1-do-nothing) + open sub-problems (living↔circulation boundary; area-min-risk growth priority) in `docs/000_area_aware_growth.md`. Golden-locked by `apt_undersized_room` (flips to `valid=True` when A lands). v1 keeps growth target-agnostic + the §4.5 gate as-is. |
 
 ## 5.3 Accepted limitations (deliberately not fixed)
 

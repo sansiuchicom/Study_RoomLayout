@@ -1,0 +1,15 @@
+{
+  "valid": false,
+  "failure_codes": [
+    "PROGRAM_CARDINALITY_INSUFFICIENT"
+  ],
+  "floors": [
+    {
+      "level": 1,
+      "n_rooms": 0,
+      "rooms": [],
+      "n_corridor_polygons": 0,
+      "corridor_area_m2": 0
+    }
+  ]
+}

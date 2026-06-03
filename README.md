@@ -12,30 +12,37 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 06 (Target rules system) complete on `main` (2026-06-02). The full
-algorithm now lives in `src/room_layout/` — Cell **Phase 3–8**: territory /
-atomize / regionize / atom_graph / region_graph (Step 03) + seed_placement /
-growth_* / room_growth / shape_gate / corridor stack (Step 04) — plus
-`program_adapter` and `anchors.subtract_anchors`. Step 05 added the program
-**admission** layer: `constraints/gates.py` (4 domain gates),
-`schema/target.py` (`TargetRules`), `stages/stage01_program.py` +
-`stages/stage02_gate.py`. Step 06 added the **target-rules** system:
-`target/rules_loader.py` + single generic `target/adapter.py` +
-`target/expand_program.py` + `data/target_rules/apartment.json` (+ a
-citation-graded provenance README). Ported growth + corridor are
-**byte-identical to the predecessor `Study_RoomLayout_Cell` across all 33
-cases**. Per-stage golden regression (layout / seed / corridor digests + PNG
-sidecars). 732 pytest + 5 xfail under the canonical runtime (conda
-`IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1).
+Step 07 (Entry point + labeling) complete on `step07-entrypoint` (2026-06-03,
+**not yet merged** — pending external review). The public entry point now works
+end-to-end:
 
-Step 04 ends at a region-based `CorridoredLayout` (S04-D2); polygonization +
-`LabeledRoomLayout` + the deferred anchor / corridor-connectivity cluster are
-**Step 07**. Steps 05–06 are admission + program-building only (pre-growth);
-the public `run()` entry point is **Step 07**.
+```python
+def run(shape: ShapeInput, program: ProgramRequest, *, seed: int) -> LabeledRoomLayout
+```
 
-**Next**: Step 07 (Entry point + labeling) — the `run()` join of the geometry
-half (03/04) and the program half (05/06), plus the deferred anchor /
-per-room-check / corridor-connectivity cluster.
+`run()` (D001) joins the geometry half (Step 03/04: atomize → … → corridor) and
+the program half (Step 05/06: admission gates + program building), then
+**polygonizes** the region-based `CorridoredLayout` (S04-D2), runs the §3.8
+**labeling** stage (7-class role/usage recovery + `area_m2`), re-inserts
+`vertical_circulation` **anchor** rooms (S04-D4), applies the **per-room**
+post-growth area/dim gate, **bridges** orphan corridors into one connected
+spine, and assembles a `LabeledRoomLayout` (`valid=False` ⇒ non-empty
+`failure_records`, proto3:D018; never crashes). A pure-function `on_stage`
+trace hook + `debug_run` persistence (D006) and a final-layout matplotlib
+renderer (S01-D10) ship too.
+
+The geometry pipeline (Cell Phase 3–8) stays **byte-identical to the
+predecessor `Study_RoomLayout_Cell` across all 33 cases** — the orphan-corridor
+bridge is a *post-step* over the unchanged carve. 970 pytest + 4 xfail under the
+canonical runtime (conda `IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1); per-stage
++ end-to-end golden regression.
+
+Two limitations are recorded as deferred (post-v1): target-agnostic growth can
+grow a realistic program *invalid* (`docs/000_area_aware_growth.md`), and
+wall-thickness clear-area inset (Progress Tracker §5.2).
+
+**Next**: Step 08 (SVG visualization) — the v1 ship gate: a canonical 12-layer
+SVG renderer + `make_gif()` consuming the `StageOutput` trace.
 
 Canonical docs live under `docs/`:
 

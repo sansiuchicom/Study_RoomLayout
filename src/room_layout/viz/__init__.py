@@ -7,7 +7,11 @@ renderers arrive incrementally:
 
 - **Step 03** (geometry pipeline port) brings Cell's matplotlib
   renderers as the development-bridge viz path (PNG output).
-- **Step 07** (SVG visualization) ships the canonical SVG renderer
+- **Step 07** (entry point + labeling) adds the final
+  ``LabeledRoomLayout`` matplotlib renderer (polygonized rooms +
+  corridor polygons + vc anchors) plus the ``on_stage`` /
+  ``StageOutput`` JSON trace (D006).
+- **Step 08** (SVG visualization) ships the canonical SVG renderer
   plus the ``make_gif()`` composition helper (adds ``pillow`` or
   ``imageio`` to the ``viz`` extra at that point).
 

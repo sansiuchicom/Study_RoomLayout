@@ -1,0 +1,35 @@
+{
+  "valid": true,
+  "failure_codes": [],
+  "floors": [
+    {
+      "level": 1,
+      "n_rooms": 3,
+      "rooms": [
+        {
+          "id": "space_1",
+          "role": "public",
+          "usage": null,
+          "area_m2": 34.05,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2",
+          "role": "private",
+          "usage": null,
+          "area_m2": 15.0,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3",
+          "role": "wet",
+          "usage": null,
+          "area_m2": 12.0,
+          "anchor_id": null
+        }
+      ],
+      "n_corridor_polygons": 1,
+      "corridor_area_m2": 7.95
+    }
+  ]
+}

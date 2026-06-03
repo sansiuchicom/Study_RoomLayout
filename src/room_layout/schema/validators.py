@@ -28,6 +28,8 @@ Stable failure codes emitted by this module:
   to it as a walk-in room. (error)
 - ``ANCHOR_FLOOR_RANGE_MISMATCH`` — the spec's containing floor level
   is outside the resolved anchor's `floor_range`. (error)
+- ``ANCHOR_OUTSIDE_FOOTPRINT`` — a `VerticalAnchor` footprint protrudes
+  outside the floor it spans (would emit an out-of-building room). (error)
 - ``PROGRAM_FLOOR_NOT_IN_SHAPE`` — `ProgramRequest.floor_programs`
   references a level not in `ShapeInput.floors`. (error)
 - ``WARN_ANCHOR_UNUSED`` — a `VerticalAnchor` with
@@ -40,6 +42,9 @@ short-circuit with a `valid=False` `LabeledRoomLayout` carrying
 """
 
 from collections import Counter
+
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 from room_layout.schema.failure import FailureRecord
 from room_layout.schema.geometry import ShapeInput
@@ -60,6 +65,7 @@ def validate_input(shape: ShapeInput, program: ProgramRequest) -> list[FailureRe
     _check_duplicate_anchor_ids(shape, records)
     _check_duplicate_floor_levels(shape, records)
     _check_duplicate_spec_ids(program, records)
+    _check_anchor_footprint_containment(shape, records)
 
     anchors_by_id = {a.id: a for a in shape.vertical_anchors}
     shape_levels = {fs.level for fs in shape.floors}
@@ -192,6 +198,39 @@ def _check_duplicate_floor_levels(shape: ShapeInput, records: list[FailureRecord
                     data={"level": level, "count": count},
                 )
             )
+
+
+def _check_anchor_footprint_containment(shape: ShapeInput, records: list[FailureRecord]) -> None:
+    """Each anchor's footprint must lie within the floor(s) it spans — otherwise a
+    `vertical_circulation` room would be emitted outside the building (S07 review).
+    Boundary-touching is fine; only area *protruding* outside the floor fails."""
+    floors_by_level = {fs.level: fs for fs in shape.floors}
+    for anchor in shape.vertical_anchors:
+        start, end = anchor.floor_range
+        for level in range(start, end + 1):
+            floor = floors_by_level.get(level)
+            if floor is None:
+                continue  # missing floor is a separate concern (range vs shape)
+            floor_poly = unary_union(
+                [Polygon(p.exterior, [list(h) for h in p.holes]) for p in floor.parts]
+            )
+            outside = anchor.footprint_polygon.difference(floor_poly).area
+            if outside > 1e-9:
+                records.append(
+                    FailureRecord(
+                        code="ANCHOR_OUTSIDE_FOOTPRINT",
+                        stage=_STAGE,
+                        message=(
+                            f"VerticalAnchor {anchor.id!r} footprint protrudes "
+                            f"{outside:.3f} m² outside floor {level}"
+                        ),
+                        data={
+                            "anchor_id": anchor.id,
+                            "level": level,
+                            "outside_area_m2": round(outside, 4),
+                        },
+                    )
+                )
 
 
 def _check_duplicate_spec_ids(program: ProgramRequest, records: list[FailureRecord]) -> None:

@@ -16,7 +16,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 |---|---|---|---|
 | 4.1 | Kickoff — Plan/Tracker + `git mv` Step 06 → `legacy/step06/` + `viz/__init__.py` doc fix (S07-D4) + Progress Tracker | Done | `cd4bc3a` |
 | 4.2 | `stages/polygonize.py` (NEW) — region-id sets → room + corridor polygons (S04-D2, **+S07-D5**) | Done | `18bc4c6` |
-| 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Todo | — |
+| 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Done | `175a576` |
 | 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Todo | — |
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Todo | — |
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path | Todo | — |
@@ -35,7 +35,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 - [ ] `run(shape, program, *, seed)` assembled (D001); per-floor loop; `on_stage` hook (default None = pure)
 - [x] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2; S07-D5 — room=single Polygon loud-guard, corridor=list)
-- [ ] Labeling (§3.8): 7-class role/usage recovery + `area_m2`; usage carried through (S06-D3)
+- [x] Labeling (§3.8): 7-class role/usage recovery (`name==id`) + `area_m2` (polygon, S07-D6); usage carried through (S06-D3)
 - [ ] vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint_polygon`
 - [ ] Per-room post-growth area/dim check (1.5 m² rejection) — distinct from Step 05 aggregate
 - [ ] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
@@ -84,6 +84,14 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   Area conservation verified across all 137 rooms + corridor components. The
   union primitive already existed in viz (display-only); 4.2 makes it the
   persisted contract output. 805 passed + 5 xfailed; ruff clean.
+- 2026-06-03 — 4.3 landed. `stages/labeling.py`: `label_room` (recovers the
+  7-class role + usage from the spec via `name == id` — growth's 4-class
+  collapse is undone here; `area_m2` from the polygon, S07-D6, not
+  `GrownRoom.area_m2`) + `label_floor` (polygonize each room + corridor regions
+  → `corridor_polygons`). vc / corridor / leftover deliberately not labeled here
+  (§4.4 / output role / coverage). Unit test proves recovery reads the spec
+  (grown `public` + spec `hub` → role `'hub'`), not the grown role; 33-case
+  `label_floor` sweep with synthesized specs. 840 passed + 5 xfailed; ruff clean.
 
 ---
 

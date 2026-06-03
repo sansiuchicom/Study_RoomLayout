@@ -24,7 +24,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Done | `5f925cc` |
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Done | `5873294` |
 | 4.10 | Test corpus B — authored fixtures (anchored / admission-fail / per-room-fail) + glob bug fix | Done | `ac185d9` |
-| 4.11 | xfail resolution — corridor single-component + K>seedable graceful | Todo | — |
+| 4.11 | xfail resolution — ① K>seedable graceful + ② orphan-corridor absorb | Done | `ea04b08`+`89ee269` |
 | 4.12 | Close — README/Tracker/Progress sync + `--no-ff` merge | Todo | — |
 
 ---
@@ -42,7 +42,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
 - [x] Viz (S01-D10): final `LabeledFloorLayout` matplotlib renderer (`save_labeled_floor_figure`) + `viz/__init__.py` doc fix (kickoff)
 - [x] Test corpus A (33 cases → run-goldens) + B (anchored / admission-fail / per-room-fail fixtures)
-- [ ] xfail: 2 Step-07 PoCs reviewed; 3 latent stay xfail
+- [x] xfail: 2 Step-07 PoCs resolved (① K>seedable flipped to pass; ② orphan absorb shipped, corridor xfail retained as Cell-faithfulness PoC); 3 latent (B5/B6/C10) stay
 - [ ] ruff (check AND format) clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1)
 - [ ] Plan/Tracker closed; S07-D series finalized; merged `--no-ff` to `main`
 
@@ -165,7 +165,21 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   clean. **Open design question** (the §4.10 finding): how should the pipeline
   handle "realistic program → target-agnostic growth → per-room reject"?
   (area-aware growth vs gate stance vs program-as-hint) — to be discussed +
-  recorded as a deferred concern.
+  recorded as a deferred concern. → recorded in `docs/000_area_aware_growth.md`
+  + Progress Tracker §5.2 (commit `ed5c836`).
+- 2026-06-03 — 4.11 landed (both PoCs). **① K>seedable** (`ea04b08`):
+  `growth_partition` guards `len(placements) < K` → `DomainGateFailure`
+  (`GROWTH_OVERSUBSCRIBED`); run() catches → valid=False; the strict xfail
+  flipped to pass. **② orphan corridor** (`89ee269`): a probe showed the
+  "corridor single-component" failure is **not an access gap** (every room
+  reaches the hub via the base corridor — verified) but an orphan detour-shortcut
+  = dead space; and it occurs **only on the manual-seed path** — production
+  run() auto-seed has 0 orphans across all 33 cases. Shipped
+  `absorb_orphan_corridors` (a repo post-step over the byte-identical Cell carve;
+  no-op in production, firing path tested via manual-seed case_33: orphan→0, area
+  conserved, idempotent). The corridor xfail stays as the carve-stage
+  Cell-faithfulness PoC (reason corrected). **xfail 5 → 4** (K>seedable resolved;
+  B5/B6/C10 + corridor remain). 968 passed + 4 xfailed; ruff clean.
 
 ---
 

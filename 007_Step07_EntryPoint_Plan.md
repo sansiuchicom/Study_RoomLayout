@@ -1,6 +1,6 @@
 # 007 Step 07 — Entry Point + Labeling Plan
 
-Status: Completed (on `step07-entrypoint`; **not yet merged** — pending external review)
+Status: Completed — **merged to `main`** (`68e8df2`, `--no-ff`, 2026-06-03) after external + adversarial review response (`0c03b69`)
 Type: Step plan
 Branch: `step07-entrypoint` (D005 — triggers fired: **integration** [joins the
 03/04 geometry half + 05/06 program half] + **regression risk** [first `run()`

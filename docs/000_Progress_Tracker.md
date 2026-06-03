@@ -90,7 +90,9 @@ S06-D1..D6 in `006_Step06_TargetRules_Plan.md` §2.
 
 Step 07 (Entry point + labeling) **complete** on `step07-entrypoint`
 (2026-06-03; D005 — branched, integration + regression-risk triggers).
-**NOT yet merged** — pending external review, then `--no-ff` to `main`.
+**Merged to `main`** (`68e8df2`, `--no-ff`, 2026-06-03) after an external +
+adversarial review response (`0c03b69` — never-crashes hardening + anchor/schema
+validation).
 
 The public `run(shape, program, *, seed) -> LabeledRoomLayout` (D001) works
 end-to-end — the join of geometry (03/04) + program (05/06):
@@ -139,15 +141,16 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 | 2026-05-29 | Step 04 Algorithm core port — completed + **merged to `main`** (`969c4f0`, --no-ff; 22 work-item commits; 4.15 anchor re-insertion deferred to Step 07). Cell Phase 6–8 (seed/growth/corridor) + shape_gate ported, **byte-identical to Cell live on all 33 cases**; + `program_adapter` (S04-D3) + `subtract_anchors` (S04-D4 donut-hole). layout/seed/auto/corridor goldens + PNG sidecars; 643 pytest + 5 xfail under GEOS 3.14.1; ruff clean. S04-D1..D8. Verified via 33-case Cell cross-check + 2 adversarial-verification workflows (growth_absorb, growth_partition: 0 confirmed). |
 | 2026-06-02 | Step 05 Program layer port — completed on `step05-programlayer` (18 commits; 8 work items). `constraints/gates.py` (4 pure gates, m units) + `schema/target.py` (`TargetRules`) + `ProgramInstantiationFailure` + `stage01_program` (cardinality only, S05-D8) + `stage02_gate` (floor-scoped area+dim, S05-D6 revised). `area_min_m2` → required / `area_target_m2` → optional (S05-D1); 33 golden inputs regenerated, **region-id digests unchanged** (S04-D3 target-agnostic guard, S05-D7). S05-D1..D8. Pre-close adversarial review: 0 gate-logic bugs, 5 fixes (`c5c06a4`). 690 pytest + 5 xfail under GEOS 3.14.1; ruff clean. **Merged to `main` `f3f4906` (--no-ff); branch deleted + pushed.** Post-merge: review-driven density_factor upper bound + doc sync. |
 | 2026-06-02 | Step 06 Target rules system — completed on `main` (D005, no merge; 7 work items, ~13 commits). `TargetRules.default_min_area_m2` (full Role map, S06-D1) + `target/rules_loader` (thin JSON-boundary + finite, S06-D4, domain delegated S06-D2가) + single generic `TargetAdapter` (S06-D5, no target_type S06-D6) + `apartment.json` + citation-ready graded provenance README + `expand_program` ({role:count}→ProgramRequest) + pyproject package-data (wheel verified). Canonical fixes at kickoff (Pipeline §5.1 DoD role↔usage + anchor slot; Arch L90-91). S06-D1..D6. DoD test: expand output passes stage01+stage02; apartment.json admits all 33 goldens. 730 pytest + 5 xfail; ruff check + format clean. apartment values from a verified search-LLM survey; non-apartment typologies surveyed separately (may not fit 4-role model — out of scope). |
-| 2026-06-03 | Step 07 Entry point + labeling — completed on `step07-entrypoint` (12 work items; **not merged** — pending external review, then `--no-ff` to `main`). The public `run()` (D001) end-to-end: `run.py` join + `polygonize` (S04-D2) + `labeling` (§3.8, 7-class role/usage recovery) + vc anchor re-insertion (S04-D4) + per-room `room_gate` (1.5 m² reject) + `corridor_bridge` (orphan dead-corridor → connected spine) + failure composition (proto3:D018, never crashes out) + `on_stage`/`debug_run` D006 trace + final-layout matplotlib renderer (S01-D10). S07-D1..D6. Corpus A (33 end-to-end run goldens) + B (authored apartment fixtures). 4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge). Geometry stays byte-identical to Cell (bridge is a post-step over the unchanged carve). 970 pytest + 4 xfail (GEOS 3.14.1); ruff clean. 2 deferred findings: area-aware growth (`docs/000_area_aware_growth.md`) + wall-thickness clear-area inset (§5.2). |
+| 2026-06-03 | Step 07 Entry point + labeling — completed on `step07-entrypoint` (12 work items; **merged to `main`** `68e8df2` `--no-ff` + external/adversarial review response `0c03b69`). The public `run()` (D001) end-to-end: `run.py` join + `polygonize` (S04-D2) + `labeling` (§3.8, 7-class role/usage recovery) + vc anchor re-insertion (S04-D4) + per-room `room_gate` (1.5 m² reject) + `corridor_bridge` (orphan dead-corridor → connected spine) + failure composition (proto3:D018, never crashes out) + `on_stage`/`debug_run` D006 trace + final-layout matplotlib renderer (S01-D10). S07-D1..D6. Corpus A (33 end-to-end run goldens) + B (authored apartment fixtures). 4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge). Geometry stays byte-identical to Cell (bridge is a post-step over the unchanged carve). 975 pytest + 4 xfail (GEOS 3.14.1); ruff clean. Review response (`0c03b69`): never-crashes hardening (GROWTH_OVERSUBSCRIBED / FLOOR_CONSUMED_BY_ANCHORS caught in `run()`) + anchor-footprint containment + ShapePart polygon-validity + non-vc `anchor_id` invariant. 2 deferred findings: area-aware growth (`docs/000_area_aware_growth.md`) + wall-thickness clear-area inset (§5.2). |
 
 ---
 
 # 3. Next actions
 
 **Step 07 (Entry point + labeling) complete** on `step07-entrypoint`
-(2026-06-03) — `run()` works end-to-end (see §1). **NOT merged** — pending
-external review, then `--no-ff` to `main` (S07-D1).
+(2026-06-03) — `run()` works end-to-end (see §1). **Merged to `main`**
+(`68e8df2`, `--no-ff`, 2026-06-03) after an external + adversarial review
+response (`0c03b69`).
 
 Next: **Step 08 (SVG visualization)** — the v1 ship gate (Pipeline §5.1): the
 canonical 12-layer SVG renderer + `make_gif()`, consuming the `StageOutput`

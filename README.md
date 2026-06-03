@@ -12,9 +12,10 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
-Step 07 (Entry point + labeling) complete on `step07-entrypoint` (2026-06-03,
-**not yet merged** — pending external review). The public entry point now works
-end-to-end:
+Step 07 (Entry point + labeling) complete and **merged to `main`** (`68e8df2`,
+`--no-ff`, 2026-06-03) after an external + adversarial review response
+(`0c03b69` — never-crashes hardening + anchor/schema validation). The public
+entry point now works end-to-end:
 
 ```python
 def run(shape: ShapeInput, program: ProgramRequest, *, seed: int) -> LabeledRoomLayout

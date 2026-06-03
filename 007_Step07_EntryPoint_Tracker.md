@@ -1,6 +1,6 @@
 # 007 Step 07 — Entry Point + Labeling Tracker
 
-Status: Completed (on `step07-entrypoint`; **not yet merged** — pending external review)
+Status: Completed — **merged to `main`** (`68e8df2`, `--no-ff`, 2026-06-03) after external + adversarial review response (`0c03b69`)
 Type: Step tracker
 Branch: `step07-entrypoint`
 Last updated: 2026-06-03
@@ -201,8 +201,9 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 Step 07 (Entry point + labeling) complete on `step07-entrypoint` — 12 work
 items. The public `run(shape, program, *, seed) -> LabeledRoomLayout` (D001)
-works end-to-end. **Not merged** — pending external review, then `--no-ff` to
-`main` (S07-D1).
+works end-to-end. **Merged to `main`** (`68e8df2`, `--no-ff`, 2026-06-03,
+S07-D1) after an external + adversarial review response (`0c03b69`, see
+"Review response" below).
 
 **Delivered:** the geometry/program join — `run.py` (per-floor loop: admission
 → subtract_anchors → atomize / regionize / region_graph → growth → carve →
@@ -231,6 +232,32 @@ can grow a realistic program invalid (`docs/000_area_aware_growth.md`);
 wall-thickness clear-area inset (Progress Tracker §5.2); the 3 latent geometry
 xfails (B5/B6/C10) + the corridor carve-stage Cell-faithfulness PoC.
 
-**Not done (deliberate):** the merge — deferred to after external review, then
-`--no-ff` to `main` (S07-D1). Step 07 docs are archived at the Step 08 §4.1
-kickoff (proto3:D016 H011).
+**Review response (`0c03b69`, before merge):** an external review (11 findings)
+plus an independent adversarial pass (background agent) were run before merging.
+Reproduced-then-fixed, each with a regression test (`tests/test_run_robustness.py`
++ schema-test additions):
+
+- **never-crashes hardening (#1, #3):** `GROWTH_OVERSUBSCRIBED` (K > seedable
+  regions) and `FLOOR_CONSUMED_BY_ANCHORS` (anchors eat the whole floor) were
+  raising *out* of `run()` — only admission was wrapped, not the geometry/growth
+  block. Wrapped the geometry+labeling block in `try/except (DomainGateFailure,
+  GeometryFailure)` → merged into `failure_records`, `valid=False`, never crashes
+  (proto3:D018 "③"). `anchors.py` raises `FLOOR_CONSUMED_BY_ANCHORS` instead of a
+  bare `FloorShape(parts=[])` `ValueError`.
+- **input validation (#2, #5):** `ANCHOR_OUTSIDE_FOOTPRINT` (anchor footprint not
+  contained by any floor part, `validators.py`) + `ShapePart.__post_init__`
+  polygon-validity check (`explain_validity`) — rejects hole-outside-exterior /
+  self-touching rings that passed per-ring orientation checks.
+- **invariant (adversarial #1):** non-`vertical_circulation` spec carrying an
+  `anchor_id` now raises (`program.py`) — the converse of the existing vc-requires-
+  anchor rule (D004).
+- **docs-only (#10):** `TargetAdapter` docstring corrected — typology identity is
+  `ProgramRequest.target_type`, not the rules JSON (which carries no `target_type`,
+  S06-D6).
+- **kept-as-is (adversarial #2):** an unused vc anchor leaves dead space — accepted
+  (behaves like an un-hosted shaft per D004), logged as WARN, not an error.
+- deferred (#7 area-aware growth, wall-thickness inset) recorded above.
+
+**Merged:** after the review response, `--no-ff` to `main` (`68e8df2`,
+2026-06-03, S07-D1); 975 pytest + 4 xfail, ruff clean. Step 07 docs are archived
+at the Step 08 §4.1 kickoff (proto3:D016 H011).

@@ -82,7 +82,7 @@ def _specs_from(corridored):
     ]
 
 
-_CASES = sorted(p.name for p in GOLDEN.iterdir() if p.is_dir())
+_CASES = sorted(p.name for p in GOLDEN.iterdir() if p.is_dir() and p.name.startswith("case_"))
 
 
 @pytest.mark.parametrize("case", _CASES)

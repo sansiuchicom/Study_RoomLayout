@@ -1,0 +1,51 @@
+{
+  "valid": false,
+  "failure_codes": [
+    "ROOM_BELOW_MIN_AREA"
+  ],
+  "floors": [
+    {
+      "level": 0,
+      "n_rooms": 5,
+      "rooms": [
+        {
+          "id": "bath",
+          "role": "wet",
+          "usage": "bathroom",
+          "area_m2": 7.665,
+          "anchor_id": null
+        },
+        {
+          "id": "bed1",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 15.075,
+          "anchor_id": null
+        },
+        {
+          "id": "bed2",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 14.265,
+          "anchor_id": null
+        },
+        {
+          "id": "kitchen",
+          "role": "service",
+          "usage": "kitchen",
+          "area_m2": 15.075,
+          "anchor_id": null
+        },
+        {
+          "id": "living",
+          "role": "public",
+          "usage": "living",
+          "area_m2": 8.76,
+          "anchor_id": null
+        }
+      ],
+      "n_corridor_polygons": 1,
+      "corridor_area_m2": 2.16
+    }
+  ]
+}

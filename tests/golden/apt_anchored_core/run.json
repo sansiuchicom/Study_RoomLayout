@@ -1,0 +1,42 @@
+{
+  "valid": true,
+  "failure_codes": [],
+  "floors": [
+    {
+      "level": 0,
+      "n_rooms": 4,
+      "rooms": [
+        {
+          "id": "bath",
+          "role": "wet",
+          "usage": "bathroom",
+          "area_m2": 20.0,
+          "anchor_id": null
+        },
+        {
+          "id": "bed1",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 18.0,
+          "anchor_id": null
+        },
+        {
+          "id": "living",
+          "role": "public",
+          "usage": "living",
+          "area_m2": 32.0,
+          "anchor_id": null
+        },
+        {
+          "id": "stair_room",
+          "role": "vertical_circulation",
+          "usage": "stair",
+          "area_m2": 4.0,
+          "anchor_id": "stair"
+        }
+      ],
+      "n_corridor_polygons": 1,
+      "corridor_area_m2": 6.0
+    }
+  ]
+}

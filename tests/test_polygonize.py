@@ -110,7 +110,7 @@ def _carve(case_dir: Path):
     return carve_corridors(floor, growth, regions=regions, region_graph=rg), regions
 
 
-_CASES = sorted(p.name for p in GOLDEN.iterdir() if p.is_dir())
+_CASES = sorted(p.name for p in GOLDEN.iterdir() if p.is_dir() and p.name.startswith("case_"))
 
 
 @pytest.mark.parametrize("case", _CASES)

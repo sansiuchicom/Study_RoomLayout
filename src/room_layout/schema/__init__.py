@@ -58,6 +58,7 @@ from room_layout.schema.program import (
     SpaceUnitSpec,
     TargetType,
 )
+from room_layout.schema.run_config import RunConfig
 from room_layout.schema.serialize import (
     coords_to_polygon,
     from_dict,
@@ -93,6 +94,7 @@ __all__ = [
     "ProgramRequest",
     "Ring",
     "Role",
+    "RunConfig",
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",

@@ -19,7 +19,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Done | `175a576` |
 | 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Done | `098a568` |
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Done | `dd62509` |
-| 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path | Todo | — |
+| 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path (**+S07-D6**) | Done | `99c0a67` |
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Todo | — |
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Todo | — |
@@ -33,12 +33,12 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 (Plan §1 — checked at close.)
 
-- [ ] `run(shape, program, *, seed)` assembled (D001); per-floor loop; `on_stage` hook (default None = pure)
+- [x] `run(shape, program, *, seed)` assembled (D001); per-floor loop; `on_stage` hook (default None = pure)
 - [x] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2; S07-D5 — room=single Polygon loud-guard, corridor=list)
 - [x] Labeling (§3.8): 7-class role/usage recovery (`name==id`) + `area_m2` (polygon, S07-D6); usage carried through (S06-D3)
 - [x] vc anchor re-insertion (S04-D4) — `vc_rooms`: polygon from `VerticalAnchor.footprint_polygon` (re-insert half; subtract half in `anchors.py`)
 - [x] Per-room post-growth area/dim check (`check_grown_rooms`; OBB short side; collect not raise; vc exempt) — distinct from Step 05 aggregate
-- [ ] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
+- [x] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
 - [ ] Viz (S01-D10): final `LabeledRoomLayout` matplotlib renderer + `viz/__init__.py` doc fix
 - [ ] Test corpus A (33 cases → run-goldens) + B (apartment fixtures + failure-injection)
@@ -112,6 +112,22 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   (rotation-invariant). Tests: reject paths + vc exemption + None-dim skip +
   OBB rotation-invariance + 33-sweep (lenient→0, huge→every room). 916 passed
   + 5 xfailed; ruff clean.
+- 2026-06-03 — 4.6 landed (+ S07-D6). The keystone `run.py`: per-floor join
+  (validate_input → rules from `program.target_type` [S07-D6; v1 apartment,
+  else `NO_TARGET_RULES`] → multi-floor gate → admission → subtract_anchors →
+  atomize/regionize/region_graph → program_to_fixture → growth → carve →
+  label_floor[grown+vc] → check_grown_rooms → assemble). **Failure
+  composition:** catch the raisers (Program/Domain/GeometryFailure) + extend
+  with the per-room *collect* → one failure_records; `valid = not failures`;
+  never raises out, partial floors kept (proto3:D018 / Pipeline §2.4).
+  `StageOutput` + the `on_stage` hook landed **here** with `run()` (S07-D3 —
+  invasive; NOT 4.7, which builds its consumers); default None = pure. seed
+  unused (deterministic v1, reserved). `run` + `StageOutput` re-exported from
+  `room_layout`. Tests: case_01 happy path (valid apartment, all polygons
+  valid), determinism, on_stage emission, 3 graceful failure injections
+  (area / cardinality / unknown typology). 924 passed + 5 xfailed; ruff clean.
+  NOT caught here (xfail PoCs → 4.11): K>seedable `IndexError`, corridor
+  single-component.
 
 ---
 

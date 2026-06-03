@@ -23,7 +23,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Done | `5f925cc` |
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Done | `5873294` |
-| 4.10 | Test corpus B — realistic apartment fixtures + failure-injection | Todo | — |
+| 4.10 | Test corpus B — authored fixtures (anchored / admission-fail / per-room-fail) + glob bug fix | Done | `ac185d9` |
 | 4.11 | xfail resolution — corridor single-component + K>seedable graceful | Todo | — |
 | 4.12 | Close — README/Tracker/Progress sync + `--no-ff` merge | Todo | — |
 
@@ -41,7 +41,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [x] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
 - [x] Viz (S01-D10): final `LabeledFloorLayout` matplotlib renderer (`save_labeled_floor_figure`) + `viz/__init__.py` doc fix (kickoff)
-- [ ] Test corpus A (33 cases → run-goldens) + B (apartment fixtures + failure-injection)
+- [x] Test corpus A (33 cases → run-goldens) + B (anchored / admission-fail / per-room-fail fixtures)
 - [ ] xfail: 2 Step-07 PoCs reviewed; 3 latent stay xfail
 - [ ] ruff (check AND format) clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1)
 - [ ] Plan/Tracker closed; S07-D series finalized; merged `--no-ff` to `main`
@@ -149,6 +149,23 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   Confirms run() = the corridor_auto path carried through labeling. 959 passed
   + 5 xfailed; ruff clean. (Corpus A done; corpus B + failure-injection = 4.10
   → then the DoD test-corpus item is fully checked.)
+- 2026-06-03 — 4.10 landed (corpus B) + bug fix. `test_golden_corpus_b.py`: 3
+  **distinct** authored fixtures — `apt_anchored_core` (valid; anchor
+  end-to-end subtract→grow→vc-reinsert, targeted test confirms vc == footprint
+  + zero overlap), `apt_infeasible` (valid=False, admission
+  `DOMAIN_AREA_GATE_FAIL`), `apt_undersized_room` (valid=False, post-growth
+  `ROOM_BELOW_MIN_AREA`). **Finding:** target-agnostic growth (S04-D3) +
+  realistic `area_min` → a realistic apartment can grow *invalid* (the living
+  room got the smallest share, below its min). So corpus B is value-driven (3
+  distinct behaviors, two failure paths golden'd), not a redundant realistic-apt
+  suite — valid non-anchored is corpus A's 31. **Bug fix:** the per-stage sweeps
+  (room_gate/labeling/polygonize) globbed *all* `tests/golden/` dirs, so the new
+  `apt_*` dirs (no growth_fixture) broke `_carve` → filtered to
+  `startswith("case_")` (matching test_golden_run). 965 passed + 5 xfailed; ruff
+  clean. **Open design question** (the §4.10 finding): how should the pipeline
+  handle "realistic program → target-agnostic growth → per-room reject"?
+  (area-aware growth vs gate stance vs program-as-hint) — to be discussed +
+  recorded as a deferred concern.
 
 ---
 

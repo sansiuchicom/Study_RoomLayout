@@ -17,11 +17,11 @@ import pytest
 from shapely.geometry import Polygon
 from tests._fixtures import load_growth_fixture
 
-from room_layout.schema import Role, ShapeInput, SpaceUnitSpec, from_dict
+from room_layout.schema import Role, ShapeInput, SpaceUnitSpec, VerticalAnchor, from_dict
 from room_layout.stages.atomize import atomize
 from room_layout.stages.corridor import carve_corridors
 from room_layout.stages.growth_partition import region_partition_growth
-from room_layout.stages.labeling import label_floor, label_room
+from room_layout.stages.labeling import label_floor, label_room, vc_rooms
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
 from room_layout.stages.room_growth import GrownRoom
@@ -104,3 +104,61 @@ def test_label_floor_over_33_cases(case):
         assert room.doors is None
     # corridors come through as polygons, not rooms
     assert all(p.geom_type == "Polygon" and p.is_valid for p in fl.corridor_polygons)
+
+
+# ---- 4.4: vertical_circulation anchor re-insertion ------------------------
+
+
+def _stair_anchor(poly: Polygon, level: int = 0) -> VerticalAnchor:
+    return VerticalAnchor(
+        id="stair_A",
+        kind="stair_core",
+        footprint_polygon=poly,
+        floor_range=(level, level),
+        host_role="vertical_circulation",
+    )
+
+
+def test_vc_rooms_builds_fixed_room_from_anchor_footprint():
+    anchor = _stair_anchor(Polygon([(0, 0), (2, 0), (2, 2), (0, 2)]))  # 4 m²
+    spec = SpaceUnitSpec(
+        id="vc_1",
+        role="vertical_circulation",
+        usage="stair",
+        area_min_m2=1.0,
+        required=True,
+        anchor_id="stair_A",
+    )
+    rooms = vc_rooms([spec], [anchor])
+    assert len(rooms) == 1
+    r = rooms[0]
+    assert r.id == "vc_1"
+    assert r.role == "vertical_circulation"
+    assert r.anchor_id == "stair_A"
+    assert r.usage == "stair"
+    assert r.area_m2 == pytest.approx(4.0)
+    assert r.polygon.equals(anchor.footprint_polygon)  # fixed = the anchor footprint
+
+
+def test_vc_rooms_ignores_non_vc_specs():
+    bed = SpaceUnitSpec(id="bed", role="private", usage=None, area_min_m2=1.0, required=True)
+    assert vc_rooms([bed], []) == []
+
+
+def test_label_floor_appends_vc_room_alongside_grown_rooms():
+    cl, regions, floor = _carve(GOLDEN / "case_01_30py_flat")
+    anchor = _stair_anchor(Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), level=floor.level)
+    vc_spec = SpaceUnitSpec(
+        id="vc_1",
+        role="vertical_circulation",
+        usage="stair",
+        area_min_m2=1.0,
+        required=True,
+        anchor_id="stair_A",
+    )
+    fl = label_floor(cl, regions, [*_specs_from(cl), vc_spec], level=floor.level, anchors=[anchor])
+    assert len(fl.rooms) == len(cl.rooms) + 1
+    vc = [r for r in fl.rooms if r.role == "vertical_circulation"]
+    assert len(vc) == 1
+    assert vc[0].id == "vc_1" and vc[0].anchor_id == "stair_A"
+    assert vc[0].polygon.equals(anchor.footprint_polygon)

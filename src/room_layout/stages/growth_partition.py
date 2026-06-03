@@ -34,6 +34,7 @@ from collections import defaultdict
 import shapely.geometry as sg
 
 from room_layout.schema import FloorShape
+from room_layout.schema.failure import DomainGateFailure, FailureRecord
 from room_layout.stages._helpers import rotate_radians as _rotate
 from room_layout.stages._helpers import to_shapely as _to_shapely
 from room_layout.stages.growth_absorb import _absorb_remaining, _aspect_ok_for_max
@@ -90,6 +91,21 @@ def region_partition_growth(
             K=K,
             has_public=has_public,
         )
+        # Oversubscription guard (S07 §4.11 ①): the floor seeds fewer regions than
+        # the program has rooms → fail gracefully (DomainGateFailure, which run()
+        # catches → valid=False) instead of an IndexError on placements[si] below.
+        if len(placements) < K:
+            raise DomainGateFailure(
+                FailureRecord(
+                    code="GROWTH_OVERSUBSCRIBED",
+                    stage="growth",
+                    message=(
+                        f"program requests {K} rooms but the floor seeds only "
+                        f"{len(placements)} region(s) — too many rooms for this footprint"
+                    ),
+                    data={"requested_rooms": K, "seedable_regions": len(placements)},
+                )
+            )
         if has_public:
             hub_idx = fixture.hub_room_index
             seeds_by_room[hub_idx] = placements[0].region.region_id

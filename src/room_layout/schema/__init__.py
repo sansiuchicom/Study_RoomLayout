@@ -32,6 +32,7 @@ from room_layout.schema.failure import (
     DimGateFailure,
     DomainGateFailure,
     FailureRecord,
+    GeometryFailure,
     ProgramInstantiationFailure,
 )
 from room_layout.schema.geometry import (
@@ -82,6 +83,7 @@ __all__ = [
     "DoorKind",
     "FailureRecord",
     "FloorShape",
+    "GeometryFailure",
     "LabeledFloorLayout",
     "LabeledRoom",
     "LabeledRoomLayout",

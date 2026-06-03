@@ -21,7 +21,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Done | `dd62509` |
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path (**+S07-D6**) | Done | `99c0a67` |
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
-| 4.8 | Final-layout matplotlib renderer (S01-D10) | Todo | — |
+| 4.8 | Final-layout matplotlib renderer (S01-D10) | Done | `5f925cc` |
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Todo | — |
 | 4.10 | Test corpus B — realistic apartment fixtures + failure-injection | Todo | — |
 | 4.11 | xfail resolution — corridor single-component + K>seedable graceful | Todo | — |
@@ -40,7 +40,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [x] Per-room post-growth area/dim check (`check_grown_rooms`; OBB short side; collect not raise; vc exempt) — distinct from Step 05 aggregate
 - [x] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
-- [ ] Viz (S01-D10): final `LabeledRoomLayout` matplotlib renderer + `viz/__init__.py` doc fix
+- [x] Viz (S01-D10): final `LabeledFloorLayout` matplotlib renderer (`save_labeled_floor_figure`) + `viz/__init__.py` doc fix (kickoff)
 - [ ] Test corpus A (33 cases → run-goldens) + B (apartment fixtures + failure-injection)
 - [ ] xfail: 2 Step-07 PoCs reviewed; 3 latent stay xfail
 - [ ] ruff (check AND format) clean; full pytest green (conda IfcOpenHouse, GEOS 3.14.1)
@@ -128,6 +128,17 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   (area / cardinality / unknown typology). 924 passed + 5 xfailed; ruff clean.
   NOT caught here (xfail PoCs → 4.11): K>seedable `IndexError`, corridor
   single-component.
+- 2026-06-03 — 4.8 landed. `viz/stages/final.py`: `save_labeled_floor_figure`
+  — dev-bridge matplotlib renderer for `LabeledFloorLayout` (rooms by 7-class
+  role color + id/usage/role/area label; corridors hatched; vc rooms distinct
+  hatch + heavy border). `ROLE_COLORS` (D004). Behind the viz extra
+  (importorskip in test; smoke-only — no golden PNG). Verified **visually**:
+  case_01 `run()` → clean 5-room role-colored tiling of the 140 m² footprint
+  (public 69 / private×3 / wet), 0 corridor (compact flat — all rooms
+  hub-adjacent), no overlap/gap. Honest note: room *sizes* are greedy auto-seed
+  growth (target-agnostic, S04-D3), not design proportions — geometry is sound;
+  proportion tuning is area-aware growth (deferred). Canonical 12-layer SVG =
+  Step 08. 926 passed + 5 xfailed; ruff clean.
 
 ---
 

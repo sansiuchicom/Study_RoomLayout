@@ -52,6 +52,14 @@ def test_shape_part_rejects_ccw_hole():
         ShapePart(exterior=_CCW_SQUARE, holes=(ccw_hole,))
 
 
+def test_shape_part_rejects_hole_outside_exterior():
+    # a CW hole placed outside the exterior — passes the per-ring checks but
+    # forms an invalid polygon (S07 review: hole-inside / non-overlap unchecked).
+    outside_hole = ((20.0, 20.0), (20.0, 22.0), (22.0, 22.0), (22.0, 20.0))
+    with pytest.raises(ValueError, match="invalid polygon"):
+        ShapePart(exterior=_CCW_SQUARE, holes=(outside_hole,))
+
+
 def test_shape_part_rejects_under_three_points():
     with pytest.raises(ValueError, match="≥ 3 points"):
         ShapePart(exterior=((0.0, 0.0), (1.0, 1.0)))

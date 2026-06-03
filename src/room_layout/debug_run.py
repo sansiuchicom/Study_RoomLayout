@@ -64,7 +64,10 @@ class DebugRunWriter:
     out_dir: Path
 
     def __call__(self, stage: StageOutput) -> None:
-        name = f"{stage.index:02d}_{stage.stage_id}.json"
+        # suffix the floor level so multi-floor runs don't overwrite (S07 review):
+        # input has level=None → no suffix; per-floor stages → `_f<level>`.
+        suffix = "" if stage.level is None else f"_f{stage.level}"
+        name = f"{stage.index:02d}_{stage.stage_id}{suffix}.json"
         _dump(self.out_dir / name, to_dict(stage.payload))
 
 

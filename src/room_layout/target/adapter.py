@@ -1,10 +1,11 @@
 """TargetAdapter — single generic typology adapter (Step 06 §4.4, S06-D5).
 
 One concrete `TargetAdapter` drives every typology (apartment / house / hotel
-/ office / warehouse). Typology identity lives in the rules JSON's
-`target_type` field, **not** in a per-typology subclass — there are no
-`ApartmentAdapter` / `HotelAdapter` classes by design (proto3:D022). Adding a
-typology that shares all algorithms is a data-only operation: author
+/ office / warehouse). Typology identity lives on `ProgramRequest.target_type`
+(set by the caller / `expand_program`) — **not** in the rules JSON (which carries
+no `target_type`, S06-D6 — see below) and **not** in a per-typology subclass
+(there are no `ApartmentAdapter` / `HotelAdapter` classes by design, proto3:D022).
+Adding a typology that shares all algorithms is a data-only operation: author
 `data/target_rules/<typology>.json`.
 
 Single responsibility (S06-D5 / 4.4 option 가): the adapter is a **validated

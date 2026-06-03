@@ -36,6 +36,10 @@ Stable failure `code` strings (expanded as gates land)::
     "ROOM_EMPTY"                     (polygonize.py — Step 07 §4.2)
     "ROOM_BELOW_MIN_AREA"            (room_gate.py — Step 07 §4.5)
     "ROOM_BELOW_MIN_DIM"             (room_gate.py — Step 07 §4.5)
+    "GROWTH_OVERSUBSCRIBED"          (growth_partition.py — Step 07 §4.11)
+    "FLOOR_CONSUMED_BY_ANCHORS"      (anchors.py — Step 07 review)
+    "ANCHOR_OUTSIDE_FOOTPRINT"       (validators.py — Step 07 review)
+    "NO_TARGET_RULES"                (run.py — Step 07 §4.6)
     # program-instantiation + area / dim / access codes land in Step 05+
 """
 

@@ -22,6 +22,7 @@ from __future__ import annotations
 from shapely.ops import unary_union
 
 from room_layout.schema import FloorShape, VerticalAnchor
+from room_layout.schema.failure import DomainGateFailure, FailureRecord
 from room_layout.stages._helpers import from_shapely, polygon_parts, to_shapely
 
 # Split fragments below this area (m²) are dropped as degenerate.
@@ -61,6 +62,19 @@ def subtract_anchors(floor: FloorShape, anchors: list[VerticalAnchor]) -> FloorS
             if poly.area < _MIN_PART_AREA:
                 continue
             new_parts.append(from_shapely(poly))
+
+    if not new_parts:
+        raise DomainGateFailure(
+            FailureRecord(
+                code="FLOOR_CONSUMED_BY_ANCHORS",
+                stage="run",
+                message=(
+                    f"floor {floor.level}: vertical anchors consume the entire footprint "
+                    "(no floor area left to lay out)"
+                ),
+                data={"level": floor.level},
+            )
+        )
 
     return FloorShape(
         level=floor.level,

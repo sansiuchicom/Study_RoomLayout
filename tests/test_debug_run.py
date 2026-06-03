@@ -37,15 +37,19 @@ def test_write_debug_run_persists_stages_and_manifest(tmp_path):
     assert result.valid is True
     assert out_dir == tmp_path / "t"
 
-    # one JSON per emitted stage, lexicographically ordered = pipeline order (D006)
-    expected = [
-        "00_input",
-        "01_atomize",
-        "02_regionize",
-        "03_region_graph",
-        "04_growth",
-        "05_corridor",
-        "06_labeling",
+    # one JSON per emitted stage; per-floor stages suffixed _f<level> (D006, no
+    # multi-floor overwrite). input has level=None → no suffix.
+    lvl = shape.floors[0].level
+    expected = ["00_input"] + [
+        f"{i:02d}_{name}_f{lvl}"
+        for i, name in [
+            (1, "atomize"),
+            (2, "regionize"),
+            (3, "region_graph"),
+            (4, "growth"),
+            (5, "corridor"),
+            (6, "labeling"),
+        ]
     ]
     for stem in expected:
         p = out_dir / f"{stem}.json"

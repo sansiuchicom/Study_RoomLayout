@@ -150,33 +150,33 @@ def run(
             floors.append(LabeledFloorLayout(level=floor.level))
             continue
 
-        # ── geometry: anchors-out → atomize → regionize → region_graph → grow → carve ──
-        applicable = anchors_on_floor(shape.vertical_anchors, floor.level)
-        holed = subtract_anchors(floor, shape.vertical_anchors)
-        atoms = atomize(holed)
-        _emit(on_stage, 1, "atomize", atoms, floor.level)
-        regions = regionize(holed, atoms=atoms)
-        _emit(on_stage, 2, "regionize", regions, floor.level)
-        rg = build_region_graph(holed, atoms=atoms, regions=regions)
-        _emit(on_stage, 3, "region_graph", rg, floor.level)
-        fixture = program_to_fixture(holed, program)
-        growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
-        _emit(on_stage, 4, "growth", growth, floor.level)
-        carved = carve_corridors(holed, growth, regions=regions, region_graph=rg)
-        # repo post-step (§4.11): bridge any orphan (hub-disconnected) corridor
-        # component into the hub network — connected circulation; Cell carve stays
-        # byte-identical. No-op when the corridor is already one component.
-        carved = bridge_orphan_corridors(carved, regions, rg)
-        _emit(on_stage, 5, "corridor", carved, floor.level)
-
-        # ── labeling (§4.3 grown + §4.4 vc; polygonize may raise GeometryFailure) ──
+        # ── geometry + labeling — wrapped so any feasibility / geometry failure
+        #    becomes valid=False, never crashing out (③): subtract_anchors raises
+        #    when an anchor consumes the whole floor; region_partition_growth raises
+        #    GROWTH_OVERSUBSCRIBED when the program over-subscribes the floor's seeds;
+        #    label_floor's polygonize raises GeometryFailure on a disconnected room.
         try:
+            applicable = anchors_on_floor(shape.vertical_anchors, floor.level)
+            holed = subtract_anchors(floor, shape.vertical_anchors)
+            atoms = atomize(holed)
+            _emit(on_stage, 1, "atomize", atoms, floor.level)
+            regions = regionize(holed, atoms=atoms)
+            _emit(on_stage, 2, "regionize", regions, floor.level)
+            rg = build_region_graph(holed, atoms=atoms, regions=regions)
+            _emit(on_stage, 3, "region_graph", rg, floor.level)
+            fixture = program_to_fixture(holed, program)
+            growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
+            _emit(on_stage, 4, "growth", growth, floor.level)
+            carved = carve_corridors(holed, growth, regions=regions, region_graph=rg)
+            # repo post-step (§4.11): bridge any orphan corridor into the hub network.
+            carved = bridge_orphan_corridors(carved, regions, rg)
+            _emit(on_stage, 5, "corridor", carved, floor.level)
             fl = label_floor(carved, regions, specs, level=floor.level, anchors=applicable)
-        except GeometryFailure as e:
+            _emit(on_stage, 6, "labeling", fl, floor.level)
+        except (DomainGateFailure, GeometryFailure) as e:
             failures.append(e.record)
             floors.append(LabeledFloorLayout(level=floor.level))
             continue
-        _emit(on_stage, 6, "labeling", fl, floor.level)
 
         # ── per-room post-growth check (§4.5; collect) ──
         failures.extend(check_grown_rooms(fl.rooms, {s.id: s for s in specs}))

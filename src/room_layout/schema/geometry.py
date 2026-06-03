@@ -14,6 +14,7 @@ from typing import Literal, get_args
 
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import LinearRing
+from shapely.validation import explain_validity
 
 Point = tuple[float, float]
 Ring = tuple[Point, ...]
@@ -107,6 +108,12 @@ class ShapePart:
         _validate_ring(self.exterior, label="ShapePart.exterior", expect_ccw=True)
         for i, hole in enumerate(self.holes):
             _validate_ring(hole, label=f"ShapePart.holes[{i}]", expect_ccw=False)
+        # The rings are each simple; check they form a VALID polygon together —
+        # holes inside the exterior, non-overlapping (S07 review). A hole outside
+        # the exterior passes the per-ring checks but yields an invalid polygon.
+        poly = Polygon(self.exterior, [list(h) for h in self.holes])
+        if not poly.is_valid:
+            raise ValueError(f"ShapePart: rings form an invalid polygon — {explain_validity(poly)}")
 
 
 @dataclass(frozen=True)

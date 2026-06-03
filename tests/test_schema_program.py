@@ -62,6 +62,12 @@ def test_space_unit_spec_vertical_circulation_with_anchor_id_accepts():
     assert s.anchor_id == "stair_1"
 
 
+def test_space_unit_spec_non_vc_with_anchor_id_rejected():
+    # converse invariant (S07 review): anchor binding is vc-only (D004)
+    with pytest.raises(ValueError, match="anchor_id is only valid"):
+        _sus(role="public", anchor_id="stair_1")
+
+
 def test_space_unit_spec_accepts_none_area_target():
     """S05-D1: `area_target_m2: float | None` — the optional diffusion hook."""
     s = _sus(area_target_m2=None)

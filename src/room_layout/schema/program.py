@@ -98,6 +98,14 @@ class SpaceUnitSpec:
                 f"SpaceUnitSpec {self.id!r}: role='vertical_circulation' requires "
                 "anchor_id (must reference a VerticalAnchor.id)"
             )
+        if self.anchor_id is not None and self.role != "vertical_circulation":
+            # converse invariant (S07 review): anchor binding is vc-only (D004). A
+            # non-vc spec with an anchor_id would carry it onto LabeledRoom (breaking
+            # "anchor_id ⟺ vertical_circulation") and punch an unfilled hole.
+            raise ValueError(
+                f"SpaceUnitSpec {self.id!r}: anchor_id is only valid for "
+                f"role='vertical_circulation', not role={self.role!r}"
+            )
         # Minimal value guards (S05-D1).
         if not self.id:
             raise ValueError("SpaceUnitSpec: id must be a non-empty identifier")

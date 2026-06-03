@@ -34,6 +34,8 @@ Stable failure `code` strings (expanded as gates land)::
     "PROGRAM_FLOOR_NOT_IN_SHAPE"     (validators.py)
     "ROOM_DISCONNECTED"              (polygonize.py — Step 07 §4.2)
     "ROOM_EMPTY"                     (polygonize.py — Step 07 §4.2)
+    "ROOM_BELOW_MIN_AREA"            (room_gate.py — Step 07 §4.5)
+    "ROOM_BELOW_MIN_DIM"             (room_gate.py — Step 07 §4.5)
     # program-instantiation + area / dim / access codes land in Step 05+
 """
 

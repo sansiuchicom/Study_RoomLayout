@@ -1,6 +1,6 @@
 # 007 Step 07 — Entry Point + Labeling Tracker
 
-Status: In progress (on `step07-entrypoint` — D005 triggers fired)
+Status: Completed (on `step07-entrypoint`; **not yet merged** — pending external review)
 Type: Step tracker
 Branch: `step07-entrypoint`
 Last updated: 2026-06-03
@@ -25,7 +25,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.9 | Test corpus A — 33 cases through `run()` → golden `LabeledRoomLayout` | Done | `5873294` |
 | 4.10 | Test corpus B — authored fixtures (anchored / admission-fail / per-room-fail) + glob bug fix | Done | `ac185d9` |
 | 4.11 | xfail resolution — ① K>seedable graceful + ② orphan-corridor bridge | Done | `ea04b08`+`7e5c52a` |
-| 4.12 | Close — README/Tracker/Progress sync + `--no-ff` merge | Todo | — |
+| 4.12 | Close — README/Tracker/Progress sync (merge deferred to post-review) | Done | (this) |
 
 ---
 
@@ -199,4 +199,38 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 ## 4. Close summary
 
-(Filled at close — 4.12.)
+Step 07 (Entry point + labeling) complete on `step07-entrypoint` — 12 work
+items. The public `run(shape, program, *, seed) -> LabeledRoomLayout` (D001)
+works end-to-end. **Not merged** — pending external review, then `--no-ff` to
+`main` (S07-D1).
+
+**Delivered:** the geometry/program join — `run.py` (per-floor loop: admission
+→ subtract_anchors → atomize / regionize / region_graph → growth → carve →
+corridor_bridge → labeling → per-room gate); `stages/polygonize.py` (S04-D2
+region-sets → polygons); `stages/labeling.py` (§3.8 7-class role/usage recovery
++ `area_m2` + vc anchor re-insertion S04-D4); `constraints/room_gate.py`
+(per-room post-growth 1.5 m² reject); `stages/corridor_bridge.py` (orphan
+dead-corridor → connected spine, §4.11②); `schema/{trace,run_config}.py` +
+`debug_run.py` (D006 on_stage trace persistence); `viz/stages/final.py`
+(S01-D10 renderer). Failure composition upholds `valid=False ⇒ failure_records`
+(proto3:D018) and never crashes out (③).
+
+**Decisions:** S07-D1..D6 (Plan §2). Notable build pivots — S07-D5
+(polygonization disconnected-union policy); S07-D6 (run() resolves rules from
+`program.target_type`); the §4.11② absorb→**bridge** swap (connect orphan
+corridors, don't dissolve — user insight).
+
+**Verification:** 970 passed + 4 xfailed (conda `IfcOpenHouse`, GEOS 3.14.1);
+ruff check + format clean. Corpus A (33 end-to-end run goldens) + B (authored
+apartment fixtures). Geometry stays byte-identical to Cell (the bridge is a
+post-step over the unchanged carve). Verified visually (case_01 + anchored +
+bridge renders).
+
+**Deferred (post-v1, recorded):** area-aware growth — target-agnostic growth
+can grow a realistic program invalid (`docs/000_area_aware_growth.md`);
+wall-thickness clear-area inset (Progress Tracker §5.2); the 3 latent geometry
+xfails (B5/B6/C10) + the corridor carve-stage Cell-faithfulness PoC.
+
+**Not done (deliberate):** the merge — deferred to after external review, then
+`--no-ff` to `main` (S07-D1). Step 07 docs are archived at the Step 08 §4.1
+kickoff (proto3:D016 H011).

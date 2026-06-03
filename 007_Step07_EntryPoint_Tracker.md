@@ -18,7 +18,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 | 4.2 | `stages/polygonize.py` (NEW) — region-id sets → room + corridor polygons (S04-D2, **+S07-D5**) | Done | `18bc4c6` |
 | 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Done | `175a576` |
 | 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Done | `098a568` |
-| 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Todo | — |
+| 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Done | `dd62509` |
 | 4.6 | `run.py` (NEW) — the `run()` join (D001) + `on_stage` hook + failure path | Todo | — |
 | 4.7 | Trace infra (D006) — `StageOutput` + JSON + `manifest.json` + `RunConfig` | Todo | — |
 | 4.8 | Final-layout matplotlib renderer (S01-D10) | Todo | — |
@@ -37,7 +37,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 - [x] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2; S07-D5 — room=single Polygon loud-guard, corridor=list)
 - [x] Labeling (§3.8): 7-class role/usage recovery (`name==id`) + `area_m2` (polygon, S07-D6); usage carried through (S06-D3)
 - [x] vc anchor re-insertion (S04-D4) — `vc_rooms`: polygon from `VerticalAnchor.footprint_polygon` (re-insert half; subtract half in `anchors.py`)
-- [ ] Per-room post-growth area/dim check (1.5 m² rejection) — distinct from Step 05 aggregate
+- [x] Per-room post-growth area/dim check (`check_grown_rooms`; OBB short side; collect not raise; vc exempt) — distinct from Step 05 aggregate
 - [ ] Failure path: `valid=False ⇒ non-empty failure_records` (proto3:D018) + `check_multi_floor_feasibility` call site (S05-D6)
 - [ ] Trace infra (D006): `StageOutput` + `on_stage` + JSON serializer + `manifest.json` + minimal `RunConfig`
 - [ ] Viz (S01-D10): final `LabeledRoomLayout` matplotlib renderer + `viz/__init__.py` doc fix
@@ -101,6 +101,17 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   callers intact). Synthetic tests only (33 goldens have no anchors); full
   subtract→grow→re-insert tiling (overlap-free) deferred to run() (4.6) /
   corpus B (4.10). 843 passed + 5 xfailed; ruff clean.
+- 2026-06-03 — 4.5 landed. `constraints/room_gate.py`:
+  `check_grown_rooms(rooms, specs_by_id)` — per non-vc room, `area_m2 <
+  area_min_m2` → `ROOM_BELOW_MIN_AREA`, OBB short side < `min_dimension_m`
+  (when set) → `ROOM_BELOW_MIN_DIM`. **Collects** FailureRecords (not raise —
+  run() flips valid=False); vc exempt (fixed anchor geom). New module under
+  constraints/ keeps the split clean: gates.py = pre-growth aggregate/raise,
+  room_gate.py = post-growth per-room/collect (gates.py docstring already
+  pointed here). `_obb_short_side` = `minimum_rotated_rectangle` short side
+  (rotation-invariant). Tests: reject paths + vc exemption + None-dim skip +
+  OBB rotation-invariance + 33-sweep (lenient→0, huge→every room). 916 passed
+  + 5 xfailed; ruff clean.
 
 ---
 

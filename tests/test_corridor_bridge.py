@@ -1,12 +1,13 @@
-"""orphan_absorb tests (Step 07 §4.11) — dead-corridor removal.
+"""corridor_bridge tests (Step 07 §4.11) — orphan-corridor bridging.
 
-``absorb_orphan_corridors`` removes orphan (hub-disconnected) corridor regions
-by giving them back to their most-adjacent room. The production ``run()``
-auto-seed path produces **no** orphans (verified across all 33 cases), so absorb
-is a no-op there — its **firing path** is exercised here via the *manual-seed*
-fixture path (Cell's seeds), which DOES produce an orphan in case_33 (a ~14 m²
-floating Stage-2 detour shortcut). So the step ships as tested defensive code,
-not an unexercised speculative guard.
+``bridge_orphan_corridors`` connects a hub-disconnected ("orphan") corridor
+component to the hub corridor network by carving the shortest room path between
+them — so the corridor is one connected spine (a corridor is connected
+circulation; dissolving it back into rooms would be wrong). The production
+``run()`` auto-seed path produces no orphans (verified across all 33 cases), so
+bridge is a no-op there — its **firing path** is exercised here via the
+manual-seed fixture path, which produces an orphan in case_33 (a ~14 m² floating
+Stage-2 detour shortcut).
 """
 
 from __future__ import annotations
@@ -22,8 +23,8 @@ from room_layout.schema import ShapeInput, from_dict
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import atomize
 from room_layout.stages.corridor import CorridoredLayout, carve_corridors
+from room_layout.stages.corridor_bridge import bridge_orphan_corridors
 from room_layout.stages.growth_partition import region_partition_growth
-from room_layout.stages.orphan_absorb import absorb_orphan_corridors
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
 
@@ -76,23 +77,23 @@ def _room_plus_corridor_area(cl: CorridoredLayout, regions) -> float:
     return rooms + corridor
 
 
-def test_absorb_removes_the_case_33_orphan_corridor():
+def test_bridge_connects_the_case_33_orphan_corridor():
     cl, regions, rg = _carve_manual("case_33_donut_wing")
     assert _orphan_area(cl, regions, rg) > 1.0  # precondition: manual-seed carve HAS an orphan
 
-    cl2 = absorb_orphan_corridors(cl, regions, rg)
+    cl2 = bridge_orphan_corridors(cl, regions, rg)
 
-    assert _orphan_area(cl2, regions, rg) == pytest.approx(0.0, abs=1e-9)  # orphan gone
+    assert _orphan_area(cl2, regions, rg) == pytest.approx(0.0, abs=1e-9)  # now hub-connected
     assert _room_plus_corridor_area(cl2, regions) == pytest.approx(
         _room_plus_corridor_area(cl, regions)
-    )  # area conserved — regions only moved corridor → room
-    assert len(cl2.corridor_region_ids) < len(cl.corridor_region_ids)  # corridor shrank
-    assert cl2.diagnostics["orphan_absorb"]["absorbed"]  # something was absorbed
-    assert not cl2.diagnostics["orphan_absorb"]["unabsorbed_region_ids"]  # all absorbed
+    )  # area conserved — a bridge region only moves room → corridor
+    # bridging CARVES room regions INTO the corridor, so the corridor grows
+    assert len(cl2.corridor_region_ids) > len(cl.corridor_region_ids)
+    assert cl2.diagnostics["orphan_bridge"]["bridge_region_ids"]  # a bridge was carved
 
 
-def test_absorb_is_idempotent_and_noop_without_orphan():
+def test_bridge_is_idempotent_and_noop_without_orphan():
     cl, regions, rg = _carve_manual("case_33_donut_wing")
-    cl2 = absorb_orphan_corridors(cl, regions, rg)  # absorbs the orphan
-    cl3 = absorb_orphan_corridors(cl2, regions, rg)  # nothing left to absorb
+    cl2 = bridge_orphan_corridors(cl, regions, rg)  # bridges the orphan
+    cl3 = bridge_orphan_corridors(cl2, regions, rg)  # nothing left to bridge
     assert cl3 is cl2  # no-op returns the same object

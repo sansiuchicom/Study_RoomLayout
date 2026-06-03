@@ -54,9 +54,9 @@ from room_layout.schema import (
 from room_layout.stages.anchors import anchors_on_floor, subtract_anchors
 from room_layout.stages.atomize import atomize
 from room_layout.stages.corridor import carve_corridors
+from room_layout.stages.corridor_bridge import bridge_orphan_corridors
 from room_layout.stages.growth_partition import region_partition_growth
 from room_layout.stages.labeling import label_floor
-from room_layout.stages.orphan_absorb import absorb_orphan_corridors
 from room_layout.stages.program_adapter import program_to_fixture
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
@@ -163,9 +163,10 @@ def run(
         growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
         _emit(on_stage, 4, "growth", growth, floor.level)
         carved = carve_corridors(holed, growth, regions=regions, region_graph=rg)
-        # repo post-step (§4.11): absorb orphan (hub-disconnected) corridor regions
-        # back into rooms — dead-space removal; Cell carve stays byte-identical.
-        carved = absorb_orphan_corridors(carved, regions, rg)
+        # repo post-step (§4.11): bridge any orphan (hub-disconnected) corridor
+        # component into the hub network — connected circulation; Cell carve stays
+        # byte-identical. No-op when the corridor is already one component.
+        carved = bridge_orphan_corridors(carved, regions, rg)
         _emit(on_stage, 5, "corridor", carved, floor.level)
 
         # ── labeling (§4.3 grown + §4.4 vc; polygonize may raise GeometryFailure) ──

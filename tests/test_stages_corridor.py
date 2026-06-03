@@ -76,10 +76,10 @@ def test_case_33_exercises_stage2_shortcut():
     "(Cell-faithful): a Stage-2 detour shortcut attaches through a room entrance (Cell §4.6 "
     "excludes src/tgt regions), so base ∪ shortcut ∪ hub is not one region-adjacency component "
     "for case_33's manual-seed carve. NOTE access is intact — every room reaches the hub via the "
-    "base corridor (verified) — and run() removes the orphan via the repo post-step "
-    "absorb_orphan_corridors (Step 07 §4.11); the production auto-seed path produces no orphan at "
-    "all (verified, 33 cases). This test drives carve_corridors directly, so it stays xfail as "
-    "the Cell-faithfulness PoC for the carve stage.",
+    "base corridor (verified) — and run() bridges the orphan into one connected network via the "
+    "repo post-step bridge_orphan_corridors (Step 07 §4.11); the production auto-seed path produces "
+    "no orphan at all (verified, 33 cases). This test drives carve_corridors directly, so it stays "
+    "xfail as the Cell-faithfulness PoC for the carve stage.",
     strict=True,
 )
 def test_corridor_network_is_single_component_case_33():

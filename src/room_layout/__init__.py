@@ -22,9 +22,10 @@ either::
     # or equivalently
     from room_layout.schema import ShapeInput
 
-The algorithm entry point `run(...)` lands in Step 07.
+The algorithm entry point is `run(...)` (Step 07) — `from room_layout import run`.
 """
 
+from room_layout.run import run
 from room_layout.schema import (
     WARN_PREFIX,
     AccessSchemaFailure,
@@ -46,6 +47,7 @@ from room_layout.schema import (
     ShapeInput,
     ShapePart,
     SpaceUnitSpec,
+    StageOutput,
     TargetRules,
     TargetType,
     VerticalAnchor,
@@ -82,6 +84,7 @@ __all__ = [
     "ShapeInput",
     "ShapePart",
     "SpaceUnitSpec",
+    "StageOutput",
     "TargetRules",
     "TargetType",
     "VerticalAnchor",
@@ -93,6 +96,7 @@ __all__ = [
     "from_dict",
     "from_json",
     "polygon_to_coords",
+    "run",
     "to_dict",
     "to_json",
     "validate_input",

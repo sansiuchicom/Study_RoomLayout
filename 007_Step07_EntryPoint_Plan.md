@@ -7,7 +7,7 @@ Branch: `step07-entrypoint` (D005 — triggers fired: **integration** [joins the
 driven over the 33 geometry goldens; a polygonization/labeling bug could
 surface as golden drift]. Step 04 + Step 05, the analogous integration Steps,
 both branched; only the small Step 06 stayed on `main`.)
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 ---
 
@@ -132,11 +132,12 @@ Predecessor decisions referenced as `S0N-Dxx` / `proto3:Dxxx`.
 | **S07-D2** | Test corpus = **both** | (A) Extend the existing 33-case golden harness *through* `run()` to a golden `LabeledRoomLayout` per case — regression continuity on top of the layout/seed/corridor digests, deterministic (region assignments are already pinned); the per-case program is synthesized from its `growth_fixture` RoomSpec set. (B) Author a small set of realistic apartment fixtures (`ShapeInput` + `ProgramRequest`) + goldens + failure-injection — the DoD's "valid apartment" intent + the failure path. Rationale for both: (A) alone is geometry stress-shapes with synthetic programs (no "is this a sane apartment?" signal); (B) alone lacks the 33-case regression web. The Pipeline §5.1 DoD line "6 apartment fixtures" predates the 33-case corpus — reconciled here as (A)+(B), not (B)-only. |
 | **S07-D3** | Trace seam: Step 07 vs Step 08 | `on_stage` hook + `StageOutput` + JSON serializer + `manifest.json` writer land in **Step 07** (D006 as written). The hook is **invasive** — it threads every stage call site inside `run()`, so it MUST land *with* `run()`; retrofitting later re-touches every stage (same "land the ripple once" logic D004 used for `vertical_circulation`). Default `on_stage=None` keeps `run()` pure. The canonical SVG renderer + `make_gif()` are a pure `StageOutput` *consumer* (addable anytime) → **Step 08** (the viz Step). Note: the trace infra is *orthogonal* to the functional DoD (goldens compare `run()`'s return value, not disk artifacts) — so within the Step it is lower-priority than 4.2–4.6, but the hook seam is designed into `run()` from 4.6. |
 | **S07-D4** | Viz seam | A final `LabeledRoomLayout` **matplotlib dev-bridge** renderer lands in **Step 07** (S01-D10 "viz at every Step"). The existing six stage renderers (`input`/`atomize`/`regionize`/`seed`/`layout`/`corridor`) cover the geometry pipeline up through the region-based `CorridoredLayout`; the **polygonized + labeled** final layout has no renderer yet. The canonical 12-layer SVG path is **Step 08**. + the `viz/__init__.py` off-by-one doc bug ("Step 07 (SVG visualization)" → Step 08) is fixed at kickoff. |
+| **S07-D5** | Polygonization disconnected-union policy | Decided during 4.2 from a probe over the 33 goldens: **0/137 rooms** produce a disconnected region union (growth absorbs only *adjacent* regions). A room's union is therefore expected to be a single `Polygon` — `polygonize_room` raises `GeometryFailure` (`ROOM_DISCONNECTED` / `ROOM_EMPTY`) on violation rather than silently taking the largest piece (honest-fix; `run()` catches → `valid=False`); no speculative repair logic. Corridors differ: the carved set is legitimately multi-component (**4/33** — case_04/10/32/33) and `corridor_polygons` is plural, so `polygonize_corridors` returns one `Polygon` per component. A new third sibling exception family `GeometryFailure` carries the `FailureRecord`. |
 
-Decisions expected to emerge *during* build (recorded as **S07-D5+** when they
-land): polygonization disconnected-union (MultiPolygon) policy; how/whether
-`expand_program` binds a `vertical_circulation` anchor; the `RunConfig` field
-set; the exact module split (one `labeling.py` vs a small package).
+Decisions expected to emerge *during* build (recorded as **S07-D6+** when they
+land): how/whether `expand_program` binds a `vertical_circulation` anchor; the
+`RunConfig` field set; the exact module split (one `labeling.py` vs a small
+package).
 
 ---
 

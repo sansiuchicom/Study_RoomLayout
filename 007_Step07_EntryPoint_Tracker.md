@@ -3,7 +3,7 @@
 Status: In progress (on `step07-entrypoint` — D005 triggers fired)
 Type: Step tracker
 Branch: `step07-entrypoint`
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 Mirrors `007_Step07_EntryPoint_Plan.md` §4 work items (proto3:D016).
 Plan = the contract; Tracker = execution state + decisions-during-build.
@@ -14,8 +14,8 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 
 | # | Work item | Status | Commit |
 |---|---|---|---|
-| 4.1 | Kickoff — Plan/Tracker + `git mv` Step 06 → `legacy/step06/` + `viz/__init__.py` doc fix (S07-D4) + Progress Tracker | In progress | (this) |
-| 4.2 | `stages/polygonize.py` (NEW) — region-id sets → room + corridor polygons (S04-D2) | Todo | — |
+| 4.1 | Kickoff — Plan/Tracker + `git mv` Step 06 → `legacy/step06/` + `viz/__init__.py` doc fix (S07-D4) + Progress Tracker | Done | `cd4bc3a` |
+| 4.2 | `stages/polygonize.py` (NEW) — region-id sets → room + corridor polygons (S04-D2, **+S07-D5**) | Done | `18bc4c6` |
 | 4.3 | Labeling (§3.8) — grown room → `LabeledRoom` (role/usage recovery, `area_m2`) | Todo | — |
 | 4.4 | vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint` | Todo | — |
 | 4.5 | Per-room post-growth area/dim gate (1.5 m² rejection) | Todo | — |
@@ -34,7 +34,7 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
 (Plan §1 — checked at close.)
 
 - [ ] `run(shape, program, *, seed)` assembled (D001); per-floor loop; `on_stage` hook (default None = pure)
-- [ ] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2)
+- [x] Polygonization: `CorridoredLayout` region-sets → room + corridor polygons (S04-D2; S07-D5 — room=single Polygon loud-guard, corridor=list)
 - [ ] Labeling (§3.8): 7-class role/usage recovery + `area_m2`; usage carried through (S06-D3)
 - [ ] vc anchor re-insertion (S04-D4) — polygon from `VerticalAnchor.footprint_polygon`
 - [ ] Per-room post-growth area/dim check (1.5 m² rejection) — distinct from Step 05 aggregate
@@ -71,6 +71,19 @@ Plan = the contract; Tracker = execution state + decisions-during-build.
   polygonize → label → anchor/gate → `run()` assembly → trace → viz → tests →
   xfail. Step start state verified green: 732 passed + 5 xfailed (conda
   IfcOpenHouse, GEOS 3.14.1).
+- 2026-06-03 — 4.2 landed (+ S07-D5). `stages/polygonize.py`:
+  `build_region_polygons` / `polygonize_room` / `polygonize_corridors`. S07-D5
+  decided from a throwaway probe over the 33 goldens: **0/137 rooms** produce a
+  disconnected region union (growth absorbs only adjacent regions) → a room
+  union must be a single `Polygon`; `polygonize_room` raises `GeometryFailure`
+  (new **third sibling** exception family in `schema/failure.py`;
+  `ROOM_DISCONNECTED` / `ROOM_EMPTY`) on violation — no largest-piece repair
+  (honest-fix; `run()` catches → `valid=False`). Corridors are legitimately
+  multi-component (**4/33**: case_04/10/32/33 — a Stage-2 shortcut attaches
+  through a room entrance) → `corridor_polygons` is plural, `list[Polygon]`.
+  Area conservation verified across all 137 rooms + corridor components. The
+  union primitive already existed in viz (display-only); 4.2 makes it the
+  persisted contract output. 805 passed + 5 xfailed; ruff clean.
 
 ---
 

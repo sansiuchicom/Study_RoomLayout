@@ -28,6 +28,16 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
+Step 08 (SVG visualization) **in progress** on `step08-svg-viz` (opened
+2026-06-08; D005 — branch on size + milestone, S08-D1). The v1 **ship gate**
+(Pipeline §5.1): a canonical layered-SVG renderer + `make_gif()` (pipeline-
+progression GIF) consuming the Step-07 `on_stage`/`StageOutput` trace. `run()`
+is untouched — additive viz on the existing hook (S08-D7). Layer stack re-
+derived from our pipeline (S08-D2); proto3's `viz/svg.py` is a skeleton, so
+the "port" is architecture-only. S08-D1..D7 in
+`008_Step08_SvgVisualization_Plan.md` §2. Step 07 docs archived →
+`legacy/step07/` (4.1 kickoff, proto3:D016 H011).
+
 Step 06 (Target rules system) **complete** on `main` (2026-06-02, D005 —
 stayed on main, weak triggers, no merge needed). Built the value+loading
 half of the S05-D2 boundary:
@@ -110,7 +120,7 @@ end-to-end — the join of geometry (03/04) + program (05/06):
 - S07-D1..D6. Test corpus (S07-D2): 33-case end-to-end run goldens (A) +
   authored apartment fixtures (B: anchored / admission-fail / per-room-fail).
   4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge).
-  970 pytest + 4 xfail (conda `IfcOpenHouse`, GEOS 3.14.1); ruff clean.
+  975 pytest + 4 xfail (conda `IfcOpenHouse`, GEOS 3.14.1); ruff clean.
 
 Two findings recorded as deferred (post-v1, paper-grade): target-agnostic
 growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
@@ -147,16 +157,19 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 
 # 3. Next actions
 
-**Step 07 (Entry point + labeling) complete** on `step07-entrypoint`
-(2026-06-03) — `run()` works end-to-end (see §1). **Merged to `main`**
-(`68e8df2`, `--no-ff`, 2026-06-03) after an external + adversarial review
-response (`0c03b69`).
+**Step 08 (SVG visualization) in progress** on `step08-svg-viz` (opened
+2026-06-08) — the v1 **ship gate** (Pipeline §5.1): the canonical layered-SVG
+renderer + `make_gif()` (pipeline-progression), consuming the `StageOutput`
+trace + `debug_run` layout Step 07 landed (4.6 / 4.7). `run()` untouched —
+additive viz on the existing `on_stage` hook (S08-D7). Plan/Tracker:
+`008_Step08_SvgVisualization_{Plan,Tracker}.md`; decisions S08-D1..D7.
 
-Next: **Step 08 (SVG visualization)** — the v1 ship gate (Pipeline §5.1): the
-canonical 12-layer SVG renderer + `make_gif()`, consuming the `StageOutput`
-trace + `debug_run` layout that Step 07 (4.6 / 4.7) landed. At the Step 08
-§4.1 kickoff, archive the Step 07 docs (`git mv 007_*.md legacy/step07/`,
-proto3:D016 H011).
+Work order (Plan §4): 4.1 kickoff (done — Step 07 docs archived →
+`legacy/step07/`, H011) → 4.2 palette → 4.3 final.py merge → 4.4 `svg.py`
+renderer → 4.5 `SvgRunWriter` wiring → 4.6 `make_gif()` → 4.7 tests →
+4.8 close (**v1 ships**).
+
+(Step 07 complete + merged — see §1 / §2.)
 
 (Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
 warehouse rules + US/EU/KR is in flight. Those typologies may not fit the

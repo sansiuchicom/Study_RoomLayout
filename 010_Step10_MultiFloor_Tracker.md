@@ -16,7 +16,7 @@ sub-decisions (S10-D11+) as work lands.
 | # | Work item | Status | Commit |
 |---|---|---|---|
 | **10.1** | Kickoff — Plan + Tracker (Step 08 docs archived → `legacy/step08/` in `9483640`) | ☐ | — |
-| **10.2** | `house.json` typology — `requires_single_floor=false` + `cardinality_scope="building"` + role `min_cardinality`; register; 4-role fit | ☐ | — |
+| **10.2** | `house.json` typology — `requires_single_floor=false` + `cardinality_scope="building"` + role `min_cardinality`; register; 4-role fit | ✅ | `392fb60` |
 | **10.3** | `TargetRules.cardinality_scope` (S10-D13) + building-level role cardinality (S10-D5/D11); apartment `per_floor` byte-identical | ☐ | — |
 | **10.4** | vc vertical continuity (S10-D6) on **emitted vc rooms**; `VERTICAL_CIRCULATION_DISCONTINUOUS` | ☐ | — |
 | **10.5** | `run()` restructure (S10-D2) — `_run_floor` + cross-floor **PRE** pass (no POST, #7) | ☐ | — |
@@ -29,7 +29,7 @@ sub-decisions (S10-D11+) as work lands.
 
 ## 2. Definition of Done checklist (Plan §1)
 
-- ☐ 1. `house.json` (`requires_single_floor=false` + `cardinality_scope="building"`) registered; 4-role fit (role-level, S10-D11)
+- ✅ 1. `house.json` (`requires_single_floor=false` + `cardinality_scope="building"`) registered; 4-role fit (role-level, S10-D11) (`392fb60`)
 - ☐ 2. `cardinality_scope` field (S10-D13) + building-level role cardinality; apartment `per_floor` byte-identical
 - ☐ 3. vc **vertical** continuity on **emitted vc rooms** (S10-D6, #5); `VERTICAL_CIRCULATION_DISCONTINUOUS`; containment reused
 - ☐ 4. `run()` restructured (`_run_floor` + cross-floor **PRE** pass, no POST #7); never-crashes preserved; apartment byte-identical
@@ -65,4 +65,11 @@ sub-decisions (S10-D11+) as work lands.
   per-floor height required when multi-floor (#10). Verified #5 (`vc_rooms` is
   spec-gated) + #8 (building cardinality makes the no-growable `ValueError`
   reachable) in code before accepting.
+- **10.2 — house cardinality uses `public`, not `hub`.** The 33-case corpus +
+  apartment.json use `public` for living rooms (`hub` appears 0× in the corpus —
+  it is a growth-internal "first public room" concept, mapped from `public`).
+  So `house.json` `min_cardinality` = `{public, private, wet}:1` (apartment's
+  vocabulary, building-scope) — *not* the `hub` the throwaway spike used. house
+  area map is house-tuned (public 12 / private 8 / wet 3) but **provisional**
+  (a graded-provenance sourcing pass, like apartment's, is a later task).
 - _(more as work lands)_

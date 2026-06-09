@@ -43,6 +43,10 @@ from room_layout.target.rules_loader import load_target_rules
 DEFAULT_APARTMENT_RULES_PATH: Path = (
     Path(__file__).resolve().parent.parent / "data" / "target_rules" / "apartment.json"
 )
+#: Multi-floor house typology (Step 10, S10-D3).
+DEFAULT_HOUSE_RULES_PATH: Path = (
+    Path(__file__).resolve().parent.parent / "data" / "target_rules" / "house.json"
+)
 
 
 class TargetAdapter:

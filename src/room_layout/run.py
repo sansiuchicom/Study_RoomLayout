@@ -62,11 +62,18 @@ from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
 from room_layout.stages.stage01_program import run as _cardinality_gate
 from room_layout.stages.stage02_gate import run as _area_dim_gate
-from room_layout.target.adapter import DEFAULT_APARTMENT_RULES_PATH
+from room_layout.target.adapter import (
+    DEFAULT_APARTMENT_RULES_PATH,
+    DEFAULT_HOUSE_RULES_PATH,
+)
 from room_layout.target.rules_loader import load_target_rules
 
-# v1 ships only apartment rules (S06-D5: other typologies are data-only adds).
-_RULES_PATH_BY_TYPE = {"apartment": DEFAULT_APARTMENT_RULES_PATH}
+# Shipped typologies (S06-D5: a typology is a data-only `<t>.json` add). house
+# is the first multi-floor typology (Step 10, S10-D3).
+_RULES_PATH_BY_TYPE = {
+    "apartment": DEFAULT_APARTMENT_RULES_PATH,
+    "house": DEFAULT_HOUSE_RULES_PATH,
+}
 
 
 def _emit(

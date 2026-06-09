@@ -143,8 +143,9 @@ def test_run_unknown_typology_returns_no_target_rules():
     shape = _shape(CASE)
     level = shape.floors[0].level
     specs = [SpaceUnitSpec(id="p", role="public", usage=None, area_min_m2=1.0, required=True)]
-    # "house" is a valid TargetType Literal but ships no rules file in v1
-    result = run(shape, _program(specs, level, target_type="house"), seed=0)
+    # "hotel" is a valid TargetType Literal but ships no rules file yet (apartment
+    # + house are registered — Step 06 / Step 10). Picks any still-unshipped one.
+    result = run(shape, _program(specs, level, target_type="hotel"), seed=0)
     assert result.valid is False
     assert [f.code for f in result.failure_records] == ["NO_TARGET_RULES"]
 

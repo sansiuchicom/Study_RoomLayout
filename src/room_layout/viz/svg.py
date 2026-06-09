@@ -29,6 +29,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 from room_layout.schema import FloorShape, LabeledFloorLayout
 from room_layout.schema.geometry import VerticalAnchor
@@ -135,13 +136,20 @@ def _draw_grid(g, bbox, pad: float, tf, su: float) -> None:
 
 
 def _draw_footprint(g, floor: FloorShape, tf, su: float) -> None:
+    # Draw the UNION outline of the parts, not each part separately. The parts
+    # are overlapping design primitives (Pipeline §2.1 "parts preserved, not
+    # unioned" — e.g. a main body + a wing); outlining each one paints the
+    # internal overlap seam as a phantom box over the rooms (S08-D8). The union
+    # is the true building perimeter; evenodd preserves any holes (donut voids).
     sw = f"{su * _STROKE['footprint']:g}"
-    for part in floor.parts:
+    merged = unary_union([to_shapely(p) for p in floor.parts])
+    polys = [merged] if merged.geom_type == "Polygon" else list(merged.geoms)
+    for poly in polys:
         ET.SubElement(
             g,
             "path",
             {
-                "d": _poly_path_d(to_shapely(part), tf),
+                "d": _poly_path_d(poly, tf),
                 "fill": "none",
                 "stroke": LAYER_COLORS["footprint"],
                 "stroke-width": sw,

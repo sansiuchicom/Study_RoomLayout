@@ -44,6 +44,17 @@ drifts / sub-decisions (S08-D8+) as work lands.
 
 (Filled as work items land — drifts, surprises, sub-decisions S08-D8+.)
 
+- **S08-D8 (4.4 follow-up) — footprint drawn as the part UNION, not per-part.**
+  Found via a user viz review of `case_33`: a phantom rectangle "box" appeared
+  over the rooms. Root cause — the footprint arrives as *overlapping design
+  primitives* (Pipeline §2.1 "parts preserved, not unioned": `case_33` = body
+  `(0,0)-(12,10)` + wing `(8,5)-(15,9)`, overlapping 16 m²), and `_draw_footprint`
+  outlined *each* part, painting the internal overlap seam as a box that matched
+  no room boundary. Fix: outline `unary_union(parts)` (true building perimeter;
+  evenodd preserves the donut hole). 4/5 sample cases had ≥2 parts and were all
+  affected. (My first read — "two same-role rooms' shared border" — was wrong;
+  corrected after point-containment + path-count diagnosis showed no overlap /
+  no extra path, only the 2-part footprint.)
 - **4.2 — layer order locked as the Plan §2 indicative 12** (no change):
   `grid, footprint, atoms, regions, region-graph, anchors, seeds, grown,
   corridor, rooms, labels, failure`. The S08-D2 list survived contact with the

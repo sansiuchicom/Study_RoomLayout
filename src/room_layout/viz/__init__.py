@@ -12,24 +12,37 @@ renderers arrive incrementally:
   corridor polygons + vc anchors) plus the ``on_stage`` /
   ``StageOutput`` JSON trace (D006).
 - **Step 08** (SVG visualization) ships the canonical SVG renderer
-  plus the ``make_gif()`` composition helper (adds ``pillow`` or
-  ``imageio`` to the ``viz`` extra at that point).
+  (``viz.svg.render``) plus the ``make_gif()`` pipeline-progression
+  helper (adds ``pillow`` to the ``viz`` extra) and the single
+  ``viz.palette`` visual vocabulary (S08-D6).
 
-Target render-fn convention (when these land)::
+Package-level exports (S08-D2/D3/D6): ``LAYER_ORDER`` / ``ROLE_COLORS`` /
+``role_color`` (palette) and ``render`` (SVG) are eager — all
+matplotlib-free, so ``import room_layout.viz`` stays light (no ``viz``
+extra needed; exercised by ``tests/test_smoke.py``). ``make_gif`` is
+exposed **lazily** via ``__getattr__`` because it pulls the matplotlib
+stage renderers — accessing it imports them on demand, so the bare
+``import room_layout.viz`` does not require ``matplotlib``.
 
-    def render_atoms(atoms: list[Atom], path: Path) -> Path
-    def render_regions(regions: list[Region], path: Path) -> Path
-    def render_rooms(rooms: list[Room], path: Path) -> Path
-    def render_corridors(rooms, corridors, path: Path) -> Path
-    # ... one per pipeline stage (see docs/000_Pipeline_Overview.md §3)
-
-The filename written follows the D006 ``NN_<stage_id>.{json,png}``
-pattern. The caller (CLI helper or test) supplies the base directory
-(``outputs/debug_runs/<run_id>/`` or ``tests/golden/<fixture_name>/``);
-the render fn does not invent paths.
-
-``matplotlib`` is an *optional* install — ``pip install
-room_layout[viz]`` adds it. Importing ``room_layout.viz`` on its own
-(without the renderers) succeeds and is exercised by
-``tests/test_smoke.py``.
+The filename written follows the D006 ``NN_<stage_id>.{json,svg,png}``
+pattern. The caller (CLI helper, ``debug_run``, or test) supplies the
+base directory; the render fns do not invent paths.
 """
+
+from __future__ import annotations
+
+from room_layout.viz.palette import LAYER_ORDER, ROLE_COLORS, role_color
+from room_layout.viz.svg import render
+
+__all__ = ["LAYER_ORDER", "ROLE_COLORS", "render", "role_color", "make_gif"]
+
+
+def __getattr__(name: str):
+    # make_gif lives in viz.gif, which imports the matplotlib stage renderers;
+    # keep it out of the eager import path so `import room_layout.viz` stays
+    # matplotlib-free (PEP 562 lazy attribute).
+    if name == "make_gif":
+        from room_layout.viz.gif import make_gif
+
+        return make_gif
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

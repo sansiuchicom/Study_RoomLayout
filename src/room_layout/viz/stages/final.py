@@ -21,17 +21,10 @@ import matplotlib.pyplot as plt
 from room_layout.schema import FloorShape, LabeledFloorLayout
 from room_layout.viz._helpers import _draw_footprint_outline, _finish_axis, configure_fonts
 
-# 7-class Role → fill color (D004). corridor/vc are muted greys (circulation).
-ROLE_COLORS = {
-    "public": "#a6cee3",
-    "private": "#b2df8a",
-    "service": "#fdbf6f",
-    "wet": "#fb9a99",
-    "hub": "#cab2d6",
-    "corridor": "#dcdcdc",
-    "vertical_circulation": "#b8b8b8",
-}
-_FALLBACK_COLOR = "#cccccc"
+# 7-class Role → fill color (D004) now lives in the single palette source
+# (S08-D6). Re-imported here so existing `from viz.stages.final import
+# ROLE_COLORS` callers (+ test_viz_final) keep working unchanged.
+from room_layout.viz.palette import ROLE_COLORS, ROLE_FALLBACK_COLOR
 
 
 def _draw_holes(ax, poly, zorder: int) -> None:
@@ -75,7 +68,7 @@ def save_labeled_floor_figure(
         ax.fill(
             xs,
             ys,
-            facecolor=ROLE_COLORS.get(room.role, _FALLBACK_COLOR),
+            facecolor=ROLE_COLORS.get(room.role, ROLE_FALLBACK_COLOR),
             edgecolor="#7a3b3b" if is_vc else "#222222",
             linewidth=2.2 if is_vc else 0.9,
             hatch="xxx" if is_vc else None,

@@ -20,7 +20,7 @@ sub-decisions (S10-D11+) as work lands.
 | **10.3** | `TargetRules.cardinality_scope` (S10-D13) + building-level role cardinality (S10-D5/D11); apartment `per_floor` byte-identical | ✅ | `3558974` |
 | **10.4** | vc vertical continuity (S10-D6) on **emitted vc rooms**; `VERTICAL_CIRCULATION_DISCONTINUOUS` | ✅ | `dda5a39` |
 | **10.5** | `run()` restructure (S10-D2) — `_run_floor` + cross-floor **PRE** pass (no POST, #7) | ☐ | — |
-| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `program_to_fixture` graceful (never-crashes; prior review #10) | ☐ | — |
+| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `program_to_fixture` graceful (never-crashes; prior review #10) | ✅ | `380fb89` |
 | **10.7** | Fixtures + goldens — current-RB 3-floor house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) | ☐ | — |
 | **10.8** | Viz — per-floor SVG/GIF for house floors (reuse) | ☐ | — |
 | **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green; `--no-ff` merge | ☐ | — |
@@ -33,7 +33,7 @@ sub-decisions (S10-D11+) as work lands.
 - ✅ 2. `cardinality_scope` field (S10-D13) + building-level role cardinality; apartment `per_floor` byte-identical (`3558974`)
 - ✅ 3. vc **vertical** continuity on **emitted vc rooms** (S10-D6, #5); `VERTICAL_CIRCULATION_DISCONTINUOUS`; containment reused (`dda5a39`)
 - ☐ 4. `run()` restructured (`_run_floor` + cross-floor **PRE** pass, no POST #7); never-crashes preserved; apartment byte-identical
-- ☐ 5. vc-only / growable-less floor **valid** (S10-D12); `program_to_fixture` graceful (never-crashes, prior review #10)
+- ✅ 5. vc-only / growable-less floor **valid** (S10-D12); `program_to_fixture` graceful (never-crashes, prior review #10) (`380fb89`)
 - ☐ 6. Fixtures + goldens — current-RB 3F house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10)
 - ☐ 7. Viz — per-floor SVG/GIF reused for house floors
 - ☐ 8. ruff (check + format) + full pytest green; apartment goldens byte-identical; merged `--no-ff`
@@ -72,4 +72,12 @@ sub-decisions (S10-D11+) as work lands.
   vocabulary, building-scope) — *not* the `hub` the throwaway spike used. house
   area map is house-tuned (public 12 / private 8 / wet 3) but **provisional**
   (a graded-provenance sourcing pass, like apartment's, is a later task).
+- **Work-order evolution (10.3→10.6):** the S10-D2 cross-floor **PRE pass**
+  landed *incrementally* — building cardinality (10.3) and vc continuity (10.4)
+  were added inline to `run()` directly, so 10.5's remaining piece is only the
+  `_run_floor` *extraction* (a pure readability refactor, no behavior change).
+  10.6 was pulled **before** 10.5 because 10.3 made the `program_to_fixture`
+  no-growable `ValueError` **reachable** (verified live: a vc-only floor crashed
+  `run()` with `floor 2 has no growable rooms`) — a never-crashes regression
+  that had to be closed immediately, not after a cosmetic refactor.
 - _(more as work lands)_

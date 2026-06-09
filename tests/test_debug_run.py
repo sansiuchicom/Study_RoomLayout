@@ -105,6 +105,19 @@ def test_svg_artifact_emits_canonical_per_floor_svg(tmp_path):
     assert any(c == "layer-01-footprint" for c in classes)
 
 
+def test_unknown_debug_artifact_token_rejected():
+    """S08 review #9: a typo'd format token fails loud, not silently (no-op)."""
+    import pytest
+
+    from room_layout.schema import RunConfig
+
+    with pytest.raises(ValueError, match="unknown format token"):
+        RunConfig(debug_artifacts=("svgg",))
+    # valid tokens still construct
+    assert RunConfig(debug_artifacts=("json", "svg")).debug_artifacts == ("json", "svg")
+    assert RunConfig(debug_artifacts=()).debug_artifacts == ()
+
+
 def test_both_artifacts_emit_json_and_svg(tmp_path):
     from room_layout.schema import RunConfig
 

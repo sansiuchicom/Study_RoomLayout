@@ -11,6 +11,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+#: Format tokens ``debug_artifacts`` accepts (S08-D9). Validated at construction
+#: so a typo (e.g. ``"svgg"``) fails loud rather than silently emitting nothing.
+VALID_DEBUG_ARTIFACTS: frozenset[str] = frozenset({"json", "svg"})
+
 
 @dataclass(frozen=True)
 class RunConfig:
@@ -20,3 +24,13 @@ class RunConfig:
     #: Empty = emit none (only ``manifest.json``). ``run()`` itself never reads
     #: this — it is pure; only the side-effecting debug-run helper does.
     debug_artifacts: tuple[str, ...] = ("json",)
+
+    def __post_init__(self) -> None:
+        # Reject unknown tokens (S08 review #9): an unrecognised format would
+        # otherwise be silently ignored — the writer just never fires for it.
+        unknown = sorted(set(self.debug_artifacts) - VALID_DEBUG_ARTIFACTS)
+        if unknown:
+            raise ValueError(
+                f"RunConfig.debug_artifacts: unknown format token(s) {unknown}; "
+                f"valid tokens are {sorted(VALID_DEBUG_ARTIFACTS)}"
+            )

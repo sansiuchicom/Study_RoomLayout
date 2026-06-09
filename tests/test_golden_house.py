@@ -230,3 +230,27 @@ def test_single_floor_height_optional():
     result = run(shape, program, seed=42)
     assert "MULTI_FLOOR_HEIGHT_REQUIRED" not in {f.code for f in result.failure_records}
     assert result.valid is True
+
+
+# --- per-floor viz reused for multi-floor (10.8, S10-D10) ------------------
+
+
+def test_house_floors_render_to_per_floor_svg(tmp_path):
+    """The Step 08 SVG renderer is per-floor, so multi-floor reuses it as-is
+    (S10-D10): each house floor renders to its own layered SVG. (matplotlib-free
+    — svg.py is pure.)"""
+    import xml.etree.ElementTree as ET
+
+    from room_layout.viz.svg import render
+
+    shape, program = house_3floor()
+    result = run(shape, program, seed=42)
+    assert len(result.floors) == 3
+    for fl, fs in zip(result.floors, shape.floors, strict=True):
+        out = render(fs, fl, tmp_path / f"f{fl.level}.svg", anchors=shape.vertical_anchors)
+        root = ET.parse(out).getroot()
+        groups = [g for g in root if g.tag.endswith("}g")]
+        assert len(groups) == 12  # the stable 12-layer stack
+        rooms_layer = next(g for g in groups if g.attrib.get("class") == "layer-09-rooms")
+        n_room_paths = len([c for c in rooms_layer if c.tag.endswith("}path")])
+        assert n_room_paths == len(fl.rooms)  # every labeled room is drawn

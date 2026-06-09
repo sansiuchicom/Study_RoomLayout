@@ -376,11 +376,12 @@ Tracker companion docs).
 | **05** | Program layer port | proto3 `stages/stage01_program.py` + `stages/stage02_gate.py` ported. The 4 gates (`check_min_area` / `check_min_dim` / `check_access_schema` / `check_multi_floor_feasibility`) live in `constraints/gates.py`. `proto3:D020` / `D023` carry. | Program gate unit tests pass; `ProgramInstantiationFailure` + `DomainGateFailure` hierarchy round-trips through `FailureRecord` |
 | **06** | Target rules system | `TargetRules` (+ `default_min_area_m2`) + `data/target_rules/apartment.json` + `README.md` + `target/rules_loader.py` + single generic `TargetAdapter` + `expand_program()` caller helper (`proto3:D021` / `D022` carry). `usage` stays a user/BIM-set pass-through — no role↔usage auto-mapping (S06-D3). | `expand_program({"public": 1, "private": 3, ...}, "apartment", rules=...)` returns a valid `ProgramRequest` that passes stage01/stage02; `apartment.json` validates against the loader |
 | **07** | Entry point + labeling | `run(shape, program, *, seed) -> LabeledRoomLayout` assembled per D001. Per-floor outer loop, labeling stage (3.8) assigns final `Role` + carries `usage` + computes `area_m2` + runs gates. Failure path produces `valid=False` with non-empty `failure_records` (`proto3:D018` enforcement). | `run()` on each of 6 apartment fixtures returns `valid=True` matching golden `LabeledRoomLayout`; failure injection (e.g., infeasible program) returns `valid=False` with the right `FailureRecord` codes |
-| **08** | SVG visualization | proto3 `viz/svg.py` ported. Each stage (3.2–3.7) can emit an SVG overlay; final renderer composes the 12-layer stack from `proto3:D013`. Cell's matplotlib viz retained only as a development helper, not the canonical path. | All 6 fixtures produce 12-layer SVG output that lines up with golden; debug overlay opt-in via `RunConfig.debug_artifacts` flag |
+| **08** ✅ | SVG visualization | **Done (v1 ship gate).** Canonical layered-SVG renderer (`viz/svg.py` — `render()`): 12 ordered named `<g>` layers **re-derived from our pipeline** (proto3's `viz/svg.py` was a footprint+grid skeleton, so its architecture was adopted but its spine-first stack dropped — S08-D2). `make_gif()` pipeline-progression animation from the matplotlib frames via `pillow` (S08-D3/D4). Single `viz/palette.py` vocabulary (S08-D6). SVG rides the `on_stage` hook — `run()` untouched (S08-D7) — opt-in via `RunConfig.debug_artifacts`. Matplotlib viz demoted to dev-bridge. | Structural SVG tests (layer order/classes, role-fill, footprint union, anchors — not byte-golden, S08-D5) + gif smoke; opt-in via `RunConfig(debug_artifacts=("json","svg"))`. ✅ |
 
-**v1 ship gate**: Step 08 complete = `run()` works on single-floor
-apartments end-to-end with SVG debug viz. No remote / external pipeline
-integration required for v1.
+**v1 ship gate — met.** Step 08 complete: `run()` works on single-floor
+apartments end-to-end with the canonical SVG viz path (+ a pipeline-progression
+GIF). No remote / external pipeline integration required for v1. Post-v1:
+Steps 09 (ResearchBIM adapter) + 10 (multi-floor orchestrator), §5.2.
 
 ## 5.2 Deferred Steps (post-v1)
 

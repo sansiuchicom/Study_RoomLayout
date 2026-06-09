@@ -20,7 +20,7 @@ dev = [
 ]
 viz = [
     "matplotlib>=3.7",
-    # Step 07 will add `pillow` or `imageio` for `make_gif()` here.
+    "pillow>=10",  # make_gif() frame stitching (Step 08 §4.6 / S08-D3)
 ]
 
 [tool.setuptools.packages.find]

@@ -176,12 +176,20 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 apartments with the canonical SVG viz path + a pipeline-progression GIF. All
 v1 Steps (01–08) are on `main`. (Step 08 detail in §1 / §2.)
 
-**Post-v1 (Pipeline §5.2; independent, either order):**
-- **Step 09** — ResearchBIM adapter (`adapters/researchbim.py`): drop-in for
-  the `ResearchBIM_synthetic-bim` Stage 4 entry (`Building`/`Storey` mutation).
-- **Step 10** — Multi-floor orchestrator: wraps per-floor `run()` with
-  vertical-anchor alignment + per-floor program allocation + cross-floor
-  validation (D001 / D004); multi-floor SVG sheet composition lands with it.
+**Post-v1, now active:**
+- **Step 10 (Multi-floor orchestrator) — IN PROGRESS** on `step10-multifloor`
+  (opened 2026-06-08). First multi-floor target = **house** (D001 / Pipeline
+  §5.2). Plan/Tracker: `010_Step10_MultiFloor_{Plan,Tracker}.md`; S10-D1..D10.
+  Spike-verified that geometry is already multi-floor-ready (3-floor house +
+  courtyard variant → `valid=True`); the work is a `house.json` typology +
+  building-level cardinality + vertical-circulation continuity + `run()`
+  restructure (`_run_floor` + cross-floor passes, apartment byte-identical) +
+  Building-shaped fixtures. Input model aligned to the **ResearchBIM
+  `Building`/`Storey`** consumer (S10-D8/D9).
+- **Step 09** — ResearchBIM adapter (`adapters/researchbim.py`): the live
+  `Building ↔ ShapeInput` / `LabeledRoomLayout → storey.rooms` translation.
+  Deferred until ResearchBIM's footprint passing lands; Step 10 designs the
+  input to map 1:1 so this stays a thin layer.
 
 **Open / accepted (not blocking v1; see §5):** GEOS-pinned goldens (env
 reproducibility — §5.x), the 3 latent geometry xfails (B5/B6/C10), area-aware

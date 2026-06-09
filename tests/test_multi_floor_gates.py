@@ -129,3 +129,54 @@ def test_single_floor_is_vacuously_continuous():
     shape = ShapeInput(name="h", floors=[_floor(1)], vertical_anchors=[])
     prog = ProgramRequest(target_type="house", floor_programs={1: [_spec("r", "private")]})
     check_vertical_continuity(shape, prog)  # no raise (single floor)
+
+
+# --- vc-only / empty floor never-crashes (10.6, S10-D12) -------------------
+
+
+def test_vc_only_floor_is_valid_and_does_not_crash():
+    # floor 2 is circulation-only (just the shared stair, no growable room).
+    # Building cardinality passes (floor 1 has public/private/wet); the
+    # no-growable floor must emit just its vc room, not crash run().
+    shape = ShapeInput(
+        name="h", floors=[_floor(1), _floor(2)], vertical_anchors=[_anchor("s", (1, 2))]
+    )
+    prog = ProgramRequest(
+        target_type="house",
+        floor_programs={
+            1: [
+                _spec("living", "public"),
+                _spec("bed", "private"),
+                _spec("kitchen", "wet"),
+                _vc("st1", "s"),
+            ],
+            2: [_vc("st2", "s")],  # vc-only floor
+        },
+    )
+    result = run(shape, prog, seed=42)  # must not raise
+    assert result.valid is True, [f.code for f in result.failure_records]
+    assert [r.role for r in result.floors[1].rooms] == ["vertical_circulation"]
+
+
+def test_empty_floor_does_not_crash_and_is_flagged_discontinuous():
+    # floor 2 has an empty program → no rooms, no vc → no crash; continuity
+    # flags it isolated (S10-D6) so the building is valid=False, not crashed.
+    shape = ShapeInput(
+        name="h", floors=[_floor(1), _floor(2)], vertical_anchors=[_anchor("s", (1, 1))]
+    )
+    prog = ProgramRequest(
+        target_type="house",
+        floor_programs={
+            1: [
+                _spec("living", "public"),
+                _spec("bed", "private"),
+                _spec("kitchen", "wet"),
+                _vc("st1", "s"),
+            ],
+            2: [],  # empty floor
+        },
+    )
+    result = run(shape, prog, seed=42)  # must not raise
+    assert result.valid is False
+    assert "VERTICAL_CIRCULATION_DISCONTINUOUS" in {f.code for f in result.failure_records}
+    assert result.floors[1].rooms == []  # empty floor emits nothing, no crash

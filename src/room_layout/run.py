@@ -57,8 +57,8 @@ from room_layout.stages.atomize import atomize
 from room_layout.stages.corridor import carve_corridors
 from room_layout.stages.corridor_bridge import bridge_orphan_corridors
 from room_layout.stages.growth_partition import region_partition_growth
-from room_layout.stages.labeling import label_floor
-from room_layout.stages.program_adapter import program_to_fixture
+from room_layout.stages.labeling import label_floor, vc_rooms
+from room_layout.stages.program_adapter import _EXCLUDED_INPUT_ROLES, program_to_fixture
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
 from room_layout.stages.stage01_program import run as _cardinality_gate
@@ -182,6 +182,18 @@ def run(
         except (ProgramInstantiationFailure, DomainGateFailure) as e:
             failures.append(e.record)
             floors.append(LabeledFloorLayout(level=floor.level))
+            continue
+
+        # ── vc-only / empty floor (S10-D12) ──
+        # No growable rooms (a circulation-only / stair floor, or an empty
+        # program) → nothing to grow: emit just the fixed vc rooms and skip the
+        # geometry block. Never-crashes: closes the `program_to_fixture`
+        # no-growable-rooms ValueError path that building cardinality (S10-D5)
+        # made reachable (prior review #10). A genuinely unreachable floor is
+        # flagged separately by `check_vertical_continuity` (S10-D6).
+        if not any(s.role not in _EXCLUDED_INPUT_ROLES for s in specs):
+            applicable = anchors_on_floor(shape.vertical_anchors, floor.level)
+            floors.append(LabeledFloorLayout(level=floor.level, rooms=vc_rooms(specs, applicable)))
             continue
 
         # ── geometry + labeling — wrapped so any feasibility / geometry failure

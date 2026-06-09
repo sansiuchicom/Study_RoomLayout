@@ -40,6 +40,7 @@ Stable failure `code` strings (expanded as gates land)::
     "FLOOR_CONSUMED_BY_ANCHORS"      (anchors.py — Step 07 review)
     "ANCHOR_OUTSIDE_FOOTPRINT"       (validators.py — Step 07 review)
     "NO_TARGET_RULES"                (run.py — Step 07 §4.6)
+    "VERTICAL_CIRCULATION_DISCONTINUOUS" (multi_floor.py — Step 10 §4.4)
     # program-instantiation + area / dim / access codes land in Step 05+
 """
 

@@ -37,6 +37,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from room_layout.constraints.gates import check_multi_floor_feasibility
+from room_layout.constraints.multi_floor import check_vertical_continuity
 from room_layout.constraints.room_gate import check_grown_rooms
 from room_layout.schema import (
     WARN_PREFIX,
@@ -158,6 +159,15 @@ def run(
             _cardinality_gate(all_specs, rules=rules)
         except (ProgramInstantiationFailure, DomainGateFailure) as e:
             failures.append(e.record)
+
+    # ── vertical-circulation continuity (S10-D6) — multi-floor only ──
+    # Every floor must be reachable through one connected vc network (defined on
+    # emitted vc rooms — spec-gated). Vacuous for a single floor → apartment
+    # untouched. Collected (partial floors still render — never-crashes).
+    try:
+        check_vertical_continuity(shape, program)
+    except DomainGateFailure as e:
+        failures.append(e.record)
 
     for floor in shape.floors:
         specs = program.floor_programs.get(floor.level, [])

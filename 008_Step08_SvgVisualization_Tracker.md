@@ -19,7 +19,7 @@ drifts / sub-decisions (S08-D8+) as work lands.
 | **4.2** | `viz/palette.py` (NEW) — single source: `LAYER_ORDER` + colors (m) + grid/font; finalize layer list/order | ✅ | `73d6c19` |
 | **4.3** | `viz/stages/final.py` (MOD) — import `ROLE_COLORS` from `palette`; drop local table (S08-D6) | ✅ | `1ccc563` |
 | **4.4** | `viz/svg.py` (NEW) — layered SVG `render()`: footprint + grid + anchors + role-fill + corridor + labels; meters + Y-flip + viewBox | ✅ | `799b315` |
-| **4.5** | `debug_run.py` (MOD) — `SvgRunWriter` + SVG/GIF emit on `debug_artifacts`; extend selector; `run()` untouched (S08-D7) | ☐ | — |
+| **4.5** | `debug_run.py` (MOD) — `SvgRunWriter` + SVG/GIF emit on `debug_artifacts`; extend selector; `run()` untouched (S08-D7) | ✅ | `ec0072c` |
 | **4.6** | `viz/gif.py` (NEW) — `make_gif()` PNG-frame pipeline-progression stitch (pillow); `pyproject` += pillow | ☐ | — |
 | **4.7** | Tests — structural SVG + gif smoke + palette completeness + debug-run artifact emission (S08-D5) | ☐ | — |
 | **4.8** | Close — README + Progress + Pipeline synced to **v1 ships**; S08-D finalize; ruff + pytest green; `--no-ff` merge | ☐ | — |
@@ -32,7 +32,7 @@ drifts / sub-decisions (S08-D8+) as work lands.
 - ✅ 2. Layer stack re-derived from our pipeline (~12, no proto3 dead layers) — finalized at 4.2 (`73d6c19`)
 - ✅ 3. Single palette source (`viz/palette.py`); `final.py` reads it (duplicate table removed) — `73d6c19` / `1ccc563`
 - ☐ 4. `make_gif()` — pipeline-progression GIF from matplotlib PNG frames (pillow)
-- ☐ 5. `RunConfig.debug_artifacts` opt-in wiring (`SvgRunWriter`); `run()` unchanged
+- ✅ 5. `RunConfig.debug_artifacts` opt-in wiring (`SvgRunWriter`); `run()` unchanged (`ec0072c`)
 - ☐ 6. Tests structural (layer order/counts/classes, role-fill, grid), not byte-golden; gif smoke
 - ☐ 7. `pyproject` viz extra += `pillow`; no cairosvg / SVG-raster dep
 - ✅ 8. Step 07 docs archived → `legacy/step07/` (H011); Progress Tracker Step 08 opened (`29eb39a`)
@@ -44,6 +44,17 @@ drifts / sub-decisions (S08-D8+) as work lands.
 
 (Filled as work items land — drifts, surprises, sub-decisions S08-D8+.)
 
+- **S08-D9 (4.5) — `SvgRunWriter` renders only the `labeling` (final) stage.**
+  The canonical SVG (`viz/svg.render`) consumes a `LabeledFloorLayout`; that is
+  the v1 deliverable. Rendering the geometry-debug stages (atoms / regions /
+  region-graph / growth / corridor) to SVG would duplicate the existing
+  matplotlib dev-bridge (which also feeds `make_gif`, 4.6) and would be
+  half-doable at best (growth / corridor carry region-id *sets*, not polygons —
+  they need cross-stage region geometry). So v1 draws the final layered SVG per
+  floor and leaves the 6 debug layers as empty `<g>` (the empty-group contract
+  makes lighting them a localized post-v1 add). Also: `RunConfig.debug_artifacts`
+  went `bool → tuple[str, ...]` (`("json","svg")`) — a real second format (SVG)
+  now exists, so the selector is not speculative.
 - **S08-D8 (4.4 follow-up) — footprint drawn as the part UNION, not per-part.**
   Found via a user viz review of `case_33`: a phantom rectangle "box" appeared
   over the rooms. Root cause — the footprint arrives as *overlapping design

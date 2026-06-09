@@ -47,7 +47,7 @@ a pre-merge review. Delivered:
   validation (review #9). `run()` untouched — SVG rides the `on_stage` hook.
 - `viz/__init__.py` — eager palette + `render` (matplotlib-free), lazy
   `make_gif` (PEP 562) so `import room_layout.viz` stays light.
-S08-D1..D9 in `008_Step08_SvgVisualization_Plan.md` §2 + Tracker §3. Step 07
+S08-D1..D9 in `legacy/step08/008_Step08_SvgVisualization_Plan.md` §2 + Tracker §3. Step 07
 docs archived → `legacy/step07/` (proto3:D016 H011). 995 pytest + 4 xfail
 (GEOS 3.14.1); ruff clean. **v1 ships.**
 

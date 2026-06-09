@@ -21,7 +21,7 @@ sub-decisions (S10-D11+) as work lands.
 | **10.4** | vc vertical continuity (S10-D6) on **emitted vc rooms**; `VERTICAL_CIRCULATION_DISCONTINUOUS` | ✅ | `dda5a39` |
 | **10.5** | `run()` restructure (S10-D2) — `_run_floor` + cross-floor **PRE** pass (no POST, #7) | ✅ | `aa8445e` |
 | **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `program_to_fixture` graceful (never-crashes; prior review #10) | ✅ | `380fb89` |
-| **10.7** | Fixtures + goldens — current-RB 3-floor house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) | ☐ | — |
+| **10.7** | Fixtures + goldens — current-RB 3-floor house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) | ✅ | `487bb04` |
 | **10.8** | Viz — per-floor SVG/GIF for house floors (reuse) | ☐ | — |
 | **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green; `--no-ff` merge | ☐ | — |
 
@@ -34,7 +34,7 @@ sub-decisions (S10-D11+) as work lands.
 - ✅ 3. vc **vertical** continuity on **emitted vc rooms** (S10-D6, #5); `VERTICAL_CIRCULATION_DISCONTINUOUS`; containment reused (`dda5a39`)
 - ✅ 4. `run()` restructured (`_run_floor` + cross-floor **PRE** pass, no POST #7); never-crashes preserved; apartment byte-identical (`aa8445e`)
 - ✅ 5. vc-only / growable-less floor **valid** (S10-D12); `program_to_fixture` graceful (never-crashes, prior review #10) (`380fb89`)
-- ☐ 6. Fixtures + goldens — current-RB 3F house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10)
+- ✅ 6. Fixtures + goldens — current-RB 3F house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) (`487bb04`)
 - ☐ 7. Viz — per-floor SVG/GIF reused for house floors
 - ☐ 8. ruff (check + format) + full pytest green; apartment goldens byte-identical; merged `--no-ff`
 

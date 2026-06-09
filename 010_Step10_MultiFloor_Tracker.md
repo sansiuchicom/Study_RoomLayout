@@ -1,6 +1,6 @@
 # 010 Step 10 — Multi-Floor Orchestrator Tracker
 
-Status: In progress (on `step10-multifloor`)
+Status: Completed (on `step10-multifloor`) — pending merge to `main`
 Type: Step tracker
 Branch: `step10-multifloor`
 Last updated: 2026-06-08
@@ -80,4 +80,51 @@ sub-decisions (S10-D11+) as work lands.
   no-growable `ValueError` **reachable** (verified live: a vc-only floor crashed
   `run()` with `floor 2 has no growable rooms`) — a never-crashes regression
   that had to be closed immediately, not after a cosmetic refactor.
-- _(more as work lands)_
+
+---
+
+## 4. Close summary
+
+Step 10 (Multi-floor orchestrator) complete on `step10-multifloor` — 9 work
+items — the **house** target (first multi-floor typology). Post-v1 capability
+(Pipeline §5.2); apartment (single-floor) stays **byte-identical** throughout.
+
+**The key framing held (§0):** multi-floor is mostly *not new geometry* — the
+per-floor pipeline already worked (verified by a 3-floor + courtyard spike). The
+real work was the cross-floor / building-level concerns + the typology:
+
+**Delivered:**
+- `house.json` typology + `TargetRules.cardinality_scope` field (S10-D3/D13);
+  registered. `public`/`private`/`wet` role cardinality (corpus vocabulary).
+- **Building-level cardinality** (S10-D5): `run()` branches on `cardinality_scope`
+  — a house counts `min_cardinality` over all floors, so living/kitchen on 1F +
+  bedrooms above is valid. `per_floor` (apartment) unchanged.
+- **vc vertical continuity** (`constraints/multi_floor.py`, S10-D6): union-find
+  over occupied levels on **emitted** vc rooms (spec-gated, #5); vertical-only
+  (#6). `VERTICAL_CIRCULATION_DISCONTINUOUS` on an isolated floor / partial-core
+  gap.
+- **vc-only / empty floor never-crashes** (S10-D12): a growable-less floor emits
+  just its fixed vc rooms — closing the `program_to_fixture` `ValueError` path
+  that building cardinality made reachable (prior review #10; verified live).
+- **`run()` restructure** (S10-D2): per-floor body extracted to `_run_floor`;
+  `run()` = cross-floor PRE pass (cardinality + continuity) → per-floor loop.
+- **Multi-floor goldens** (`test_golden_house.py`): current-RB 3-floor +
+  forward-compat courtyard + discontinuity injection. Multi-floor requires
+  per-floor height (`MULTI_FLOOR_HEIGHT_REQUIRED`, #10).
+- **Per-floor viz** reused as-is for the house floors (S10-D10).
+
+**ResearchBIM alignment (S10-D8/D9):** the input model maps 1:1 from the
+consumer's `Building`/`Storey`/`Footprint`/`Core` (same m/CCW/centerline);
+fixtures are authored *as* Building translations. The **live adapter is Step 09**
+(deferred until ResearchBIM's footprint passing lands).
+
+**Decisions:** S10-D1..D10 (planning) + **S10-D11/D12/D13** (from a pre-build
+external review of the Plan — role-level cardinality + usage caveat; vc-only
+floor valid + never-crashes; `cardinality_scope` field). 7 further plan doc
+fixes from the same review (§3 review-response note). Verified #5 + #8 in code
+before accepting.
+
+**Not done (deliberate):** the live ResearchBIM adapter (Step 09); auto program
+allocation; hotel/office typologies; a stacked multi-floor SVG sheet; full
+horizontal access topology (deferred v1-wide). Step 10 docs archive at the next
+Step's kickoff (proto3:D016 H011).

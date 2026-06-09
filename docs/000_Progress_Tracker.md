@@ -28,6 +28,27 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
+Step 10 (Multi-floor orchestrator) **complete** on `step10-multifloor` (pending
+merge) — the first multi-floor target, **house** (post-v1, Pipeline §5.2). Most
+of multi-floor was already done (the per-floor pipeline; spike-verified), so the
+work was cross-floor / building-level:
+- `house.json` typology + `TargetRules.cardinality_scope` field (S10-D3/D13).
+- Building-level cardinality (S10-D5): `run()` branches on `cardinality_scope`
+  → a house counts `min_cardinality` building-wide (living/kitchen 1F + bedrooms
+  above is valid). apartment (`per_floor`) byte-identical.
+- vc vertical continuity (`constraints/multi_floor.py`, S10-D6) on emitted vc
+  rooms (#5), vertical-only (#6) → `VERTICAL_CIRCULATION_DISCONTINUOUS`.
+- vc-only / empty floor never-crashes (S10-D12): emits fixed rooms, skips growth
+  — closed the `program_to_fixture` ValueError building cardinality made
+  reachable (prior review #10).
+- `run()` restructure: `_run_floor` extraction + cross-floor PRE pass (S10-D2).
+- Multi-floor goldens (`test_golden_house.py`) + `MULTI_FLOOR_HEIGHT_REQUIRED`
+  (#10) + per-floor SVG reuse (S10-D10).
+Input model maps 1:1 from the ResearchBIM `Building`/`Storey` consumer
+(S10-D8/D9); the live adapter is Step 09. S10-D1..D13 (incl. D11/12/13 from a
+pre-build Plan review). 1018 pytest + 4 xfail (GEOS 3.14.1); ruff clean;
+apartment goldens byte-identical.
+
 Step 08 (SVG visualization) **complete** on `step08-svg-viz` — the v1 **ship
 gate** (Pipeline §5.1) — merged `--no-ff` to `main` (2026-06-08, S08-D1) after
 a pre-merge review. Delivered:
@@ -166,6 +187,7 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 | 2026-06-02 | Step 06 Target rules system — completed on `main` (D005, no merge; 7 work items, ~13 commits). `TargetRules.default_min_area_m2` (full Role map, S06-D1) + `target/rules_loader` (thin JSON-boundary + finite, S06-D4, domain delegated S06-D2가) + single generic `TargetAdapter` (S06-D5, no target_type S06-D6) + `apartment.json` + citation-ready graded provenance README + `expand_program` ({role:count}→ProgramRequest) + pyproject package-data (wheel verified). Canonical fixes at kickoff (Pipeline §5.1 DoD role↔usage + anchor slot; Arch L90-91). S06-D1..D6. DoD test: expand output passes stage01+stage02; apartment.json admits all 33 goldens. 730 pytest + 5 xfail; ruff check + format clean. apartment values from a verified search-LLM survey; non-apartment typologies surveyed separately (may not fit 4-role model — out of scope). |
 | 2026-06-03 | Step 07 Entry point + labeling — completed on `step07-entrypoint` (12 work items; **merged to `main`** `68e8df2` `--no-ff` + external/adversarial review response `0c03b69`). The public `run()` (D001) end-to-end: `run.py` join + `polygonize` (S04-D2) + `labeling` (§3.8, 7-class role/usage recovery) + vc anchor re-insertion (S04-D4) + per-room `room_gate` (1.5 m² reject) + `corridor_bridge` (orphan dead-corridor → connected spine) + failure composition (proto3:D018, never crashes out) + `on_stage`/`debug_run` D006 trace + final-layout matplotlib renderer (S01-D10). S07-D1..D6. Corpus A (33 end-to-end run goldens) + B (authored apartment fixtures). 4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge). Geometry stays byte-identical to Cell (bridge is a post-step over the unchanged carve). 975 pytest + 4 xfail (GEOS 3.14.1); ruff clean. Review response (`0c03b69`): never-crashes hardening (GROWTH_OVERSUBSCRIBED / FLOOR_CONSUMED_BY_ANCHORS caught in `run()`) + anchor-footprint containment + ShapePart polygon-validity + non-vc `anchor_id` invariant. 2 deferred findings: area-aware growth (`docs/000_area_aware_growth.md`) + wall-thickness clear-area inset (§5.2). |
 | 2026-06-08 | Step 08 SVG visualization — **the v1 ship gate** — completed on `step08-svg-viz` (8 work items; merged `--no-ff` to `main`). `viz/palette.py` (single vocabulary: 12-layer `LAYER_ORDER` re-derived from our pipeline — proto3's spine-first stack dropped, its `svg.py` is a footprint+grid skeleton so architecture-only, S08-D2; meters, `proto3:D019` dropped) + `viz/svg.py` (canonical `render()`: ordered named `<g>` layers, Y-flip + viewBox, footprint = part **union** S08-D8, role-fill rooms, corridor, labels, anchors) + `viz/gif.py` (`make_gif()` 7-frame pipeline-progression via matplotlib + `pillow`, S08-D3/D4) + `SvgRunWriter` + `RunConfig.debug_artifacts` `bool→tuple` selector with token validation (S08-D7/D9). `run()` untouched — SVG rides the `on_stage` hook. matplotlib demoted to dev-bridge. S08-D1..D9. Pre-merge review: 1 fix (`debug_artifacts` token validation #9); 11 other findings triaged as documented v1-accepted limitations / post-v1 deferrals (GEOS-pinned goldens, B5/B6/C10 xfails, area-aware growth, wall-thickness, typology coverage, frozen-mutable, NaN/inf, provenance). Structural SVG tests (not byte-golden, S08-D5) + gif smoke. 995 pytest + 4 xfail (GEOS 3.14.1); ruff clean. **v1 ships.** |
+| 2026-06-08 | Step 10 Multi-floor orchestrator — completed on `step10-multifloor` (9 work items; pending merge). First multi-floor target **house** (post-v1). `house.json` typology + `TargetRules.cardinality_scope` field (S10-D3/D13); **building-level cardinality** (S10-D5 — `run()` branches on the scope; house counts `min_cardinality` building-wide, apartment `per_floor` byte-identical); **vc vertical continuity** (`constraints/multi_floor.py`, S10-D6 — union-find on *emitted* vc rooms #5, vertical-only #6, `VERTICAL_CIRCULATION_DISCONTINUOUS`); **vc-only/empty floor never-crashes** (S10-D12 — closed the `program_to_fixture` ValueError building cardinality made reachable, prior review #10); **`run()` restructure** (`_run_floor` + cross-floor PRE pass, S10-D2); multi-floor goldens (`test_golden_house.py`: current-RB 3-floor + courtyard + discontinuity) + `MULTI_FLOOR_HEIGHT_REQUIRED` (#10) + per-floor SVG reuse (S10-D10). Input maps 1:1 from the ResearchBIM `Building`/`Storey` consumer (S10-D8/D9); live adapter = Step 09. S10-D1..D13 (D11/12/13 + 7 doc fixes from a pre-build Plan review; #5/#8 verified in code). 1018 pytest + 4 xfail (GEOS 3.14.1); ruff clean; apartment goldens byte-identical. |
 
 ---
 
@@ -176,20 +198,16 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 apartments with the canonical SVG viz path + a pipeline-progression GIF. All
 v1 Steps (01–08) are on `main`. (Step 08 detail in §1 / §2.)
 
-**Post-v1, now active:**
-- **Step 10 (Multi-floor orchestrator) — IN PROGRESS** on `step10-multifloor`
-  (opened 2026-06-08). First multi-floor target = **house** (D001 / Pipeline
-  §5.2). Plan/Tracker: `010_Step10_MultiFloor_{Plan,Tracker}.md`; S10-D1..D10.
-  Spike-verified that geometry is already multi-floor-ready (3-floor house +
-  courtyard variant → `valid=True`); the work is a `house.json` typology +
-  building-level cardinality + vertical-circulation continuity + `run()`
-  restructure (`_run_floor` + cross-floor passes, apartment byte-identical) +
-  Building-shaped fixtures. Input model aligned to the **ResearchBIM
-  `Building`/`Storey`** consumer (S10-D8/D9).
-- **Step 09** — ResearchBIM adapter (`adapters/researchbim.py`): the live
+**Post-v1:**
+- **Step 10 (Multi-floor orchestrator) — COMPLETE** on `step10-multifloor`
+  (pending merge). First multi-floor target = **house**: `run()` lays out
+  multi-floor buildings (building cardinality + vc continuity + vc-only/empty
+  floors + `_run_floor`), apartment byte-identical. Detail in §1 / §2.
+  S10-D1..D13. **Next: merge `--no-ff` to `main`.**
+- **Step 09 (next)** — ResearchBIM adapter (`adapters/researchbim.py`): the live
   `Building ↔ ShapeInput` / `LabeledRoomLayout → storey.rooms` translation.
-  Deferred until ResearchBIM's footprint passing lands; Step 10 designs the
-  input to map 1:1 so this stays a thin layer.
+  Activated when ResearchBIM's footprint passing lands; Step 10 designed the
+  input to map 1:1 (S10-D8/D9) so this stays a thin layer.
 
 **Open / accepted (not blocking v1; see §5):** GEOS-pinned goldens (env
 reproducibility — §5.x), the 3 latent geometry xfails (B5/B6/C10), area-aware

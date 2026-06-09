@@ -1,6 +1,6 @@
 # 010 Step 10 — Multi-Floor Orchestrator Plan
 
-Status: In progress (kickoff on `step10-multifloor`)
+Status: Completed (on `step10-multifloor`) — pending merge to `main`; S10-D1..D13
 Type: Step plan
 Branch: `step10-multifloor` (D005 — triggers fired: **integration** [`run()`
 restructured into a per-floor body + cross-floor pre/post passes] + **regression

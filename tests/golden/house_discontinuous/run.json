@@ -1,0 +1,81 @@
+{
+  "valid": false,
+  "failure_codes": [
+    "VERTICAL_CIRCULATION_DISCONTINUOUS"
+  ],
+  "floors": [
+    {
+      "level": 1,
+      "n_rooms": 3,
+      "rooms": [
+        {
+          "id": "kitchen",
+          "role": "wet",
+          "usage": null,
+          "area_m2": 30.0,
+          "anchor_id": null
+        },
+        {
+          "id": "living",
+          "role": "public",
+          "usage": null,
+          "area_m2": 84.0,
+          "anchor_id": null
+        },
+        {
+          "id": "stair_1",
+          "role": "vertical_circulation",
+          "usage": null,
+          "area_m2": 6.0,
+          "anchor_id": "stair"
+        }
+      ],
+      "n_corridor_polygons": 0,
+      "corridor_area_m2": 0
+    },
+    {
+      "level": 2,
+      "n_rooms": 2,
+      "rooms": [
+        {
+          "id": "bed1",
+          "role": "private",
+          "usage": null,
+          "area_m2": 76.375,
+          "anchor_id": null
+        },
+        {
+          "id": "bed2",
+          "role": "private",
+          "usage": null,
+          "area_m2": 37.625,
+          "anchor_id": null
+        }
+      ],
+      "n_corridor_polygons": 0,
+      "corridor_area_m2": 0
+    },
+    {
+      "level": 3,
+      "n_rooms": 2,
+      "rooms": [
+        {
+          "id": "bed3",
+          "role": "private",
+          "usage": null,
+          "area_m2": 114.0,
+          "anchor_id": null
+        },
+        {
+          "id": "stair_3",
+          "role": "vertical_circulation",
+          "usage": null,
+          "area_m2": 6.0,
+          "anchor_id": "stair"
+        }
+      ],
+      "n_corridor_polygons": 0,
+      "corridor_area_m2": 0
+    }
+  ]
+}

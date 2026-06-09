@@ -41,6 +41,7 @@ Stable failure `code` strings (expanded as gates land)::
     "ANCHOR_OUTSIDE_FOOTPRINT"       (validators.py — Step 07 review)
     "NO_TARGET_RULES"                (run.py — Step 07 §4.6)
     "VERTICAL_CIRCULATION_DISCONTINUOUS" (multi_floor.py — Step 10 §4.4)
+    "MULTI_FLOOR_HEIGHT_REQUIRED"     (validators.py — Step 10 §4.7)
     # program-instantiation + area / dim / access codes land in Step 05+
 """
 

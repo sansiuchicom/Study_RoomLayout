@@ -18,7 +18,7 @@ drifts / sub-decisions (S08-D8+) as work lands.
 | **4.1** | Kickoff — Plan + Tracker + `git mv 007_*.md → legacy/step07/` + Progress Tracker (Step 08 opened) | ✅ | `29eb39a` |
 | **4.2** | `viz/palette.py` (NEW) — single source: `LAYER_ORDER` + colors (m) + grid/font; finalize layer list/order | ✅ | `73d6c19` |
 | **4.3** | `viz/stages/final.py` (MOD) — import `ROLE_COLORS` from `palette`; drop local table (S08-D6) | ✅ | `1ccc563` |
-| **4.4** | `viz/svg.py` (NEW) — layered SVG `render()`: footprint + grid + anchors + role-fill + corridor + labels; meters + Y-flip + viewBox | ☐ | — |
+| **4.4** | `viz/svg.py` (NEW) — layered SVG `render()`: footprint + grid + anchors + role-fill + corridor + labels; meters + Y-flip + viewBox | ✅ | `799b315` |
 | **4.5** | `debug_run.py` (MOD) — `SvgRunWriter` + SVG/GIF emit on `debug_artifacts`; extend selector; `run()` untouched (S08-D7) | ☐ | — |
 | **4.6** | `viz/gif.py` (NEW) — `make_gif()` PNG-frame pipeline-progression stitch (pillow); `pyproject` += pillow | ☐ | — |
 | **4.7** | Tests — structural SVG + gif smoke + palette completeness + debug-run artifact emission (S08-D5) | ☐ | — |
@@ -28,8 +28,8 @@ drifts / sub-decisions (S08-D8+) as work lands.
 
 ## 2. Definition of Done checklist (Plan §1)
 
-- ☐ 1. Canonical SVG renderer (`viz/svg.py`) — layered `<g>`, empty-group contract, meters + Y-flip + viewBox + pad + scale
-- ☐ 2. Layer stack re-derived from our pipeline (~12, no proto3 dead layers) — finalized at 4.2
+- ✅ 1. Canonical SVG renderer (`viz/svg.py`) — layered `<g>`, empty-group contract, meters + Y-flip + viewBox + pad + scale (`799b315`)
+- ✅ 2. Layer stack re-derived from our pipeline (~12, no proto3 dead layers) — finalized at 4.2 (`73d6c19`)
 - ✅ 3. Single palette source (`viz/palette.py`); `final.py` reads it (duplicate table removed) — `73d6c19` / `1ccc563`
 - ☐ 4. `make_gif()` — pipeline-progression GIF from matplotlib PNG frames (pillow)
 - ☐ 5. `RunConfig.debug_artifacts` opt-in wiring (`SvgRunWriter`); `run()` unchanged

@@ -28,15 +28,28 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Step 08 (SVG visualization) **in progress** on `step08-svg-viz` (opened
-2026-06-08; D005 — branch on size + milestone, S08-D1). The v1 **ship gate**
-(Pipeline §5.1): a canonical layered-SVG renderer + `make_gif()` (pipeline-
-progression GIF) consuming the Step-07 `on_stage`/`StageOutput` trace. `run()`
-is untouched — additive viz on the existing hook (S08-D7). Layer stack re-
-derived from our pipeline (S08-D2); proto3's `viz/svg.py` is a skeleton, so
-the "port" is architecture-only. S08-D1..D7 in
-`008_Step08_SvgVisualization_Plan.md` §2. Step 07 docs archived →
-`legacy/step07/` (4.1 kickoff, proto3:D016 H011).
+Step 08 (SVG visualization) **complete** on `step08-svg-viz` — the v1 **ship
+gate** (Pipeline §5.1) — merged `--no-ff` to `main` (2026-06-08, S08-D1) after
+a pre-merge review. Delivered:
+- `viz/palette.py` (S08-D6) — single visual vocabulary: 12-layer `LAYER_ORDER`
+  re-derived from our pipeline (proto3's spine-first stack dropped — its
+  `viz/svg.py` is a footprint+grid skeleton, so architecture-only port, S08-D2),
+  role colors, grid/font (meters; `proto3:D019` mm dropped). `final.py` reads it.
+- `viz/svg.py` (S08-D2) — canonical `render()`: 12 ordered named `<g>` layers,
+  Y-flip + viewBox + 5% pad; footprint = part **union** (S08-D8 — fixed a
+  phantom overlap-seam box a viz review caught), role-fill rooms, corridor,
+  labels, optional anchors; unlit layers stay empty `<g>`.
+- `viz/gif.py` (S08-D3/D4) — `make_gif()`: 7-frame pipeline-progression GIF from
+  the matplotlib renderers via `pillow` (not SVG raster); reads `run()`'s live
+  trace (no pipeline re-orchestration).
+- `debug_run.py` (S08-D7/D9) — `SvgRunWriter` (renders the `labeling` stage);
+  `RunConfig.debug_artifacts` `bool → tuple[str,...]` selector + token
+  validation (review #9). `run()` untouched — SVG rides the `on_stage` hook.
+- `viz/__init__.py` — eager palette + `render` (matplotlib-free), lazy
+  `make_gif` (PEP 562) so `import room_layout.viz` stays light.
+S08-D1..D9 in `008_Step08_SvgVisualization_Plan.md` §2 + Tracker §3. Step 07
+docs archived → `legacy/step07/` (proto3:D016 H011). 995 pytest + 4 xfail
+(GEOS 3.14.1); ruff clean. **v1 ships.**
 
 Step 06 (Target rules system) **complete** on `main` (2026-06-02, D005 —
 stayed on main, weak triggers, no merge needed). Built the value+loading
@@ -152,24 +165,32 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 | 2026-06-02 | Step 05 Program layer port — completed on `step05-programlayer` (18 commits; 8 work items). `constraints/gates.py` (4 pure gates, m units) + `schema/target.py` (`TargetRules`) + `ProgramInstantiationFailure` + `stage01_program` (cardinality only, S05-D8) + `stage02_gate` (floor-scoped area+dim, S05-D6 revised). `area_min_m2` → required / `area_target_m2` → optional (S05-D1); 33 golden inputs regenerated, **region-id digests unchanged** (S04-D3 target-agnostic guard, S05-D7). S05-D1..D8. Pre-close adversarial review: 0 gate-logic bugs, 5 fixes (`c5c06a4`). 690 pytest + 5 xfail under GEOS 3.14.1; ruff clean. **Merged to `main` `f3f4906` (--no-ff); branch deleted + pushed.** Post-merge: review-driven density_factor upper bound + doc sync. |
 | 2026-06-02 | Step 06 Target rules system — completed on `main` (D005, no merge; 7 work items, ~13 commits). `TargetRules.default_min_area_m2` (full Role map, S06-D1) + `target/rules_loader` (thin JSON-boundary + finite, S06-D4, domain delegated S06-D2가) + single generic `TargetAdapter` (S06-D5, no target_type S06-D6) + `apartment.json` + citation-ready graded provenance README + `expand_program` ({role:count}→ProgramRequest) + pyproject package-data (wheel verified). Canonical fixes at kickoff (Pipeline §5.1 DoD role↔usage + anchor slot; Arch L90-91). S06-D1..D6. DoD test: expand output passes stage01+stage02; apartment.json admits all 33 goldens. 730 pytest + 5 xfail; ruff check + format clean. apartment values from a verified search-LLM survey; non-apartment typologies surveyed separately (may not fit 4-role model — out of scope). |
 | 2026-06-03 | Step 07 Entry point + labeling — completed on `step07-entrypoint` (12 work items; **merged to `main`** `68e8df2` `--no-ff` + external/adversarial review response `0c03b69`). The public `run()` (D001) end-to-end: `run.py` join + `polygonize` (S04-D2) + `labeling` (§3.8, 7-class role/usage recovery) + vc anchor re-insertion (S04-D4) + per-room `room_gate` (1.5 m² reject) + `corridor_bridge` (orphan dead-corridor → connected spine) + failure composition (proto3:D018, never crashes out) + `on_stage`/`debug_run` D006 trace + final-layout matplotlib renderer (S01-D10). S07-D1..D6. Corpus A (33 end-to-end run goldens) + B (authored apartment fixtures). 4.11 resolved the 2 Step-07 xfails (K>seedable graceful; corridor bridge). Geometry stays byte-identical to Cell (bridge is a post-step over the unchanged carve). 975 pytest + 4 xfail (GEOS 3.14.1); ruff clean. Review response (`0c03b69`): never-crashes hardening (GROWTH_OVERSUBSCRIBED / FLOOR_CONSUMED_BY_ANCHORS caught in `run()`) + anchor-footprint containment + ShapePart polygon-validity + non-vc `anchor_id` invariant. 2 deferred findings: area-aware growth (`docs/000_area_aware_growth.md`) + wall-thickness clear-area inset (§5.2). |
+| 2026-06-08 | Step 08 SVG visualization — **the v1 ship gate** — completed on `step08-svg-viz` (8 work items; merged `--no-ff` to `main`). `viz/palette.py` (single vocabulary: 12-layer `LAYER_ORDER` re-derived from our pipeline — proto3's spine-first stack dropped, its `svg.py` is a footprint+grid skeleton so architecture-only, S08-D2; meters, `proto3:D019` dropped) + `viz/svg.py` (canonical `render()`: ordered named `<g>` layers, Y-flip + viewBox, footprint = part **union** S08-D8, role-fill rooms, corridor, labels, anchors) + `viz/gif.py` (`make_gif()` 7-frame pipeline-progression via matplotlib + `pillow`, S08-D3/D4) + `SvgRunWriter` + `RunConfig.debug_artifacts` `bool→tuple` selector with token validation (S08-D7/D9). `run()` untouched — SVG rides the `on_stage` hook. matplotlib demoted to dev-bridge. S08-D1..D9. Pre-merge review: 1 fix (`debug_artifacts` token validation #9); 11 other findings triaged as documented v1-accepted limitations / post-v1 deferrals (GEOS-pinned goldens, B5/B6/C10 xfails, area-aware growth, wall-thickness, typology coverage, frozen-mutable, NaN/inf, provenance). Structural SVG tests (not byte-golden, S08-D5) + gif smoke. 995 pytest + 4 xfail (GEOS 3.14.1); ruff clean. **v1 ships.** |
 
 ---
 
 # 3. Next actions
 
-**Step 08 (SVG visualization) in progress** on `step08-svg-viz` (opened
-2026-06-08) — the v1 **ship gate** (Pipeline §5.1): the canonical layered-SVG
-renderer + `make_gif()` (pipeline-progression), consuming the `StageOutput`
-trace + `debug_run` layout Step 07 landed (4.6 / 4.7). `run()` untouched —
-additive viz on the existing `on_stage` hook (S08-D7). Plan/Tracker:
-`008_Step08_SvgVisualization_{Plan,Tracker}.md`; decisions S08-D1..D7.
+**🚢 v1 shipped.** Step 08 (SVG visualization) complete + merged — the v1
+**ship gate** (Pipeline §5.1) is met: `run()` works end-to-end on single-floor
+apartments with the canonical SVG viz path + a pipeline-progression GIF. All
+v1 Steps (01–08) are on `main`. (Step 08 detail in §1 / §2.)
 
-Work order (Plan §4): 4.1 kickoff (done — Step 07 docs archived →
-`legacy/step07/`, H011) → 4.2 palette → 4.3 final.py merge → 4.4 `svg.py`
-renderer → 4.5 `SvgRunWriter` wiring → 4.6 `make_gif()` → 4.7 tests →
-4.8 close (**v1 ships**).
+**Post-v1 (Pipeline §5.2; independent, either order):**
+- **Step 09** — ResearchBIM adapter (`adapters/researchbim.py`): drop-in for
+  the `ResearchBIM_synthetic-bim` Stage 4 entry (`Building`/`Storey` mutation).
+- **Step 10** — Multi-floor orchestrator: wraps per-floor `run()` with
+  vertical-anchor alignment + per-floor program allocation + cross-floor
+  validation (D001 / D004); multi-floor SVG sheet composition lands with it.
 
-(Step 07 complete + merged — see §1 / §2.)
+**Open / accepted (not blocking v1; see §5):** GEOS-pinned goldens (env
+reproducibility — §5.x), the 3 latent geometry xfails (B5/B6/C10), area-aware
+growth + wall-thickness inset (deferred design), target-rules provenance
+(paper-grade sourcing), and the cheap pre-v1 hardenings declined at the Step 08
+review (#8 NaN/inf input guard, #10 `program_to_fixture` never-crashes — both
+currently unreachable on the apartment path).
+
+(Steps 05–08 complete + merged — see §1 / §2.)
 
 (Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
 warehouse rules + US/EU/KR is in flight. Those typologies may not fit the

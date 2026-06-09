@@ -12,6 +12,19 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
+**v1 shipped** — Step 08 (SVG visualization) complete, the v1 **ship gate**
+(Pipeline §5.1). On top of the Step 07 `run()` end-to-end core, v1 now has the
+**canonical layered-SVG renderer** (`viz/svg.py` — `render()`, 12 ordered `<g>`
+layers re-derived from our pipeline), a **`make_gif()`** pipeline-progression
+animation (matplotlib frames via `pillow`), and a single `viz/palette.py`
+visual vocabulary. SVG rides the existing `on_stage` hook — `run()` is
+untouched (S08-D7) — and is opt-in via
+`RunConfig(debug_artifacts=("json","svg"))`. Merged `--no-ff` to `main` after a
+pre-merge review (one fix landed — `debug_artifacts` token validation #9; the
+other findings are documented v1-accepted limitations / post-v1 deferrals).
+S08-D1..D9. Post-v1: Step 09 (ResearchBIM adapter) + Step 10 (multi-floor),
+both independent (Pipeline §5.2).
+
 Step 07 (Entry point + labeling) complete and **merged to `main`** (`68e8df2`,
 `--no-ff`, 2026-06-03) after an external + adversarial review response
 (`0c03b69` — never-crashes hardening + anchor/schema validation). The public

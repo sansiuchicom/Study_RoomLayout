@@ -1,6 +1,6 @@
 # 008 Step 08 — SVG Visualization Plan
 
-Status: In progress (kickoff on `step08-svg-viz`)
+Status: Completed — merged `--no-ff` to `main` (v1 ship gate, 2026-06-08); S08-D1..D9
 Type: Step plan
 Branch: `step08-svg-viz` (D005 — branch on **size + milestone**, not the classic
 integration/regression triggers. Honest framing: Step 08 is **additive viz** —

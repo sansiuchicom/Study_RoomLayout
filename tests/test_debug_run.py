@@ -63,11 +63,61 @@ def test_write_debug_run_persists_stages_and_manifest(tmp_path):
     manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["seed"] == 42
     assert manifest["package_version"]
-    assert manifest["config"] == {"debug_artifacts": False}
+    # default debug_artifacts = ("json",) → serialized as a list (S08-D9)
+    assert manifest["config"] == {"debug_artifacts": ["json"]}
     assert "started_at" in manifest and "duration_ms" in manifest
+
+    # default emits no SVG (json-only)
+    assert not list(out_dir.glob("*.svg"))
 
 
 def test_default_run_id_is_seed_prefixed(tmp_path):
     shape, program = _shape_and_program("case_01_30py_flat")
     _, out_dir = write_debug_run(shape, program, seed=7, out_root=tmp_path)
     assert out_dir.name.startswith("seed7_")
+
+
+def test_svg_artifact_emits_canonical_per_floor_svg(tmp_path):
+    """debug_artifacts=("svg",) → per-floor labeling SVG, no JSON (S08-D9)."""
+    from room_layout.schema import RunConfig
+
+    shape, program = _shape_and_program("case_04_50py_c_shape")
+    lvl = shape.floors[0].level
+    _, out_dir = write_debug_run(
+        shape,
+        program,
+        seed=1,
+        out_root=tmp_path,
+        run_id="svg",
+        config=RunConfig(debug_artifacts=("svg",)),
+    )
+    svg = out_dir / f"06_labeling_f{lvl}.svg"
+    assert svg.exists() and svg.stat().st_size > 0
+    # svg-only selector ⇒ no per-stage JSON, no final.json
+    assert not list(out_dir.glob("*.json")) or {p.name for p in out_dir.glob("*.json")} == {
+        "manifest.json"
+    }
+    # the SVG is real, layered XML with the footprint
+    import xml.etree.ElementTree as ET
+
+    root = ET.parse(svg).getroot()
+    classes = [g.attrib.get("class", "") for g in root if g.tag.endswith("}g") or g.tag == "g"]
+    assert any(c == "layer-01-footprint" for c in classes)
+
+
+def test_both_artifacts_emit_json_and_svg(tmp_path):
+    from room_layout.schema import RunConfig
+
+    shape, program = _shape_and_program("case_01_30py_flat")
+    lvl = shape.floors[0].level
+    _, out_dir = write_debug_run(
+        shape,
+        program,
+        seed=2,
+        out_root=tmp_path,
+        run_id="both",
+        config=RunConfig(debug_artifacts=("json", "svg")),
+    )
+    assert (out_dir / "final.json").exists()
+    assert (out_dir / f"06_labeling_f{lvl}.json").exists()
+    assert (out_dir / f"06_labeling_f{lvl}.svg").exists()

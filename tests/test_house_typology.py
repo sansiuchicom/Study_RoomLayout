@@ -1,10 +1,11 @@
-"""house typology smoke (Step 10 §4.2 / S10-D3 / S10-D13).
+"""house typology + building-level cardinality (Step 10 §4.2/§4.3, S10-D3/D5/D13).
 
 The first multi-floor typology: `house.json` loads, registers, and lets a
 multi-floor run past `check_multi_floor_feasibility` (apartment forbids it).
-Building-level cardinality logic itself is 10.3 — here both floors carry a full
-program so per-floor admission (still active) passes; this proves the typology
-+ the gate, not the building-cardinality split.
+Building-level cardinality (10.3): `cardinality_scope="building"` counts
+`min_cardinality` over the WHOLE building, so a house with living/kitchen only
+on 1F and bedrooms above is valid (per-floor scope would reject the upper
+floors); a building-wide shortfall is reported once, partial floors still render.
 """
 
 from __future__ import annotations
@@ -118,3 +119,72 @@ def test_multi_floor_house_passes_the_multi_floor_gate():
     assert "NO_TARGET_RULES" not in codes
     assert result.valid is True, codes
     assert len(result.floors) == 2
+
+
+# --- building-level cardinality (10.3, S10-D5/D13) --------------------------
+
+
+def test_sparse_upper_floors_valid_under_building_scope():
+    """1F=living+kitchen, 2F/3F=bedrooms — no public/wet on the upper floors.
+    Per-floor cardinality would reject 2F/3F (no public); building scope counts
+    the required roles building-wide → valid. The S10-D5 win.
+    """
+    shape = ShapeInput(
+        name="house3",
+        floors=[_floor(1), _floor(2), _floor(3)],
+        vertical_anchors=[_stair((1, 3))],
+    )
+    prog = ProgramRequest(
+        target_type="house",
+        floor_programs={
+            1: [
+                _spec("living", "public"),
+                _spec("kitchen", "wet"),
+                _spec("stair_1", "vertical_circulation", anchor_id="stair"),
+            ],
+            2: [
+                _spec("bed1", "private"),
+                _spec("bed2", "private"),
+                _spec("stair_2", "vertical_circulation", anchor_id="stair"),
+            ],
+            3: [
+                _spec("bed3", "private"),
+                _spec("stair_3", "vertical_circulation", anchor_id="stair"),
+            ],
+        },
+    )
+    result = run(shape, prog, seed=42)
+    assert result.valid is True, [f.code for f in result.failure_records]
+    assert len(result.floors) == 3
+    # the upper floors really do carry rooms (not rejected per-floor)
+    assert result.floors[1].rooms and result.floors[2].rooms
+
+
+def test_building_cardinality_shortfall_collected_partial_floors():
+    """No `wet` anywhere → building cardinality fails (wet>=1), valid=False, but
+    floors still render (partial output, never-crashes)."""
+    shape = ShapeInput(
+        name="house_nokitchen",
+        floors=[_floor(1), _floor(2)],
+        vertical_anchors=[_stair((1, 2))],
+    )
+    prog = ProgramRequest(
+        target_type="house",
+        floor_programs={
+            1: [
+                _spec("living", "public"),
+                _spec("stair_1", "vertical_circulation", anchor_id="stair"),
+            ],
+            2: [
+                _spec("bed1", "private"),
+                _spec("stair_2", "vertical_circulation", anchor_id="stair"),
+            ],
+        },
+    )
+    result = run(shape, prog, seed=42)
+    assert result.valid is False
+    assert "PROGRAM_CARDINALITY_INSUFFICIENT" in {f.code for f in result.failure_records}
+    # building-level shortfall is reported ONCE, not per floor
+    assert sum(f.code == "PROGRAM_CARDINALITY_INSUFFICIENT" for f in result.failure_records) == 1
+    # partial layouts still rendered
+    assert len(result.floors) == 2 and result.floors[0].rooms

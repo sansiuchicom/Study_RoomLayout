@@ -145,12 +145,29 @@ def run(
             valid=False, floors=[], failure_records=[e.record], provenance=provenance
         )
 
+    # ── building-level cardinality (S10-D5/D13) ──
+    # When the typology counts `min_cardinality` over the WHOLE building (a house
+    # needs its required rooms building-wide, not on every floor), check it ONCE
+    # over all floors' specs. A shortfall is collected (partial floors still
+    # render — never-crashes). `per_floor` typologies (apartment) skip this and
+    # keep the in-loop per-floor check below — byte-identical.
+    building_cardinality = rules.cardinality_scope == "building"
+    if building_cardinality:
+        all_specs = [s for fspecs in program.floor_programs.values() for s in fspecs]
+        try:
+            _cardinality_gate(all_specs, rules=rules)
+        except (ProgramInstantiationFailure, DomainGateFailure) as e:
+            failures.append(e.record)
+
     for floor in shape.floors:
         specs = program.floor_programs.get(floor.level, [])
 
         # ── admission (pre-growth; raise → catch) ──
+        # cardinality is per-floor only when scope == per_floor (S10-D5); the
+        # building branch already checked it once above. area/dim stays per-floor.
         try:
-            _cardinality_gate(specs, rules=rules)
+            if not building_cardinality:
+                _cardinality_gate(specs, rules=rules)
             _area_dim_gate(floor, specs, rules=rules)
         except (ProgramInstantiationFailure, DomainGateFailure) as e:
             failures.append(e.record)

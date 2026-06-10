@@ -12,6 +12,16 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
+**Post-v1: Step 10 (multi-floor) complete** on `step10-multifloor` — the first
+multi-floor target, **house**. `run()` now lays out multi-floor buildings:
+building-level cardinality (`cardinality_scope`, so living/kitchen downstairs +
+bedrooms above is valid), vertical-circulation continuity
+(`VERTICAL_CIRCULATION_DISCONTINUOUS`), vc-only/empty floors handled
+(never-crashes), per-floor SVG reused. The input model maps 1:1 from the
+**ResearchBIM `Building`/`Storey`** consumer (the live adapter is Step 09). The
+single-floor **apartment** path stays byte-identical. S10-D1..D13. (Pending
+merge.)
+
 **v1 shipped** — Step 08 (SVG visualization) complete, the v1 **ship gate**
 (Pipeline §5.1). On top of the Step 07 `run()` end-to-end core, v1 now has the
 **canonical layered-SVG renderer** (`viz/svg.py` — `render()`, 12 ordered `<g>`

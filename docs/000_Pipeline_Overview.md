@@ -387,8 +387,8 @@ Steps 09 (ResearchBIM adapter) + 10 (multi-floor orchestrator), §5.2.
 
 | # | Step | Activation trigger |
 |---|---|---|
-| **09** | ResearchBIM adapter (`adapters/researchbim.py`) | Activated when integrating with the `ResearchBIM_synthetic-bim` Stage 4 — drop-in replacement for `run_s04_core_bsp(...)` via `Building` / `Storey` mutation translation |
-| **10** | Multi-floor orchestrator | Activated when the first multi-floor target (house / hotel) is scoped. Wraps per-floor `run()` with vertical-anchor alignment + per-floor program allocation + cross-floor validation (D001 / D004) |
+| **09** (next) | ResearchBIM adapter (`adapters/researchbim.py`) | The live `Building ↔ ShapeInput` / `LabeledRoomLayout → storey.rooms` translation into `ResearchBIM_synthetic-bim` Stage 4 (`run_s04_core_bsp`). Activated when ResearchBIM's footprint passing lands; Step 10 designed the input to map 1:1 (S10-D8/D9) so this is a thin layer. |
+| **10** ✅ | Multi-floor orchestrator | **Done** (`step10-multifloor`) — first target **house**. `run()` is multi-floor: building-level cardinality (`cardinality_scope`, S10-D5/D13), vertical-circulation continuity (S10-D6), vc-only/empty floors (S10-D12), `_run_floor` extraction (S10-D2); apartment byte-identical. Program is caller-supplied per floor (S10-D4 — no auto-allocator). Input aligned to ResearchBIM `Building`/`Storey`. S10-D1..D13. |
 
 ## 5.3 Dependencies
 

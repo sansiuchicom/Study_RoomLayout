@@ -66,6 +66,7 @@ def validate_input(shape: ShapeInput, program: ProgramRequest) -> list[FailureRe
     _check_duplicate_floor_levels(shape, records)
     _check_duplicate_spec_ids(program, records)
     _check_anchor_footprint_containment(shape, records)
+    _check_multi_floor_heights(shape, records)
 
     anchors_by_id = {a.id: a for a in shape.vertical_anchors}
     shape_levels = {fs.level for fs in shape.floors}
@@ -198,6 +199,27 @@ def _check_duplicate_floor_levels(shape: ShapeInput, records: list[FailureRecord
                     data={"level": level, "count": count},
                 )
             )
+
+
+def _check_multi_floor_heights(shape: ShapeInput, records: list[FailureRecord]) -> None:
+    """A multi-floor building needs `floor_to_floor_height` on every floor —
+    storey elevation/stacking is undefined without it (Step 10 §4.7 / review
+    #10). A single-floor building may omit it (Pipeline §2.1)."""
+    if len(shape.floors) <= 1:
+        return
+    missing = [fs.level for fs in shape.floors if fs.floor_to_floor_height is None]
+    if missing:
+        records.append(
+            FailureRecord(
+                code="MULTI_FLOOR_HEIGHT_REQUIRED",
+                stage=_STAGE,
+                message=(
+                    f"multi-floor building ({len(shape.floors)} floors) requires "
+                    f"floor_to_floor_height on every floor; missing on level(s) {missing}"
+                ),
+                data={"levels_missing_height": missing},
+            )
+        )
 
 
 def _check_anchor_footprint_containment(shape: ShapeInput, records: list[FailureRecord]) -> None:

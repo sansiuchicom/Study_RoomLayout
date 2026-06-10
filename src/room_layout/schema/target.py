@@ -20,6 +20,9 @@ Fields:
   spaces count toward it (enforced in `stage01_program`, not here).
 - `requires_single_floor` — typology forbids multi-floor layouts; the
   multi-floor gate fails when this is set and the building has != 1 floor.
+- `cardinality_scope` — `"per_floor"` (apartment default) or `"building"`
+  (multi-floor house): the scope `min_cardinality` is checked over (S10-D13).
+  A separate axis from `requires_single_floor`.
 - `default_min_area_m2` — per-`Role` standard floor area (S06-D1). A **full**
   Role-keyed map. This is the SEED `expand_program` reads to fill a fresh
   `SpaceUnitSpec.area_min_m2`; it is **not** a stage01 None-fallback (S05-D1
@@ -72,8 +75,20 @@ class TargetRules:
     requires_single_floor: bool
     default_min_area_m2: dict[Role, float]  # required full Role map (S06-D1)
     min_cardinality: dict[Role, int] = field(default_factory=dict)
+    #: S10-D13 — where `min_cardinality` is checked: `"per_floor"` (each floor
+    #: independently, the apartment default) or `"building"` (summed across all
+    #: floors, for a multi-floor house). A *separate axis* from
+    #: `requires_single_floor` (a future hotel could be multi-floor yet want a
+    #: per-floor minimum). The cardinality gate branches on this, not on floor
+    #: count.
+    cardinality_scope: str = "per_floor"
 
     def __post_init__(self) -> None:
+        if self.cardinality_scope not in ("per_floor", "building"):
+            raise ValueError(
+                f"TargetRules: cardinality_scope must be 'per_floor' or "
+                f"'building', got {self.cardinality_scope!r}"
+            )
         if not (0 < self.density_factor <= 1):
             raise ValueError(
                 f"TargetRules: density_factor must be in (0, 1] "

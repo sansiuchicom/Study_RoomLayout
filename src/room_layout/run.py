@@ -128,7 +128,11 @@ def _run_floor(
     # `check_vertical_continuity` (S10-D6).
     if not any(s.role not in _EXCLUDED_INPUT_ROLES for s in specs):
         applicable = anchors_on_floor(shape.vertical_anchors, floor.level)
-        return LabeledFloorLayout(level=floor.level, rooms=vc_rooms(specs, applicable)), []
+        fl = LabeledFloorLayout(level=floor.level, rooms=vc_rooms(specs, applicable))
+        # emit the labeling stage so this floor still appears in the on_stage
+        # trace + per-floor SVG (S10 review #1 — it was silently skipped).
+        _emit(on_stage, 6, "labeling", fl, floor.level)
+        return fl, []
 
     # ── geometry + labeling — wrapped so any feasibility / geometry failure
     #    becomes valid=False, never crashing out (③): subtract_anchors raises
@@ -186,7 +190,7 @@ def run(
             valid=False, floors=[], failure_records=hard, provenance=provenance
         )
 
-    # Resolve typology rules (S07-D6) — v1 ships apartment only.
+    # Resolve typology rules (S07-D6). Shipped: apartment + house (Step 10).
     rules_path = _RULES_PATH_BY_TYPE.get(program.target_type)
     if rules_path is None:
         return LabeledRoomLayout(
@@ -198,7 +202,7 @@ def run(
                     stage="run",
                     message=(
                         f"no target_rules shipped for typology {program.target_type!r} "
-                        "(v1 ships apartment only)"
+                        f"(shipped: {sorted(_RULES_PATH_BY_TYPE)})"
                     ),
                     data={"target_type": program.target_type},
                 )

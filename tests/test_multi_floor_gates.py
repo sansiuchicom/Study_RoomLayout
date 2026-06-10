@@ -180,3 +180,27 @@ def test_empty_floor_does_not_crash_and_is_flagged_discontinuous():
     assert result.valid is False
     assert "VERTICAL_CIRCULATION_DISCONTINUOUS" in {f.code for f in result.failure_records}
     assert result.floors[1].rooms == []  # empty floor emits nothing, no crash
+
+
+def test_vc_only_floor_emits_labeling_stage_to_trace():
+    # S10 review #1: a vc-only floor short-circuits growth but must still emit
+    # its `labeling` stage, or the debug JSON/SVG silently drop that floor.
+    shape = ShapeInput(
+        name="h", floors=[_floor(1), _floor(2)], vertical_anchors=[_anchor("s", (1, 2))]
+    )
+    prog = ProgramRequest(
+        target_type="house",
+        floor_programs={
+            1: [
+                _spec("living", "public"),
+                _spec("bed", "private"),
+                _spec("kitchen", "wet"),
+                _vc("st1", "s"),
+            ],
+            2: [_vc("st2", "s")],  # vc-only floor
+        },
+    )
+    seen: list[tuple[int | None, str]] = []
+    run(shape, prog, seed=42, on_stage=lambda s: seen.append((s.level, s.stage_id)))
+    labeling_levels = [lvl for lvl, sid in seen if sid == "labeling"]
+    assert labeling_levels == [1, 2]  # both floors traced, incl. the vc-only one

@@ -260,7 +260,22 @@ def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
         if not adj_roots:
             exhausted.add(sliver_i)
             continue
-        host_i = max(adj_roots, key=lambda r: areas[r])
+        # 격자 번호상 인접이어도 hole(계단/courtyard) 너머라 *물리적으로 안 닿는*
+        # cell 과의 병합을 차단 — 안 닿는 병합은 group 을 disconnected 로 만들어
+        # 이후 _union_atoms_to_shape_part 가 작은 조각을 버림(area 손실). 공유변>0 만 허용.
+        sliver_poly = unary_union([to_shapely(aw[0].shape) for aw in cells[sliver_i][0]])
+        touching = [
+            r
+            for r in adj_roots
+            if sliver_poly.intersection(
+                unary_union([to_shapely(aw[0].shape) for aw in cells[r][0]])
+            ).length
+            > 1e-9
+        ]
+        if not touching:
+            exhausted.add(sliver_i)
+            continue
+        host_i = max(touching, key=lambda r: areas[r])
         ha, hh, hx, hy = cells[host_i]
         cells[host_i] = (ha + cells[sliver_i][0], hh, hx, hy)
         areas[host_i] += areas[sliver_i]

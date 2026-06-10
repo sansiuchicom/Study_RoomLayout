@@ -254,3 +254,33 @@ def test_house_floors_render_to_per_floor_svg(tmp_path):
         rooms_layer = next(g for g in groups if g.attrib.get("class") == "layer-09-rooms")
         n_room_paths = len([c for c in rooms_layer if c.tag.endswith("}path")])
         assert n_room_paths == len(fl.rooms)  # every labeled room is drawn
+
+
+# --- geometry invariants the area-digest can't see (review #7) --------------
+
+
+def test_house_geometry_invariants():
+    """The `run_golden` digest is id/role/area-based (GEOS-stable, by design),
+    so it would miss a subtle polygon/topology break. These assert the geometry
+    directly: vc room == the shared anchor footprint, no two rooms overlap, and
+    the courtyard void is inside no room."""
+    from shapely.geometry import Point
+
+    shape, program = house_3floor()
+    result = run(shape, program, seed=42)
+    anchor = shape.vertical_anchors[0].footprint_polygon
+    for fl in result.floors:
+        vc = [r for r in fl.rooms if r.role == "vertical_circulation"]
+        assert len(vc) == 1
+        assert vc[0].polygon.symmetric_difference(anchor).area < 1e-9  # vc == anchor
+        for i in range(len(fl.rooms)):
+            for j in range(i + 1, len(fl.rooms)):
+                inter = fl.rooms[i].polygon.intersection(fl.rooms[j].polygon).area
+                assert inter < 1e-9, f"f{fl.level}: {fl.rooms[i].id} ∩ {fl.rooms[j].id}"
+
+    # courtyard: the 2F hole (5,4)-(7,6) is a void → inside no room
+    shape_c, program_c = house_courtyard()
+    result_c = run(shape_c, program_c, seed=42)
+    void = Point(6, 5)
+    for r in result_c.floors[1].rooms:
+        assert not r.polygon.covers(void), f"{r.id} covers the courtyard void"

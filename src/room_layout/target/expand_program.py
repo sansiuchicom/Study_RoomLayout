@@ -27,6 +27,13 @@ Invalid roles (`corridor`, or `vertical_circulation` without an anchor) are
 **not** pre-screened here — `SpaceUnitSpec.__post_init__` already rejects them
 (S02-D9), so a second check would duplicate that single source of truth
 (S05-D8 spirit). They surface as the constructor's `ValueError`.
+
+**Single-floor only.** This builds a one-`level` `ProgramRequest` (and binds no
+`vertical_circulation` anchors). Multi-floor program *allocation* — deciding
+which spaces go on which floor + the per-floor stair/vc specs — is the caller's
+job (S10-D4: `run()` validates the allocation, it does not invent one). There is
+deliberately no `expand_building(...)` helper yet (no consumer). For a
+multi-floor house, author `ProgramRequest.floor_programs` directly per floor.
 """
 
 from __future__ import annotations

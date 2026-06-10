@@ -20,10 +20,10 @@ sub-decisions (S10-D11+) as work lands.
 | **10.3** | `TargetRules.cardinality_scope` (S10-D13) + building-level role cardinality (S10-D5/D11); apartment `per_floor` byte-identical | ✅ | `3558974` |
 | **10.4** | vc vertical continuity (S10-D6) on **emitted vc rooms**; `VERTICAL_CIRCULATION_DISCONTINUOUS` | ✅ | `dda5a39` |
 | **10.5** | `run()` restructure (S10-D2) — `_run_floor` + cross-floor **PRE** pass (no POST, #7) | ✅ | `aa8445e` |
-| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `program_to_fixture` graceful (never-crashes; prior review #10) | ✅ | `380fb89` |
+| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `run()` skips growth (never-crashes; prior review #10) | ✅ | `380fb89` |
 | **10.7** | Fixtures + goldens — current-RB 3-floor house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) | ✅ | `487bb04` |
 | **10.8** | Viz — per-floor SVG/GIF for house floors (reuse) | ✅ | `81cc0c8` |
-| **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green; `--no-ff` merge | ☐ | — |
+| **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green | 🟡 | `ddfbc38` (docs + green done; merge pending review) |
 
 ---
 
@@ -33,10 +33,10 @@ sub-decisions (S10-D11+) as work lands.
 - ✅ 2. `cardinality_scope` field (S10-D13) + building-level role cardinality; apartment `per_floor` byte-identical (`3558974`)
 - ✅ 3. vc **vertical** continuity on **emitted vc rooms** (S10-D6, #5); `VERTICAL_CIRCULATION_DISCONTINUOUS`; containment reused (`dda5a39`)
 - ✅ 4. `run()` restructured (`_run_floor` + cross-floor **PRE** pass, no POST #7); never-crashes preserved; apartment byte-identical (`aa8445e`)
-- ✅ 5. vc-only / growable-less floor **valid** (S10-D12); `program_to_fixture` graceful (never-crashes, prior review #10) (`380fb89`)
+- ✅ 5. vc-only / growable-less floor **valid** (S10-D12); `run()` skips growth before `program_to_fixture` (never-crashes, prior review #10) (`380fb89`)
 - ✅ 6. Fixtures + goldens — current-RB 3F house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) (`487bb04`)
 - ✅ 7. Viz — per-floor SVG/GIF reused for house floors (`81cc0c8`)
-- ☐ 8. ruff (check + format) + full pytest green; apartment goldens byte-identical; merged `--no-ff`
+- 🟡 8. ruff (check + format) + full pytest green (1018 + 4 xfail, GEOS 3.14.1) + docs synced + apartment goldens byte-identical — **done**; `--no-ff` merge — **pending external review** (then a review-response pass + merge)
 
 ---
 
@@ -80,6 +80,27 @@ sub-decisions (S10-D11+) as work lands.
   no-growable `ValueError` **reachable** (verified live: a vc-only floor crashed
   `run()` with `floor 2 has no growable rooms`) — a never-crashes regression
   that had to be closed immediately, not after a cosmetic refactor.
+- **Post-implementation external review (12 findings) → response:** 2 code fixes
+  — **#1** (real bug: a vc-only floor short-circuited growth but never emitted
+  its `labeling` stage, so the debug JSON/SVG dropped it; now emits — `2444472`)
+  + **#11** (stale `NO_TARGET_RULES` "apartment only" message — now lists shipped
+  typologies). 1 test — **#7** (the area-digest golden can't see geometry, so a
+  direct invariant test: vc==anchor, no overlaps, courtyard void — `eb12c99`).
+  4 doc fixes — **#2** (`program_to_fixture` is **not** itself graceful; `run()`
+  skips a growable-less floor before calling it — wording corrected across
+  Plan/Tracker), **#8** (`cardinality_scope` added to the target-rules README
+  field table; house values flagged provisional), **#9** (`expand_program`
+  docstring: single-floor only, multi-floor allocation is the caller's job),
+  **#10** (this DoD/§1 vs README/Progress consistency). 5 documented as
+  deliberate / pre-existing in `docs/000_multifloor_access.md`: **#3**
+  (role-level cardinality, already S10-D11), **#4** (continuity is a universal
+  multi-floor invariant, not a typology rule), **#5** (no non-occupied-floor
+  concept — ResearchBIM doesn't send one), **#6** (continuity is PRE on specs by
+  design), **#12** (pre-existing loose anchor-aware area gate). That note also
+  captures the **stair / entrance / public access-model** discussion (the
+  access root differs by floor; the entrance is a future fixed-input like an
+  anchor). The 70 full-suite fails the reviewer saw are the GEOS 3.13.1-vs-pinned
+  golden mismatch (#1's env), not a regression (1018 pass at 3.14.1).
 
 ---
 

@@ -37,7 +37,8 @@ of `expand_program` stamps the typology onto the resulting `ProgramRequest`).
 | `density_factor` | float in (0, 1] | usable-area fraction of the gross footprint. The area gate's capacity is `footprint_area_m2 × density_factor`. |
 | `requires_single_floor` | bool | typology forbids multi-floor layouts; the multi-floor gate fails when set and the building has ≠ 1 floor. |
 | `default_min_area_m2` | dict[Role, float] | **full Role map** — per-role minimum-barrier area. The seed `expand_program` reads to fill `SpaceUnitSpec.area_min_m2`. Not a stage01 fill fallback (S05-D1). |
-| `min_cardinality` | dict[Role, int] | minimum required count per Role for the typology to be valid. Required-only (proto3:D023). Sparse (unlisted roles = 0). |
+| `min_cardinality` | dict[Role, int] | minimum required count per Role for the typology to be valid. Required-only (proto3:D023). Sparse (unlisted roles = 0). **Role-level only** — it cannot pin a specific *usage* (e.g. `wet ≥ 1` is met by a bathroom alone, no kitchen; S10-D11). |
+| `cardinality_scope` | `"per_floor"` \| `"building"` | where `min_cardinality` is checked: per floor (apartment) or summed across **all** floors (multi-floor house — living/kitchen downstairs + bedrooms above is valid). A separate axis from `requires_single_floor`. Optional, default `"per_floor"`. (Step 10, S10-D13.) |
 
 ---
 
@@ -106,9 +107,15 @@ the cardinality gate (it applies to `expand_program` output, not to the raw
 fixture inputs). So the values introduce no golden regression. (Verified
 2026-06-02 during 4.5.)
 
----
+### 2.1 `house.json` — **provisional** (Step 10)
 
-## 3. 3-layer typology extensibility model (proto3:D022)
+The first multi-floor typology (Step 10). `requires_single_floor=false`,
+`cardinality_scope="building"` (S10-D13), `min_cardinality={public, private,
+wet}:1`. Its `default_min_area_m2` (public 12 / private 8 / service 4 / wet 3 /
+…) are **house-tuned engine estimates — not graded** to the apartment level
+above: a Korean residential-area sourcing pass (the §2 table treatment) is a
+**deferred task**, not done. Until then, treat house values as provisional
+defaults, not citable figures.
 
 Typology knowledge is separated into three layers:
 

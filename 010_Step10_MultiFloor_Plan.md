@@ -120,10 +120,11 @@ Step 10 closes when:
 
 4. vc-only / growable-less floor is VALID (10.6, S10-D12): building cardinality
    lets a floor through with no growable rooms (a pure circulation / stair floor);
-   it emits only its fixed vc rooms (growth skipped). program_to_fixture's
-   no-growable-rooms ValueError is made graceful — closing the latent
-   never-crashes gap (prior review #10) that building cardinality now makes
-   reachable. Empty floor program (no specs at all) policy decided at 10.6.
+   it emits only its fixed vc rooms (growth skipped). run() skips the geometry
+   block for a growable-less floor (so program_to_fixture — which still raises on
+   no-growable-rooms — is never called) — closing the latent never-crashes gap
+   (prior review #10) that building cardinality now makes reachable. Empty floor
+   program (no specs at all) policy decided at 10.6.
 
 5. run() restructure (10.5, S10-D2): the per-floor body extracted to _run_floor;
    run() = cross-floor PRE pass (cardinality + continuity — both program/anchor-
@@ -169,7 +170,7 @@ decisions referenced as `S0N-Dxx` / `proto3:Dxxx`.
 | **S10-D9** | Input model **aligned to ResearchBIM `Building`/`Storey`**; live adapter = Step 09 | The multi-floor input is designed to map 1:1 from `Building`(`storeys`, per-storey `footprint`, shared `core`) so the future `Building ↔ ShapeInput` adapter is a thin translation. The **live adapter is Step 09** (deferred until ResearchBIM's footprint passing is implemented); Step 10 uses **hand-built fixtures modeling the `Building` shape**. |
 | **S10-D10** | Viz = **reuse per-floor** | The Step 08 SVG/GIF renderers already operate per `LabeledFloorLayout` (per floor). Multi-floor reuses them as-is (one SVG/GIF per floor). A stacked/sheet composition is deferred (Step 09 / later). |
 | **S10-D11** | house cardinality = **role-level**, no usage guarantee (review #3) | `min_cardinality` counts **roles** (`wet`/`hub`/`private`/…), not usages. Because `wet`=kitchen+bath and `hub`=landing+living, `wet≥1` is satisfied by a bathroom alone and `hub≥1` by a landing alone — so role cardinality **cannot guarantee a specific usage** (a kitchen). v1 keeps role-level and **states this limitation**; usage is a caller pass-through (S06-D3), so a usage-level cardinality rule is a separate future mechanism (§5), not Step 10. |
-| **S10-D12** | A **vc-only / growable-less floor is valid** + never-crashes (review #8) | Building-level cardinality (S10-D5) lets a floor through admission with no growable rooms (e.g. a circulation-only mezzanine / pure stair floor). That floor emits only its **fixed vc rooms** (no growth). `program_to_fixture` currently `raise ValueError` on no-growable-rooms — which would escape `run()` (it catches only `DomainGate`/`Geometry` failures), so this **closes the latent never-crashes gap** (prior external-review #10, now *reachable* via building cardinality): growth is skipped gracefully for a growable-less floor instead of raising. |
+| **S10-D12** | A **vc-only / growable-less floor is valid** + never-crashes (review #8) | Building-level cardinality (S10-D5) lets a floor through admission with no growable rooms (e.g. a circulation-only mezzanine / pure stair floor). That floor emits only its **fixed vc rooms** (no growth). `program_to_fixture` raises `ValueError` on no-growable-rooms — which would escape `run()` (it catches only `DomainGate`/`Geometry` failures). The fix is at the **`run()` level**: it detects a growable-less floor and skips the geometry block (so `program_to_fixture` is never called), emitting just the fixed vc rooms — **closing the latent never-crashes gap** (prior external-review #10, now *reachable* via building cardinality). `program_to_fixture` itself is **unchanged** (it correctly raises on misuse; `run()` simply no longer reaches it with no growable rooms). |
 | **S10-D13** | `TargetRules.cardinality_scope` field (review #4) | The cardinality scope (`"per_floor"` \| `"building"`) is an **explicit `TargetRules` field**, decoupled from `requires_single_floor` — they are different axes (a future hotel can be multi-floor *and* want a bathroom/service room **per floor**). apartment=`per_floor` (byte-identical), house=`building`. The gate branches on this field, not on floor count. |
 
 Decisions expected to emerge *during* build (recorded as **S10-D14+** when they
@@ -194,7 +195,8 @@ src/room_layout/
     gates.py             # MODIFIED: building-vs-per-floor cardinality on cardinality_scope (S10-D5/D11)
     multi_floor.py       # NEW (or in gates): vc vertical continuity on emitted vc rooms (S10-D6)
   stages/
-    program_adapter.py   # MODIFIED: no-growable floor → graceful (skip growth), not ValueError (S10-D12)
+    # (program_adapter.py UNCHANGED — `run()` skips a growable-less floor before
+    #  calling program_to_fixture, which still raises on misuse; S10-D12)
 
 tests/
   test_run_multifloor.py       # NEW: 3-floor house end-to-end + courtyard variant
@@ -220,7 +222,7 @@ close. Each item is one commit (proto3:D015). Mirrors into Tracker §1.
 | **10.3** | `TargetRules.cardinality_scope` field (S10-D13) + **building-level** role cardinality (S10-D5/D11); gate branches on the field | building-cardinality unit tests; **33 apartment goldens unchanged** (scope=`per_floor`) |
 | **10.4** | vc **vertical continuity** (S10-D6) on **emitted vc rooms** (vc-spec ∩ anchor coverage; not raw `floor_range`); `VERTICAL_CIRCULATION_DISCONTINUOUS` | continuity tests incl. a gap-injection (N partial cores) + a spec-omitted-floor case |
 | **10.5** | `run()` restructure (S10-D2) — `_run_floor` extraction + cross-floor **PRE** pass (cardinality + continuity); **no POST** (#7); never-crashes preserved | **apartment goldens + corpus B byte-identical**; multi-floor house runs |
-| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `program_to_fixture` no-growable ValueError → graceful (skip growth, emit fixed rooms); empty-floor policy | a vc-only floor returns valid (no crash); was the latent review-#10 path |
+| **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `run()` skips growth before `program_to_fixture` (emit fixed rooms); empty-floor policy | a vc-only floor returns valid (no crash); was the latent review-#10 path |
 | **10.7** | Multi-floor fixtures + goldens (S10-D7/D8/D9, #9/#10) — (a) current-RB 3-floor house + (b) forward-compat courtyard variant + (c) discontinuity injection; per-floor heights | multi-floor run-goldens green; courtyard valid; height required when >1 floor |
 | **10.8** | Viz (S10-D10) — confirm per-floor SVG/GIF render each house floor | renders 3 floors to SVG |
 | **10.9** | Close — README + Progress + Pipeline sync; S10-D finalize; ruff + pytest green; `--no-ff` merge | CI green; merged |

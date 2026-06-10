@@ -1,6 +1,6 @@
 # 010 Step 10 — Multi-Floor Orchestrator Tracker
 
-Status: Completed (on `step10-multifloor`) — pending merge to `main`
+Status: Completed — **merged to `main`** (`382966c`, `--no-ff`, 2026-06-10) after external review response
 Type: Step tracker
 Branch: `step10-multifloor`
 Last updated: 2026-06-08
@@ -23,7 +23,7 @@ sub-decisions (S10-D11+) as work lands.
 | **10.6** | vc-only / growable-less floor **valid** (S10-D12) — `run()` skips growth (never-crashes; prior review #10) | ✅ | `380fb89` |
 | **10.7** | Fixtures + goldens — current-RB 3-floor house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) | ✅ | `487bb04` |
 | **10.8** | Viz — per-floor SVG/GIF for house floors (reuse) | ✅ | `81cc0c8` |
-| **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green | 🟡 | `ddfbc38` (docs + green done; merge pending review) |
+| **10.9** | Close — README + Progress + Pipeline sync; ruff + pytest green; `--no-ff` merge | ✅ | `ddfbc38` + merge `382966c` (after external review response) |
 
 ---
 
@@ -36,7 +36,7 @@ sub-decisions (S10-D11+) as work lands.
 - ✅ 5. vc-only / growable-less floor **valid** (S10-D12); `run()` skips growth before `program_to_fixture` (never-crashes, prior review #10) (`380fb89`)
 - ✅ 6. Fixtures + goldens — current-RB 3F house + forward-compat courtyard + discontinuity; per-floor heights (#9/#10) (`487bb04`)
 - ✅ 7. Viz — per-floor SVG/GIF reused for house floors (`81cc0c8`)
-- 🟡 8. ruff (check + format) + full pytest green (1018 + 4 xfail, GEOS 3.14.1) + docs synced + apartment goldens byte-identical — **done**; `--no-ff` merge — **pending external review** (then a review-response pass + merge)
+- ✅ 8. ruff (check + format) + full pytest green (1020 + 4 xfail, GEOS 3.14.1) + docs synced + apartment goldens byte-identical; **merged `--no-ff`** (`382966c`) after the external review + 12-finding response
 
 ---
 

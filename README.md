@@ -19,8 +19,10 @@ bedrooms above is valid), vertical-circulation continuity
 (`VERTICAL_CIRCULATION_DISCONTINUOUS`), vc-only/empty floors handled
 (never-crashes), per-floor SVG reused. The input model maps 1:1 from the
 **ResearchBIM `Building`/`Storey`** consumer (the live adapter is Step 09). The
-single-floor **apartment** path stays byte-identical. S10-D1..D13. (Pending
-merge.)
+single-floor **apartment** path stays byte-identical. S10-D1..D13. **Merged
+`--no-ff` to `main`** (`382966c`, 2026-06-10) after a pre-build + post-
+implementation review response (the access-model discussion +
+deferred findings live in `docs/000_multifloor_access.md`).
 
 **v1 shipped** — Step 08 (SVG visualization) complete, the v1 **ship gate**
 (Pipeline §5.1). On top of the Step 07 `run()` end-to-end core, v1 now has the

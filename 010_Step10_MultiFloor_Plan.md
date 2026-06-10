@@ -199,10 +199,11 @@ src/room_layout/
     #  calling program_to_fixture, which still raises on misuse; S10-D12)
 
 tests/
-  test_run_multifloor.py       # NEW: 3-floor house end-to-end + courtyard variant
-  test_multi_floor_gates.py    # NEW: building cardinality + vc continuity (incl. failure injection)
-  fixtures/house_*.json         # NEW: ResearchBIM-Building-shaped multi-floor inputs
+  test_house_typology.py       # NEW (actual): house.json load + single/multi-floor + building cardinality
+  test_multi_floor_gates.py    # NEW (actual): vc continuity + vc-only/empty floor + trace
+  test_golden_house.py         # NEW (actual): 3-floor + courtyard + discontinuity goldens + geometry invariants
   golden/house_*/run.json       # NEW: multi-floor goldens (GEOS 3.14.1)
+  # fixtures are IN-CODE (like corpus B), no tests/fixtures/ dir
 ```
 
 Module split (vc continuity in `gates.py` vs a new `multi_floor.py`)

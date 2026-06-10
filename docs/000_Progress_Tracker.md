@@ -2,7 +2,7 @@
 
 Status: Current working status only
 Scope: active work item, completed work, next actions, blockers
-Last updated: 2026-06-02
+Last updated: 2026-06-10
 
 ---
 
@@ -28,8 +28,9 @@ Accepted decisions / rationale:
 # 1. Current status
 
 ```text
-Step 10 (Multi-floor orchestrator) **complete** on `step10-multifloor` (pending
-merge) — the first multi-floor target, **house** (post-v1, Pipeline §5.2). Most
+Step 10 (Multi-floor orchestrator) **complete + merged** to `main` (`382966c`,
+`--no-ff`, 2026-06-10) — the first multi-floor target, **house** (post-v1,
+Pipeline §5.2). Most
 of multi-floor was already done (the per-floor pipeline; spike-verified), so the
 work was cross-floor / building-level:
 - `house.json` typology + `TargetRules.cardinality_scope` field (S10-D3/D13).
@@ -199,25 +200,58 @@ growth can grow a realistic program *invalid* (`docs/000_area_aware_growth.md`)
 apartments with the canonical SVG viz path + a pipeline-progression GIF. All
 v1 Steps (01–08) are on `main`. (Step 08 detail in §1 / §2.)
 
-**Post-v1:**
-- **Step 10 (Multi-floor orchestrator) — COMPLETE + MERGED** (`382966c`,
-  `--no-ff`, 2026-06-10, after external review response). First multi-floor
-  target = **house**: `run()` lays out multi-floor buildings (building
-  cardinality + vc continuity + vc-only/empty floors + `_run_floor`), apartment
-  byte-identical. Detail in §1 / §2. S10-D1..D13.
-- **Step 09 (next)** — ResearchBIM adapter (`adapters/researchbim.py`): the live
-  `Building ↔ ShapeInput` / `LabeledRoomLayout → storey.rooms` translation.
-  Activated when ResearchBIM's footprint passing lands; Step 10 designed the
-  input to map 1:1 (S10-D8/D9) so this stays a thin layer.
+**Done:** v1 (Steps 01–08) + **Step 10** (multi-floor house) — all on `main`.
 
-**Open / accepted (not blocking v1; see §5):** GEOS-pinned goldens (env
-reproducibility — §5.x), the 3 latent geometry xfails (B5/B6/C10), area-aware
-growth + wall-thickness inset (deferred design), target-rules provenance
-(paper-grade sourcing), and the cheap pre-v1 hardenings declined at the Step 08
-review (#8 NaN/inf input guard, #10 `program_to_fixture` never-crashes — both
-currently unreachable on the apartment path).
+### Forward roadmap (post-Step-10)
 
-(Steps 05–08 complete + merged — see §1 / §2.)
+Strategic frame: the real goal is the **ResearchBIM integration**; the
+stair / core / entrance / access work is mostly *downstream* (ResearchBIM) and
+is **decided at the Step 09 contract** — so don't pre-build it (over-design +
+pipeline-order risk). See `docs/000_multifloor_access.md`.
+
+**A. Integration (the goal) — Step 09 + access contract** ⭐
+- **A1 — ResearchBIM coordination** 🔴 *gating*: unblock footprint passing +
+  define the Stage-4 contract (what room_layout receives / returns). Needs
+  work on the ResearchBIM side. Critical path — without it, A2/B are guesswork.
+- **A2 — Step 09 adapter**: live `Building ↔ ShapeInput` /
+  `LabeledRoomLayout → storey.rooms`. Blocked on A1. Thin by design (S10-D8/D9).
+- **A3 — access boundary** (decided with A2): who owns doors / stair-landings /
+  entrance; corridor-topology handoff. Pre-designed in the access note.
+
+**B. Access / stair / core / entrance (room_layout's slice — small, after the contract)**
+- **B1 — stair-as-hub**: carve corridors to the vc anchor on large hubless
+  upper floors. Pipeline-order dependent (needs the stair door early) — resolve
+  at A3. Not needed until a floor is large enough to require a routed corridor.
+- **B2 — entrance** as a fixed input (a generalized `fixed_rooms` — horizontal,
+  single-floor, `role=entrance`). When the contract needs it.
+- **B3 — doors + reachability** (`LabeledRoom.doors`, `check_access_schema`):
+  the big access layer, **mostly ResearchBIM**; room_layout's part TBD by A3.
+- *(Done / free: non-rectangular cores work as-is; per-floor stair direction is
+  the deferred door — access note §5–§7.)*
+- **Do not build B before A3** — pre-design is captured, not the code.
+
+**C. Algorithm / quality (room_layout-internal, not blocked)**
+- C1 — area-aware growth (consume `area_target_m2`) — `docs/000_area_aware_growth.md`.
+- C2 — anchor-aware area admission (gross-footprint optimism; Step 10 review #12).
+- C3 — the 3 latent geometry xfails (B5/B6/C10).
+- C4 — wall-thickness clear-area inset (§5.2).
+
+**D. Typology / data (room_layout-internal)**
+- D1 — non-apartment multi-floor typologies (hotel / office): 4-role fit research
+  + rules (a search-LLM survey of house/hotel/office/warehouse · US/EU/KR is in
+  flight; they may not fit the 4-role model — likely data-only `<typology>.json`).
+- D2 — `house.json` provenance grading (currently provisional).
+- D3 — usage-level cardinality (force a kitchen, if ever needed; S10-D11).
+
+**E. Infra / reproducibility**
+- E1 — GEOS-pinned goldens (the 70-fail-off-GEOS issue) — CI / onboarding debt.
+
+**Recommended sequence:** **A1 first** (talk to ResearchBIM — it gates the real
+goal). While A1 is coordinated, room_layout can move solo on **E1** (repro debt)
+or **C1** (area-aware growth). Hold **B** until the A3 contract.
+
+Also declined at the Step 08 review (cheap, currently unreachable on the shipped
+paths): #8 NaN/inf input guard, #10 `program_to_fixture` never-crashes.
 
 (Open follow-up, not blocking: a search-LLM survey of house/hotel/office/
 warehouse rules + US/EU/KR is in flight. Those typologies may not fit the

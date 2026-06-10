@@ -98,3 +98,70 @@ hubless floors)** — relevant once a house floor is large enough to need a rout
 corridor. The `entrance` concept + validated reachability ride with the broader
 access-topology work (and the Step 09 ResearchBIM adapter, which supplies the
 entrance). Recorded here so it is found, not re-discovered.
+
+---
+
+## 5. Cross-floor consistency vs directionality (what's shared, what's per-floor)
+
+A stair is the one element that is **both vertical and horizontal**, and the two
+split cleanly:
+
+| property | scope | enforced today? |
+|---|---|---|
+| **footprint** (the XY box) | **shared** — a vertical shaft has the same XY on every floor | ✅ `_check_anchor_footprint_containment` (anchor ⊆ every floor in its `floor_range`) |
+| **access / opening / door** (which edge connects to the floor; what it opens into — `public` on 1F, a `corridor` on 2F) | **per-floor** — free to differ | ❌ not modeled (`LabeledRoom.doors=None`) — so "the 1F and 2F entry directions differ" is *un-modeled, hence consistent*, not broken |
+
+So a stair whose landing faces different sides on different floors (normal for
+real buildings) is **fine** — the only cross-floor constraint room_layout
+imposes (shared footprint) is satisfied, and the per-floor direction lives in the
+deferred **door** layer. When doors land, each floor's vc room carries its own
+door; the anchor stays shared.
+
+The "direction" is therefore not a new concept to invent — it **is a door**. The
+stair-opening = a door (vc room → landing); the entrance = a door (outside →
+foyer). Both are the deferred access/door layer.
+
+## 6. Feasibility for synthetic-BIM generation (objective)
+
+The consumer (`ResearchBIM_synthetic-bim`) generates synthetic BIM for ML
+training. Two facts make the access/stair layer tractable:
+
+1. **Synthetic ≠ buildable.** The goal is *plausible* topology + geometry, not a
+   constructible building. So the real-stair constraint "a switchback's landing
+   side is fixed by its flights" does **not** have to be honored — a plausible
+   door (facing the interior) is enough. room_layout never models stair
+   internals (flights / treads / risers); it only places the **footprint**.
+2. **Stair internals + doors are downstream (ResearchBIM), not room_layout.** The
+   consumer's pipeline is S1 massing → S3 walls → **S4 room layout (= this repo)**
+   → S6 doors → IfcStair. So the door/landing and the IfcStair geometry are
+   ResearchBIM stages *after* room layout. room_layout's job ends at the 2D
+   partition + footprints.
+
+Two implementation paths for the per-floor stair door (when it is ever needed):
+- **(A) caller-provided** — ResearchBIM (which owns the stair model) passes the
+  landing edge per floor; room_layout does a lookup. Cleanest; needs the contract
+  to carry it.
+- **(B) heuristic** — room_layout picks the stair-footprint edge facing the most
+  open / circulation space on that floor. Pure geometry, ignores stair type; fine
+  for synthetic data.
+
+**The one genuine tension — pipeline order.** "Carve corridors to the stair"
+(§2.1) needs the stair door *before* layout, but ResearchBIM decides doors at S6
+*after* layout. Resolve at the Step 09 contract: either decide the stair landing
+earlier (path A, an input to room layout) **or** don't route corridors to the
+stair in room_layout at all (path B / leave it to S6). Small floors never hit
+this (rooms tile without a corridor); it only bites on large hubless floors.
+
+## 7. Non-rectangular cores are free
+
+room_layout never assumes a `VerticalAnchor.footprint_polygon` is a rectangle —
+it is a shapely `Polygon` end to end (`subtract_anchors` = polygon difference;
+`vc_rooms` = the polygon as-is; `area_m2 = polygon.area`). **Verified** by a
+throwaway spike: an L-shaped (ㄱ자, non-convex, 5 m²) stair core ran a 2-floor
+house `valid=True`, the vc room equalled the L exactly, growth tiled around the
+L-hole with no overlap, and it rendered. So L / T / U / any simple-polygon core
+costs **zero** work — the same reason footprint holes / donuts already work. A
+pathological core that splits the floor degrades *gracefully* (a disconnected
+room → `ROOM_DISCONNECTED` `GeometryFailure` → `valid=False`, never a crash). The
+core's *door* is still the deferred access layer (an L has 6 edges, so "which
+edge is the landing" is even more a door question — ResearchBIM's, §6).

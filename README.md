@@ -59,7 +59,7 @@ renderer (S01-D10) ship too.
 
 The geometry pipeline (Cell Phase 3–8) stays **byte-identical to the
 predecessor `Study_RoomLayout_Cell` across all 33 cases** — the orphan-corridor
-bridge is a *post-step* over the unchanged carve. 970 pytest + 4 xfail under the
+bridge is a *post-step* over the unchanged carve. 975 pytest + 4 xfail under the
 canonical runtime (conda `IfcOpenHouse`: shapely 2.1.2 / GEOS 3.14.1); per-stage
 + end-to-end golden regression.
 

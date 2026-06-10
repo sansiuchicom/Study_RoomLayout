@@ -27,9 +27,12 @@ Failure handling (§4.6 decisions ②/③):
 is fully deterministic (no RNG), so it is currently unused — reserved for the
 deferred stochastic Search Orchestrator.
 
-Known latent gaps (NOT caught here — xfail PoCs, deferred to §4.11): growth
-``K > seedable regions`` → ``IndexError``, and corridor single-component. The
-33 goldens + apartment fixtures do not trigger them.
+Two early-identified gaps are now **hardened**, not latent: growth
+``K > seedable regions`` raises ``GROWTH_OVERSUBSCRIBED`` (a ``DomainGateFailure``
+caught here → ``valid=False``, Step 07 §4.11), and an orphan corridor is bridged
+into the hub network (``bridge_orphan_corridors``). The remaining xfail PoCs
+(B5 / B6 / C10 latent geometry) are not reachable through the public ``run()``
+on the shipped fixtures.
 """
 
 from __future__ import annotations

@@ -100,7 +100,8 @@ sub-decisions (S10-D11+) as work lands.
   captures the **stair / entrance / public access-model** discussion (the
   access root differs by floor; the entrance is a future fixed-input like an
   anchor). The 70 full-suite fails the reviewer saw are the GEOS 3.13.1-vs-pinned
-  golden mismatch (#1's env), not a regression (1018 pass at 3.14.1).
+  golden mismatch (#1's env), not a regression (1020 pass at 3.14.1 after the
+  2 response tests).
 
 ---
 

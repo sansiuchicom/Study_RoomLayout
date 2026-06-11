@@ -55,6 +55,8 @@ MIN_AREA = 0.7  # m² minimum final region area
 MAX_ASPECT = 3.0  # final region local-bbox aspect cap (~ 1m × 3m fits target)
 BAL_MIN = 0.15  # balance threshold (smaller piece ≥ 15% of larger)
 TIE_DECIMALS = 6  # balance tie-break precision (float drift tolerance)
+_MERGE_NECK_EPS = 0.03  # sliver 흡수 시 병합 결과 최소 목 두께 — 이보다 얇게
+# 연결되면(점-핀치 / hole 너머) 병합 거부 → 비현실 tab / area 손실 방지
 
 
 @dataclass(frozen=True)
@@ -260,7 +262,20 @@ def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
         if not adj_roots:
             exhausted.add(sliver_i)
             continue
-        host_i = max(adj_roots, key=lambda r: areas[r])
+        # 격자 번호상 인접이어도 hole(계단/courtyard) 너머라 병합 결과가 robust 하게
+        # 연결되지 않으면(disconnected = area 손실 B6, 또는 점-핀치 = 비현실 tab) 제외.
+        # 병합 결과를 살짝 erode 해도 단일 Polygon 으로 남는 host 만 허용.
+        sliver_poly = unary_union([to_shapely(aw[0].shape) for aw in cells[sliver_i][0]])
+        robust = []
+        for r in adj_roots:
+            host_poly = unary_union([to_shapely(aw[0].shape) for aw in cells[r][0]])
+            eroded = sliver_poly.union(host_poly).buffer(-_MERGE_NECK_EPS)
+            if eroded.geom_type == "Polygon" and not eroded.is_empty:
+                robust.append(r)
+        if not robust:
+            exhausted.add(sliver_i)
+            continue
+        host_i = max(robust, key=lambda r: areas[r])
         ha, hh, hx, hy = cells[host_i]
         cells[host_i] = (ha + cells[sliver_i][0], hh, hx, hy)
         areas[host_i] += areas[sliver_i]

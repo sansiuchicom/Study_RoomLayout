@@ -164,3 +164,54 @@ def test_union_atoms_conserves_area_when_group_is_disconnected():
     shape = _union_atoms_to_shape_part(atoms)
     assert shape is not None
     assert to_shapely(shape).area == pytest.approx(2.0, abs=1e-9)
+
+
+def test_regionize_conserves_area_and_connectivity_with_interior_hole():
+    """Hole-adjacent sliver absorption must not merge across an interior hole.
+
+    Pre-fix, ``_absorb_sliver_cells`` picked merge hosts by lattice index
+    only, so a hole-side sliver could merge into the cell on the FAR side
+    of the hole — producing (a) a disconnected group whose small piece is
+    silently dropped by ``_union_atoms_to_shape_part`` (area loss, B6
+    path) or (b) a point-pinched region (near-point neck → unrealistic
+    tab). The fix requires the merged result to survive a small erosion
+    (``_MERGE_NECK_EPS``).
+
+    Geometry reproduces the first real-world trigger: a rectangular floor
+    with a floating interior stair hole (ResearchBIM_synthetic-bim
+    integration, seed-7 1F — PlanBIM 142 §10).
+    """
+    # Full-precision coords — the trigger is precision-sensitive (atom
+    # centroids decide the absorption path; rounded coords miss it).
+    ext = (
+        (0.0, 0.0),
+        (9.750572799628003, 0.0),
+        (9.750572799628003, 11.383282805817453),
+        (0.0, 11.383282805817453),
+    )
+    hole = (  # CW interior ring — floating stair core, 2.5 × 4.0 m
+        (3.6252863998140015, 3.6916414029087266),
+        (3.6252863998140015, 7.6916414029087266),
+        (6.1252863998140015, 7.6916414029087266),
+        (6.1252863998140015, 3.6916414029087266),
+    )
+    floor = FloorShape(
+        level=1,
+        parts=[ShapePart(exterior=ext, holes=(hole,))],
+        floor_to_floor_height=3.0,
+    )
+    atoms = atomize(floor)
+    regions = regionize(floor, atoms=atoms)
+
+    # (a) area conservation — no silently dropped disconnected pieces.
+    atom_area = sum(a.area for a in atoms)
+    region_area = sum(_area(r) for r in regions)
+    assert region_area == pytest.approx(atom_area, abs=1e-6)
+
+    # (b) no point-pinched region — every region survives the merge-neck
+    # erosion the absorption fix guarantees (0.03 = _MERGE_NECK_EPS).
+    for r in regions:
+        eroded = to_shapely(r.shape).buffer(-0.03)
+        assert eroded.geom_type == "Polygon" and not eroded.is_empty, (
+            f"region {r.region_id} is point-pinched or degenerate"
+        )

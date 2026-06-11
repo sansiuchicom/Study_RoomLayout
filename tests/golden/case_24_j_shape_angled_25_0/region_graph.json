@@ -20,7 +20,7 @@
   {
     "region_a": 0,
     "region_b": 6,
-    "shared_boundary_length": 1.460001,
+    "shared_boundary_length": 1.46,
     "centroid_distance": 2.004327,
     "same_theta_group": true,
     "exterior_contact": true,

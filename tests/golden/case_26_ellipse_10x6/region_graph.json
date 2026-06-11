@@ -11,19 +11,19 @@
   {
     "region_a": 0,
     "region_b": 2,
-    "shared_boundary_length": 2.707827,
+    "shared_boundary_length": 2.7,
     "centroid_distance": 1.459263,
     "same_theta_group": true,
-    "exterior_contact": true,
+    "exterior_contact": false,
     "hole_contact": false
   },
   {
     "region_a": 1,
     "region_b": 3,
-    "shared_boundary_length": 2.407827,
+    "shared_boundary_length": 2.4,
     "centroid_distance": 1.427069,
     "same_theta_group": true,
-    "exterior_contact": true,
+    "exterior_contact": false,
     "hole_contact": false
   },
   {

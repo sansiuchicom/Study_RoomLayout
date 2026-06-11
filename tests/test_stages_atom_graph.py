@@ -106,3 +106,39 @@ def test_atom_graph_empty_atoms_returns_empty():
 def test_atom_graph_explicit_atoms_match_internal():
     floor = _floor(_rect(0, 0, 2, 2))
     assert build_atom_graph(floor) == build_atom_graph(floor, atoms=atomize(floor))
+
+
+def test_atom_graph_filters_float_drift_micro_edges():
+    """hole 모서리 float drift 의 마이크로(서브-snap) 겹침 변은 인접이 아니다.
+
+    좌표 = ResearchBIM_synthetic-bim 통합 실측 (seed5 atom 96/67, full
+    precision): 계단 hole 모서리 y 가 두 계산 경로(snap anchor vs hole ring)로
+    1e-7 어긋나, 모서리 점 접촉이어야 할 두 atom 이 x=1.2 선에서 3.17e-7 m
+    겹침 변을 가짐. 이전 필터(1e-9 = 수치 0 판정)는 이를 edge 로 만들어
+    성장/흡수가 유령 인접으로 오배정 (점-목 거실 팔 — PlanBIM 142 §10).
+    geometry_snap 미만 변은 edge 가 아니어야 한다.
+    """
+    a = Atom(
+        atom_id=0,
+        shape=ShapePart(exterior=(
+            (1.2, 6.045976999999998),
+            (1.5499999999999998, 6.045976999999998),
+            (1.5499999999999998, 6.345977),
+            (1.2, 6.345977),
+        )),
+        part_id=0, piece_id=0, theta=0.0, is_feature_sliver=False,
+    )
+    b = Atom(
+        atom_id=1,
+        shape=ShapePart(exterior=(
+            (0.8999999999999999, 6.345976683126426),
+            (1.2, 6.345976683126426),
+            (1.2, 6.695977),
+            (0.8999999999999999, 6.695977),
+        )),
+        part_id=0, piece_id=0, theta=0.0, is_feature_sliver=False,
+    )
+    g = build_atom_graph(_floor(_rect(0, 5, 2, 7)), atoms=(a, b))
+    assert g.edges == (), (
+        f"drift 유령 edge 생성됨: {[(e.atom_a, e.atom_b, e.shared_boundary_length) for e in g.edges]}"
+    )

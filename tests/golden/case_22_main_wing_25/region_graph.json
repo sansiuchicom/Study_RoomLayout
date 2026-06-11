@@ -532,15 +532,6 @@
   },
   {
     "region_a": 29,
-    "region_b": 39,
-    "shared_boundary_length": 1e-06,
-    "centroid_distance": 2.589749,
-    "same_theta_group": false,
-    "exterior_contact": true,
-    "hole_contact": false
-  },
-  {
-    "region_a": 29,
     "region_b": 40,
     "shared_boundary_length": 1.16082,
     "centroid_distance": 1.427517,
@@ -623,19 +614,10 @@
   {
     "region_a": 35,
     "region_b": 39,
-    "shared_boundary_length": 1.183799,
+    "shared_boundary_length": 1.183798,
     "centroid_distance": 1.468183,
     "same_theta_group": true,
     "exterior_contact": true,
-    "hole_contact": false
-  },
-  {
-    "region_a": 36,
-    "region_b": 37,
-    "shared_boundary_length": 0.0,
-    "centroid_distance": 2.895396,
-    "same_theta_group": true,
-    "exterior_contact": false,
     "hole_contact": false
   },
   {
@@ -668,7 +650,7 @@
   {
     "region_a": 39,
     "region_b": 40,
-    "shared_boundary_length": 1.103379,
+    "shared_boundary_length": 1.103378,
     "centroid_distance": 2.09491,
     "same_theta_group": true,
     "exterior_contact": true,

@@ -96,6 +96,13 @@ def build_atom_graph(
     polys = [to_shapely(a.shape) for a in atoms]
     tree = STRtree(polys)
 
+    # 인접 = 물리적으로 의미 있는 공유변. geometry_snap(0.01m) 미만은 float
+    # drift 유령 — hole 모서리 좌표가 두 계산 경로(snap anchor vs hole ring)로
+    # ~1e-7 어긋나면 점 접촉이어야 할 atom 쌍이 마이크로 겹침 변을 가짐
+    # (ResearchBIM 통합 실측: 유령 17개 전부 ≤4.4e-7 m vs 정상 edge ≥0.15 m —
+    # 7자릿수 dead zone). 이전 1e-9 는 수치 0 판정일 뿐 의미 필터가 아니었음.
+    min_edge_length = (policy or DimensionPolicy()).geometry_snap
+
     footprint = unary_union(
         [sg.Polygon(p.exterior, [list(h) for h in p.holes]) for p in floor.parts]
     )
@@ -118,7 +125,7 @@ def build_atom_graph(
             poly_j = polys[j]
             shared = _shared_boundary_geom(poly_i, poly_j)
             length = line_length(shared)
-            if length < 1e-9:
+            if length < min_edge_length:
                 continue
 
             ca = atoms[i].centroid

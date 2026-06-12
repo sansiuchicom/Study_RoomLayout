@@ -14,6 +14,7 @@ from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
 from room_layout.stages.regionize import (
     MIN_AREA,
+    _MERGE_NECK_EPS,
     Region,
     _lattice_cuts,
     _union_atoms_to_shape_part,
@@ -209,9 +210,36 @@ def test_regionize_conserves_area_and_connectivity_with_interior_hole():
     assert region_area == pytest.approx(atom_area, abs=1e-6)
 
     # (b) no point-pinched region — every region survives the merge-neck
-    # erosion the absorption fix guarantees (0.03 = _MERGE_NECK_EPS).
+    # erosion the absorption fix guarantees (_MERGE_NECK_EPS).
     for r in regions:
-        eroded = to_shapely(r.shape).buffer(-0.03)
+        eroded = to_shapely(r.shape).buffer(-_MERGE_NECK_EPS)
         assert eroded.geom_type == "Polygon" and not eroded.is_empty, (
             f"region {r.region_id} is point-pinched or degenerate"
         )
+
+
+def test_absorb_rejects_gap_merge_even_for_thin_sliver():
+    """erosion 게이트의 구멍 (리뷰 2026-06-12): 전체 폭 < 2×_MERGE_NECK_EPS 인
+    sliver 는 buffer(-EPS) 가 끊긴 조각을 *통째로 지워* 단일 Polygon 으로 오판
+    → 떨어진 host 와 병합 → `_union_atoms_to_shape_part` 가 작은 조각을 버림
+    (무음 area 손실, B6 재발). 연결성 선체크(union 이 Polygon 인가)가 막아야 한다.
+    """
+    from room_layout.stages.regionize import _absorb_sliver_cells  # noqa: PLC0415
+
+    def _atom(aid, sp):
+        return Atom(
+            atom_id=aid, shape=sp, part_id=0, piece_id=0, theta=0.0,
+            is_feature_sliver=False,
+        )
+
+    # 폭 5cm(< 0.06) sliver — 격자번호상 host 와 인접하지만 실제론 0.45m 떨어짐
+    thin = _atom(0, ShapePart(exterior=((0, 0), (0.05, 0), (0.05, 2), (0, 2))))
+    fat = _atom(1, _rect(0.5, 0, 2.5, 2))
+    cells = [
+        ([(thin, (0.025, 1.0), (0, 0, 0.05, 2), 0.1)], [], 0, 0),
+        ([(fat, (1.5, 1.0), (0.5, 0, 2.5, 2), 4.0)], [], 1, 0),
+    ]
+    out = _absorb_sliver_cells(cells)
+    assert len(out) == 2, (
+        "떨어진 host 와 병합됨 — 얇은 sliver 가 erosion 게이트를 우회 (area 손실 경로)"
+    )

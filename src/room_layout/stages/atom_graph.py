@@ -3,11 +3,18 @@
 Plan reference: ``003_Step03_GeometryPipeline_Plan.md`` §4.10 + S03-D13.
 
 Ported from Cell ``atom_graph.py`` and adapted to the new schema: the
-stage takes a ``FloorShape`` (S03-D13). Algorithm unchanged.
+stage takes a ``FloorShape`` (S03-D13). Algorithm unchanged except the
+edge minimum-length filter (see below).
 
 Nodes are atoms. Two atoms are connected by an edge when their polygons
-share a boundary segment of positive length (point-only contact is not
-an edge).
+share a boundary segment of at least ``policy.geometry_snap`` (0.01 m).
+Point-only contact is not an edge; nor are sub-snap micro-contacts —
+float-drift ghosts (hole/rotated corner coords reaching the pipeline via
+two computation paths that disagree at ~1e-7) and sub-snap slivers are
+both below modelable scale and dropped by design. Note: dropped edges
+also drop their ``exterior_contact``/``hole_contact`` info — a region
+pair whose only contact is sub-snap loses that flag (viz-only consumers
+today; corridor computes ``on_footprint_edge`` independently).
 
 Each edge carries metadata for downstream phases (regionizer, corridor
 router):
@@ -96,11 +103,12 @@ def build_atom_graph(
     polys = [to_shapely(a.shape) for a in atoms]
     tree = STRtree(polys)
 
-    # 인접 = 물리적으로 의미 있는 공유변. geometry_snap(0.01m) 미만은 float
-    # drift 유령 — hole 모서리 좌표가 두 계산 경로(snap anchor vs hole ring)로
-    # ~1e-7 어긋나면 점 접촉이어야 할 atom 쌍이 마이크로 겹침 변을 가짐
-    # (ResearchBIM 통합 실측: 유령 17개 전부 ≤4.4e-7 m vs 정상 edge ≥0.15 m —
-    # 7자릿수 dead zone). 이전 1e-9 는 수치 0 판정일 뿐 의미 필터가 아니었음.
+    # 인접 = 물리적으로 의미 있는 공유변(≥ geometry_snap 0.01m). sub-snap 은
+    # 두 부류 모두 의도적으로 제외: ① float drift 유령(~1e-7 — hole/회전 모서리
+    # 좌표가 snap anchor vs ring 원좌표 두 경로로 어긋남; ResearchBIM 통합 실측
+    # ≤4.4e-7m) ② 회전/곡선 기하의 진짜 mm-급 미세 접촉(골든 re-baseline 에서
+    # 5.8mm/7.8mm 관측) — 어느 쪽이든 모델링 스케일(snap) 미만이라 인접으로
+    # 취급하지 않음. 이전 1e-9 는 수치 0 판정일 뿐 의미 필터가 아니었음.
     min_edge_length = (policy or DimensionPolicy()).geometry_snap
 
     footprint = unary_union(

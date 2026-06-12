@@ -37,12 +37,13 @@ on the shipped fixtures.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from room_layout.constraints.gates import check_multi_floor_feasibility
 from room_layout.constraints.multi_floor import check_vertical_continuity
 from room_layout.constraints.room_gate import check_grown_rooms
 from room_layout.schema import (
+    CorridorTarget,
     WARN_PREFIX,
     DomainGateFailure,
     FailureRecord,
@@ -101,6 +102,7 @@ def _run_floor(
     rules: TargetRules,
     building_cardinality: bool,
     on_stage: Callable[[StageOutput], None] | None,
+    extra_corridor_targets: tuple = (),
 ) -> tuple[LabeledFloorLayout, list[FailureRecord]]:
     """Lay out one floor — the per-floor body of ``run()`` (S10-D2 extraction).
 
@@ -154,7 +156,13 @@ def _run_floor(
         fixture = program_to_fixture(holed, program)
         growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
         _emit(on_stage, 4, "growth", growth, floor.level)
-        carved = carve_corridors(holed, growth, regions=regions, region_graph=rg)
+        carved = carve_corridors(
+            holed,
+            growth,
+            regions=regions,
+            region_graph=rg,
+            extra_targets=extra_corridor_targets,
+        )
         # repo post-step (§4.11): bridge any orphan corridor into the hub network.
         carved = bridge_orphan_corridors(carved, regions, rg)
         _emit(on_stage, 5, "corridor", carved, floor.level)
@@ -173,8 +181,15 @@ def run(
     *,
     seed: int,
     on_stage: Callable[[StageOutput], None] | None = None,
+    corridor_targets: Sequence[CorridorTarget] | None = None,
 ) -> LabeledRoomLayout:
-    """Lay out ``program`` on ``shape`` and return a ``LabeledRoomLayout`` (D001)."""
+    """Lay out ``program`` on ``shape`` and return a ``LabeledRoomLayout`` (D001).
+
+    ``corridor_targets``: optional geometric access goals — circulation must
+    additionally reach each target's polygon on its floor (e.g., a walk-in
+    anchor's landing, which the anchor-blind corridor stage would otherwise
+    ignore). Best-effort; per-target outcome lands in stage diagnostics.
+    """
     failures: list[FailureRecord] = []
     floors: list[LabeledFloorLayout] = []
     provenance = {"seed": seed, "target_type": program.target_type}
@@ -250,6 +265,10 @@ def run(
 
     # Per-floor: the geometry/labeling body is `_run_floor` (S10-D2); the
     # cross-floor passes above are the only building-level concerns.
+    targets_by_level: dict[int, list] = {}
+    for t in corridor_targets or ():
+        targets_by_level.setdefault(t.level, []).append(t.polygon)
+
     for floor in shape.floors:
         fl, floor_failures = _run_floor(
             floor,
@@ -258,6 +277,7 @@ def run(
             rules=rules,
             building_cardinality=building_cardinality,
             on_stage=on_stage,
+            extra_corridor_targets=tuple(targets_by_level.get(floor.level, ())),
         )
         floors.append(fl)
         failures.extend(floor_failures)

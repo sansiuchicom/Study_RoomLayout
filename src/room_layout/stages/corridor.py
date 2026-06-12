@@ -171,15 +171,142 @@ def _cleanup_leftover(
 # ---------- Public entry -----------------------------------------------
 
 
+def _route_extra_targets(
+    extra_targets,
+    *,
+    room_region_ids: dict[int, set[int]],
+    room_roles: dict[int, str],
+    hub_regions: set[int],
+    base_corridor: set[int],
+    unassigned_set: set[int],
+    region_poly,
+    region_area: dict[int, float],
+    region_adj: dict[int, set[int]],
+    on_footprint_edge: dict[int, bool],
+) -> list[dict]:
+    """Route the base corridor to caller-specified polygons (CorridorTarget).
+
+    For each target polygon: resolve the goal set = regions sharing a
+    positive-length boundary with it, then Stage-1 style — already satisfied
+    (a goal region is corridor / public-role) → skip; else damage-guarded A*
+    from the hub. **The goal region is carved too** (unlike room targets) so
+    the corridor physically touches the target polygon. Mutates
+    ``room_region_ids`` / ``base_corridor`` / ``unassigned_set`` in place;
+    returns a per-target log (diagnostics).
+    """
+    from room_layout.stages.corridor_path import (
+        _minimize_offending,
+        _path_damages_any_room,
+    )
+    from room_layout.stages.corridor_stage1 import (
+        _CORRIDOR_MAX_RETRY,
+        _astar_base_corridor,
+    )
+
+    log: list[dict] = []
+    if not extra_targets:
+        return log
+
+    region_to_room: dict[int, int] = {}
+    for room_idx, rids in room_region_ids.items():
+        for rid in rids:
+            region_to_room[rid] = room_idx
+
+    for t_i, target in enumerate(extra_targets):
+        goal_set = {
+            rid
+            for rid, poly in region_poly.items()
+            if poly.boundary.intersection(target.boundary).length > 0.05
+        }
+        if not goal_set:
+            log.append({"target": t_i, "result": "no-goal-regions"})
+            continue
+        satisfied = any(
+            rid in base_corridor
+            or rid in hub_regions
+            or room_roles.get(region_to_room.get(rid, -1)) == "public"
+            for rid in goal_set
+        )
+        if satisfied:
+            log.append({"target": t_i, "result": "satisfied"})
+            continue
+        if not hub_regions:
+            log.append({"target": t_i, "result": "no-hub"})
+            continue
+
+        forbidden: set[int] = set()
+        path: list[int] | None = None
+        attempts = 0
+        for attempts in range(1, _CORRIDOR_MAX_RETRY + 1):
+            candidate = _astar_base_corridor(
+                start_set=hub_regions,
+                goal_set=goal_set,
+                room_region_ids=room_region_ids,
+                base_corridor=base_corridor,
+                unassigned_set=unassigned_set,
+                region_area=region_area,
+                region_adj=region_adj,
+                on_footprint_edge=on_footprint_edge,
+                forbidden=frozenset(forbidden),
+            )
+            if candidate is None:
+                break
+            # goal regions are NOT excluded — their owners must survive the
+            # loss too (the goal region becomes corridor).
+            damage = _path_damages_any_room(
+                candidate,
+                excluded=hub_regions,
+                room_region_ids=room_region_ids,
+                region_adj=region_adj,
+            )
+            if damage is None:
+                path = candidate
+                break
+            offending, damaged_room = damage
+            forbidden.update(
+                _minimize_offending(
+                    offending, damaged_room, room_region_ids, region_adj
+                )
+            )
+        if path is None:
+            log.append({"target": t_i, "result": "astar-failed", "attempts": attempts})
+            continue
+
+        carved_now: list[int] = []
+        for rid in path:
+            if rid in hub_regions:
+                continue
+            for owner_set in room_region_ids.values():
+                owner_set.discard(rid)
+            unassigned_set.discard(rid)
+            base_corridor.add(rid)
+            carved_now.append(rid)
+        log.append(
+            {
+                "target": t_i,
+                "result": "ok",
+                "attempts": attempts,
+                "carved": carved_now,
+            }
+        )
+
+    return log
+
+
 def carve_corridors(
     floor: FloorShape,
     growth_result: GrowthResult,
     *,
     regions: tuple[Region, ...],
     region_graph: RegionGraph,
+    extra_targets: tuple = (),
 ) -> CorridoredLayout:
     """Phase 8 entry — see ``PHASE8_Corridor.md``. Consumes Step 03 outputs
     (``regions`` + ``region_graph``) as the carve substrate (S04-D8).
+
+    ``extra_targets``: shapely Polygons the circulation must additionally
+    reach (CorridorTarget.polygon, already filtered to this floor) — routed
+    after the room targets, before Stage 2 / cleanup.
     """
     (
         _regions,
@@ -192,6 +319,28 @@ def carve_corridors(
     room_region_ids, base_corridor, leftover, stage1_diag = _stage1_base_corridor(
         growth_result, region_area, region_adj, on_footprint_edge
     )
+
+    extra_diag: list[dict] = []
+    if extra_targets:
+        hub_idx_pre = growth_result.fixture.hub_room_index
+        extra_diag = _route_extra_targets(
+            tuple(extra_targets),
+            room_region_ids=room_region_ids,
+            room_roles={
+                i: r.role for i, r in enumerate(growth_result.rooms)
+            },
+            hub_regions=(
+                set(room_region_ids.get(hub_idx_pre, set()))
+                if hub_idx_pre is not None
+                else set()
+            ),
+            base_corridor=base_corridor,
+            unassigned_set=leftover,
+            region_poly=region_poly,
+            region_area=region_area,
+            region_adj=region_adj,
+            on_footprint_edge=on_footprint_edge,
+        )
 
     shortcut_corridor, stage2_diag = _stage2_detour_shortcut(
         room_region_ids=room_region_ids,
@@ -242,6 +391,7 @@ def carve_corridors(
     diagnostics = {
         "phase": "w4-stage1+stage2+cleanup",
         "stage1": stage1_diag,
+        "extra_targets": extra_diag,
         "stage2": stage2_diag,
         "cleanup": cleanup_diag,
         "base_corridor_count": len(base_corridor),

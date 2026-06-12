@@ -36,6 +36,7 @@ from room_layout.schema.failure import (
     ProgramInstantiationFailure,
 )
 from room_layout.schema.geometry import (
+    CorridorTarget,
     FloorShape,
     Point,
     Ring,
@@ -101,6 +102,7 @@ __all__ = [
     "StageOutput",
     "TargetRules",
     "TargetType",
+    "CorridorTarget",
     "VerticalAnchor",
     "VerticalAnchorHostRole",
     "VerticalAnchorKind",

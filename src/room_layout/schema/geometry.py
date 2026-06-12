@@ -174,6 +174,29 @@ class FloorShape:
 
 
 @dataclass(frozen=True)
+class CorridorTarget:
+    """A geometric access goal for corridor carving (``run(corridor_targets=...)``).
+
+    The circulation network (hub room ∪ corridor) must reach the regions
+    adjacent to ``polygon`` on floor ``level``. Use case: a walk-in anchor's
+    landing — anchors are corridor-blind holes (S04-D4), so a caller that
+    needs guaranteed access to one names it here. Unlike room targets, the
+    goal region IS carved into corridor (the corridor must *touch* the
+    polygon, not stop one region short). Best-effort like Stage 1: an
+    unreachable target is logged in diagnostics, never a hard failure.
+    """
+
+    level: int
+    polygon: Polygon
+
+    def __post_init__(self) -> None:
+        if self.polygon.is_empty or not self.polygon.is_valid:
+            raise ValueError(
+                f"CorridorTarget level={self.level}: polygon must be valid and non-empty"
+            )
+
+
+@dataclass(frozen=True)
 class ShapeInput:
     """The full geometric input to `run()` — name + floors + anchors."""
 

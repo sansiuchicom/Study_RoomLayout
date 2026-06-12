@@ -214,7 +214,7 @@ def _structural_partition(
 
 
 def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
-    """Merge cells with area < threshold into their largest adjacent cell.
+    """Merge cells with area < threshold into their largest **robust** adjacent cell.
 
     Adjacency follows the ``(x_idx, y_idx)`` lattice (differs by 1 on one
     axis). When a neighbor has already been absorbed, the adjacency
@@ -222,10 +222,14 @@ def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
     between another sliver and the main cell can still reach the main cell
     after the in-between sliver is merged first.
 
-    Slivers without any live neighbor are returned as-is. Output is
-    ``(atoms, history)`` pairs ready for Pass B; absorbed slivers'
-    histories are dropped (the host's history still describes the merged
-    region's actual exterior cuts).
+    Robust = merged union is a single Polygon (connectivity — lattice
+    neighbors can be physically separated by an interior hole) AND stays a
+    single Polygon after eroding by ``_MERGE_NECK_EPS`` (no point-pinch).
+
+    Slivers without any live neighbor — or without any robust host — are
+    returned as-is. Output is ``(atoms, history)`` pairs ready for Pass B;
+    absorbed slivers' histories are dropped (the host's history still
+    describes the merged region's actual exterior cuts).
     """
     if not cells:
         return []
@@ -264,12 +268,18 @@ def _absorb_sliver_cells(cells, threshold: float = MIN_AREA):
             continue
         # 격자 번호상 인접이어도 hole(계단/courtyard) 너머라 병합 결과가 robust 하게
         # 연결되지 않으면(disconnected = area 손실 B6, 또는 점-핀치 = 비현실 tab) 제외.
-        # 병합 결과를 살짝 erode 해도 단일 Polygon 으로 남는 host 만 허용.
+        # ① 연결성 선체크: union 자체가 MultiPolygon(떨어짐)이면 즉시 거부 —
+        #    erosion 만으로는 폭 < 2×EPS sliver 조각이 통째로 증발해 '단일 Polygon'
+        #    으로 오판될 수 있음 (리뷰 2026-06-12 발견 구멍).
+        # ② non-pinch: 연결돼 있어도 erode 후 단일 Polygon 으로 남아야 (점-목 거부).
         sliver_poly = unary_union([to_shapely(aw[0].shape) for aw in cells[sliver_i][0]])
         robust = []
         for r in adj_roots:
             host_poly = unary_union([to_shapely(aw[0].shape) for aw in cells[r][0]])
-            eroded = sliver_poly.union(host_poly).buffer(-_MERGE_NECK_EPS)
+            merged = sliver_poly.union(host_poly)
+            if merged.geom_type != "Polygon":
+                continue
+            eroded = merged.buffer(-_MERGE_NECK_EPS)
             if eroded.geom_type == "Polygon" and not eroded.is_empty:
                 robust.append(r)
         if not robust:

@@ -43,8 +43,8 @@ from room_layout.constraints.gates import check_multi_floor_feasibility
 from room_layout.constraints.multi_floor import check_vertical_continuity
 from room_layout.constraints.room_gate import check_grown_rooms
 from room_layout.schema import (
-    CorridorTarget,
     WARN_PREFIX,
+    CorridorTarget,
     DomainGateFailure,
     FailureRecord,
     FloorShape,

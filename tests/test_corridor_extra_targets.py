@@ -150,11 +150,7 @@ def test_run_accepts_corridor_targets_and_connects():
     landing = sg.box(1.2, 3.0, 2.1, 6.6)  # 계단 동쪽 면 앞
     floor = FloorShape(
         level=1,
-        parts=[
-            ShapePart(
-                exterior=((0.0, 0.0), (12.0, 0.0), (12.0, 9.0), (0.0, 9.0))
-            )
-        ],
+        parts=[ShapePart(exterior=((0.0, 0.0), (12.0, 0.0), (12.0, 9.0), (0.0, 9.0)))],
         floor_to_floor_height=None,
     )
     shape = ShapeInput(
@@ -179,28 +175,48 @@ def test_run_accepts_corridor_targets_and_connects():
     )
     specs = [
         SpaceUnitSpec(
-            id="living", role="public", usage="living", area_min_m2=10.0,
+            id="living",
+            role="public",
+            usage="living",
+            area_min_m2=10.0,
             required=True,
         ),
         SpaceUnitSpec(
-            id="bed1", role="private", usage="bedroom", area_min_m2=7.5,
+            id="bed1",
+            role="private",
+            usage="bedroom",
+            area_min_m2=7.5,
             required=True,
         ),
         SpaceUnitSpec(
-            id="bed2", role="private", usage="bedroom", area_min_m2=7.5,
+            id="bed2",
+            role="private",
+            usage="bedroom",
+            area_min_m2=7.5,
             required=True,
         ),
         SpaceUnitSpec(
-            id="bath", role="wet", usage="bathroom", area_min_m2=2.5,
+            id="bath",
+            role="wet",
+            usage="bathroom",
+            area_min_m2=2.5,
             required=True,
         ),
         SpaceUnitSpec(
-            id="stair_spec", role="vertical_circulation", usage="stair",
-            area_min_m2=stair.area, required=True, anchor_id="stair",
+            id="stair_spec",
+            role="vertical_circulation",
+            usage="stair",
+            area_min_m2=stair.area,
+            required=True,
+            anchor_id="stair",
         ),
         SpaceUnitSpec(
-            id="landing_spec", role="vertical_circulation", usage="entry",
-            area_min_m2=landing.area, required=True, anchor_id="landing",
+            id="landing_spec",
+            role="vertical_circulation",
+            usage="entry",
+            area_min_m2=landing.area,
+            required=True,
+            anchor_id="landing",
         ),
     ]
     program = ProgramRequest(target_type="house", floor_programs={1: specs})
@@ -213,14 +229,9 @@ def test_run_accepts_corridor_targets_and_connects():
     )
     assert layout.valid, layout.failure_records
     fl = layout.floors[0]
-    circulation = [
-        r.polygon for r in fl.rooms if r.role == "public"
-    ] + list(fl.corridor_polygons)
+    circulation = [r.polygon for r in fl.rooms if r.role == "public"] + list(fl.corridor_polygons)
     touch = max(
-        (
-            landing.boundary.intersection(p.boundary).length
-            for p in circulation
-        ),
+        (landing.boundary.intersection(p.boundary).length for p in circulation),
         default=0.0,
     )
     assert touch > 0.05, f"순환이 landing 과 접하지 않음 (touch={touch})"
@@ -245,15 +256,24 @@ def test_run_corridor_targets_default_none_is_noop():
     shape = ShapeInput(name="noop", floors=[floor])
     specs = [
         SpaceUnitSpec(
-            id="living", role="public", usage="living", area_min_m2=10.0,
+            id="living",
+            role="public",
+            usage="living",
+            area_min_m2=10.0,
             required=True,
         ),
         SpaceUnitSpec(
-            id="bed1", role="private", usage="bedroom", area_min_m2=7.5,
+            id="bed1",
+            role="private",
+            usage="bedroom",
+            area_min_m2=7.5,
             required=True,
         ),
         SpaceUnitSpec(
-            id="bath", role="wet", usage="bathroom", area_min_m2=2.5,
+            id="bath",
+            role="wet",
+            usage="bathroom",
+            area_min_m2=2.5,
             required=True,
         ),
     ]
@@ -261,6 +281,4 @@ def test_run_corridor_targets_default_none_is_noop():
     a = run(shape, program, seed=3)
     b = run(shape, program, seed=3, corridor_targets=None)
     assert a.valid and b.valid
-    assert [r.polygon.wkt for r in a.floors[0].rooms] == [
-        r.polygon.wkt for r in b.floors[0].rooms
-    ]
+    assert [r.polygon.wkt for r in a.floors[0].rooms] == [r.polygon.wkt for r in b.floors[0].rooms]

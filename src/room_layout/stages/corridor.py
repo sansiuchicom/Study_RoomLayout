@@ -264,9 +264,7 @@ def _route_extra_targets(
                 break
             offending, damaged_room = damage
             forbidden.update(
-                _minimize_offending(
-                    offending, damaged_room, room_region_ids, region_adj
-                )
+                _minimize_offending(offending, damaged_room, room_region_ids, region_adj)
             )
         if path is None:
             log.append({"target": t_i, "result": "astar-failed", "attempts": attempts})
@@ -326,13 +324,9 @@ def carve_corridors(
         extra_diag = _route_extra_targets(
             tuple(extra_targets),
             room_region_ids=room_region_ids,
-            room_roles={
-                i: r.role for i, r in enumerate(growth_result.rooms)
-            },
+            room_roles={i: r.role for i, r in enumerate(growth_result.rooms)},
             hub_regions=(
-                set(room_region_ids.get(hub_idx_pre, set()))
-                if hub_idx_pre is not None
-                else set()
+                set(room_region_ids.get(hub_idx_pre, set())) if hub_idx_pre is not None else set()
             ),
             base_corridor=base_corridor,
             unassigned_set=leftover,

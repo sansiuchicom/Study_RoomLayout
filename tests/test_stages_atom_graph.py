@@ -120,23 +120,33 @@ def test_atom_graph_filters_float_drift_micro_edges():
     """
     a = Atom(
         atom_id=0,
-        shape=ShapePart(exterior=(
-            (1.2, 6.045976999999998),
-            (1.5499999999999998, 6.045976999999998),
-            (1.5499999999999998, 6.345977),
-            (1.2, 6.345977),
-        )),
-        part_id=0, piece_id=0, theta=0.0, is_feature_sliver=False,
+        shape=ShapePart(
+            exterior=(
+                (1.2, 6.045976999999998),
+                (1.5499999999999998, 6.045976999999998),
+                (1.5499999999999998, 6.345977),
+                (1.2, 6.345977),
+            )
+        ),
+        part_id=0,
+        piece_id=0,
+        theta=0.0,
+        is_feature_sliver=False,
     )
     b = Atom(
         atom_id=1,
-        shape=ShapePart(exterior=(
-            (0.8999999999999999, 6.345976683126426),
-            (1.2, 6.345976683126426),
-            (1.2, 6.695977),
-            (0.8999999999999999, 6.695977),
-        )),
-        part_id=0, piece_id=0, theta=0.0, is_feature_sliver=False,
+        shape=ShapePart(
+            exterior=(
+                (0.8999999999999999, 6.345976683126426),
+                (1.2, 6.345976683126426),
+                (1.2, 6.695977),
+                (0.8999999999999999, 6.695977),
+            )
+        ),
+        part_id=0,
+        piece_id=0,
+        theta=0.0,
+        is_feature_sliver=False,
     )
     g = build_atom_graph(_floor(_rect(0, 5, 2, 7)), atoms=(a, b))
     assert g.edges == (), (

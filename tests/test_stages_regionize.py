@@ -13,8 +13,8 @@ from room_layout.schema import FloorShape, ShapePart
 from room_layout.stages._helpers import to_shapely
 from room_layout.stages.atomize import Atom, atomize
 from room_layout.stages.regionize import (
-    MIN_AREA,
     _MERGE_NECK_EPS,
+    MIN_AREA,
     Region,
     _lattice_cuts,
     _union_atoms_to_shape_part,
@@ -228,7 +228,11 @@ def test_absorb_rejects_gap_merge_even_for_thin_sliver():
 
     def _atom(aid, sp):
         return Atom(
-            atom_id=aid, shape=sp, part_id=0, piece_id=0, theta=0.0,
+            atom_id=aid,
+            shape=sp,
+            part_id=0,
+            piece_id=0,
+            theta=0.0,
             is_feature_sliver=False,
         )
 

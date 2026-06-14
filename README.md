@@ -12,6 +12,8 @@ See `MIGRATION_LOG.md` for the migration trail.
 
 ## Status
 
+**Integration (2026-06): synthetic-bim 흡수 중 라이브러리 확장.** `run(corridor_targets=[CorridorTarget(level, polygon)])` 신설 — caller가 지정한 기하 목표(예: walk-in anchor의 landing)까지 순환망이 도달하도록 corridor 추가 라우팅 (anchor는 corridor-blind, S04-D4). 기본 `None`=byte-identical (골든 무변). + regionize non-pinch 흡수 / atom_graph drift 유령 edge 필터 (통합 중 발견된 latent 버그 fix, 골든 무변). 메인 단일 출처 = PlanBIM `142_RoomLayout_Integration_Plan.md`.
+
 **Post-v1: Step 10 (multi-floor) complete** on `step10-multifloor` — the first
 multi-floor target, **house**. `run()` now lays out multi-floor buildings:
 building-level cardinality (`cardinality_scope`, so living/kitchen downstairs +
@@ -67,8 +69,8 @@ Two limitations are recorded as deferred (post-v1): target-agnostic growth can
 grow a realistic program *invalid* (`docs/000_area_aware_growth.md`), and
 wall-thickness clear-area inset (Progress Tracker §5.2).
 
-**Next**: Step 08 (SVG visualization) — the v1 ship gate: a canonical 12-layer
-SVG renderer + `make_gif()` consuming the `StageOutput` trace.
+**Next**: (v1 + Step 08~10 모두 완료.) 추가 작업은 synthetic-bim 통합 요구에
+따라 — 위 "Integration (2026-06)" 참조.
 
 Canonical docs live under `docs/`:
 

@@ -70,6 +70,10 @@ class RoomSpec:
     role: GrowthRole
     seed_position: tuple[float, float] | None
     target_aspect_range: tuple[float, float] | None = None
+    # area_target_m2: 전형(현실) 크기 — area-aware growth 입력 (Phase 4 Step 2,
+    # PlanBIM 145/146). None → fixture role 기본 없음(타깃 무시). growth 가
+    # target 거리로 흡수 우선순위/cap 을 줄 때 소비. min(area floor)과 별개.
+    area_target_m2: float | None = None
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -89,6 +93,11 @@ class RoomSpec:
                     f"RoomSpec.target_aspect_range must satisfy "
                     f"1.0 <= min <= max, got {self.target_aspect_range!r}"
                 )
+        if self.area_target_m2 is not None and self.area_target_m2 <= 0:
+            raise ValueError(
+                f"RoomSpec.area_target_m2 must be > 0 when set, "
+                f"got {self.area_target_m2!r}"
+            )
 
 
 @dataclass(frozen=True)
@@ -205,6 +214,14 @@ class LayoutFixture:
     def resolved_min_area(self, room: RoomSpec) -> float:
         """Per-room min area resolved from ``role_min_areas``."""
         return self.role_min_areas[room.role]
+
+    def resolved_target_area(self, room: RoomSpec) -> float | None:
+        """Per-room target (전형) area — Phase 4 area-aware growth 입력.
+
+        ``RoomSpec.area_target_m2`` (None 이면 타깃 없음). min(floor)과 별개;
+        growth 가 흡수 우선순위/cap 에 쓸 '지향 크기' (PlanBIM 145/146).
+        """
+        return room.area_target_m2
 
 
 @dataclass(frozen=True)

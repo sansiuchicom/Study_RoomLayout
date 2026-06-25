@@ -120,14 +120,18 @@ def label_floor(
     specs = list(specs)
     specs_by_id = {s.id: s for s in specs}
     region_poly = build_region_polygons(regions)
-    rooms = [
-        label_room(
+    rooms = []
+    for gr in corridored.rooms:
+        room = label_room(
             gr,
             specs_by_id[gr.name],
             polygonize_room(gr.region_ids, region_poly, room_name=gr.name),
         )
-        for gr in corridored.rooms
-    ]
+        # 구성 region 폴리곤 부착(§8 region-aligned 후처리 입력) — 직렬화 무영향(init=False).
+        room.region_polygons = tuple(
+            region_poly[rid] for rid in gr.region_ids if rid in region_poly
+        )
+        rooms.append(room)
     rooms.extend(vc_rooms(specs, anchors))
     corridor_polygons = polygonize_corridors(corridored.corridor_region_ids, region_poly)
     return LabeledFloorLayout(level=level, rooms=rooms, corridor_polygons=corridor_polygons)

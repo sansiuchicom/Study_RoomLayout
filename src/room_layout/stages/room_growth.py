@@ -95,8 +95,7 @@ class RoomSpec:
                 )
         if self.area_target_m2 is not None and self.area_target_m2 <= 0:
             raise ValueError(
-                f"RoomSpec.area_target_m2 must be > 0 when set, "
-                f"got {self.area_target_m2!r}"
+                f"RoomSpec.area_target_m2 must be > 0 when set, got {self.area_target_m2!r}"
             )
 
 

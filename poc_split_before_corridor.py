@@ -56,8 +56,51 @@ def _region_adjacency(region_poly: dict[int, Polygon]) -> dict[int, set[int]]:
     return adj
 
 
+def _bfs_half(rids, region_poly):
+    """rids 를 면적 ~반반 *둘 다 연결* 2그룹으로 — **2-source 성장**.
+
+    양 끝(longer-axis 최소·최대) seed 2개에서 동시에 키움. 매 스텝 *작은 쪽*에
+    인접 region 1개 흡수 → 각 그룹이 seed 로부터 BFS 트리라 *둘 다 연결 보장*
+    (sweep 의 orphan + 단일-seed BFS 의 B 끊김, 둘 다 해결). 미청구 섬은 A 로.
+    """
+    sub = {r: region_poly[r] for r in rids}
+    adj = _region_adjacency(sub)  # 방 *내부* 인접만
+    areas = {r: region_poly[r].area for r in rids}
+    minx, miny, maxx, maxy = unary_union(list(sub.values())).bounds
+    axis_x = (maxx - minx) >= (maxy - miny)
+
+    def key(r):
+        return region_poly[r].centroid.x if axis_x else region_poly[r].centroid.y
+
+    rset = set(rids)
+    ordered = sorted(rids, key=key)
+    seedA, seedB = ordered[0], ordered[-1]
+    A, B = {seedA}, {seedB}
+    aA, aB = areas[seedA], areas[seedB]
+    claimed = {seedA, seedB}
+    while len(claimed) < len(rset):
+        grow_A = aA <= aB  # 작은 쪽부터 → 균형
+        grp = A if grow_A else B
+        frontier = [n for r in grp for n in adj.get(r, set()) if n in rset and n not in claimed]
+        if not frontier:  # 막히면 반대 그룹 성장
+            grow_A = not grow_A
+            grp = A if grow_A else B
+            frontier = [n for r in grp for n in adj.get(r, set()) if n in rset and n not in claimed]
+            if not frontier:
+                break
+        nxt = (min if grow_A else max)(frontier, key=key)
+        grp.add(nxt)
+        claimed.add(nxt)
+        if grow_A:
+            aA += areas[nxt]
+        else:
+            aB += areas[nxt]
+    A |= rset - claimed  # 미청구(분리 섬) fallback
+    return sorted(A), sorted(B)
+
+
 def split_biggest(growth, region_poly):
-    """제일 큰 비-hub 방(≥SPLIT_MIN_AREA, region≥2) → region 2분할 (longer-axis sweep).
+    """제일 큰 비-hub 방(≥SPLIT_MIN_AREA, region≥2) → region 2분할 (BFS 연결).
 
     반환 (growth2, info) 또는 (None, reason).
     """
@@ -74,22 +117,7 @@ def split_biggest(growth, region_poly):
     if len(rids) < 2:
         return None, "single region"
 
-    union = unary_union([region_poly[r] for r in rids])
-    minx, miny, maxx, maxy = union.bounds
-    axis_x = (maxx - minx) >= (maxy - miny)
-    ordered = sorted(
-        rids,
-        key=lambda r: region_poly[r].centroid.x if axis_x else region_poly[r].centroid.y,
-    )
-    half = room.area_m2 / 2.0
-    groupA: list[int] = []
-    acc = 0.0
-    for rid in ordered:
-        groupA.append(rid)
-        acc += region_poly[rid].area
-        if acc >= half and len(groupA) < len(ordered):
-            break
-    groupB = [r for r in ordered if r not in set(groupA)]
+    groupA, groupB = _bfs_half(rids, region_poly)
     if not groupA or not groupB:
         return None, "degenerate"
 

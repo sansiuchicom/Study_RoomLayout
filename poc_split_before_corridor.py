@@ -125,9 +125,7 @@ def split_biggest(growth, region_poly):
     bU = unary_union([region_poly[r] for r in groupB])
     new_rooms = list(growth.rooms)
     new_rooms[i] = GrownRoom(room.name, room.role, tuple(sorted(groupA)), aU.area)
-    new_rooms.append(
-        GrownRoom(room.name + "__B", room.role, tuple(sorted(groupB)), bU.area)
-    )
+    new_rooms.append(GrownRoom(room.name + "__B", room.role, tuple(sorted(groupB)), bU.area))
     growth2 = dataclasses.replace(growth, rooms=tuple(new_rooms))
     info = {
         "room": room.name,
@@ -174,8 +172,18 @@ def access_ok(carved, region_poly, idx) -> bool:
 
 
 def _draw(ax, region_poly, rooms, corridor_ids, title, hi=()):
-    palette = ["#A4C2F4", "#FFD27F", "#B6D7A8", "#F4A4A4", "#D5A6BD", "#FFE8B8",
-               "#C9DAF8", "#CFE2F3", "#E6B8D9", "#D0E0B0"]
+    palette = [
+        "#A4C2F4",
+        "#FFD27F",
+        "#B6D7A8",
+        "#F4A4A4",
+        "#D5A6BD",
+        "#FFE8B8",
+        "#C9DAF8",
+        "#CFE2F3",
+        "#E6B8D9",
+        "#D0E0B0",
+    ]
     bnds = []
     for k, room in enumerate(rooms):
         polys = [region_poly[r] for r in room.region_ids if r in region_poly]
@@ -184,15 +192,25 @@ def _draw(ax, region_poly, rooms, corridor_ids, title, hi=()):
         u = unary_union(polys)
         bnds.append(u.bounds)
         is_hi = k in hi
-        for g in (u.geoms if isinstance(u, MultiPolygon) else [u]):
+        for g in u.geoms if isinstance(u, MultiPolygon) else [u]:
             xs, ys = g.exterior.xy
-            ax.add_patch(MplPoly(list(zip(xs, ys)),
-                                 facecolor=palette[k % len(palette)],
-                                 edgecolor="#C00" if is_hi else "#555",
-                                 lw=2.5 if is_hi else 0.5))
-        ax.text(u.centroid.x, u.centroid.y, f"{room.name[:6]}\n{u.area:.0f}",
-                ha="center", va="center", fontsize=5,
-                color="#900" if is_hi else "black")
+            ax.add_patch(
+                MplPoly(
+                    list(zip(xs, ys)),
+                    facecolor=palette[k % len(palette)],
+                    edgecolor="#C00" if is_hi else "#555",
+                    lw=2.5 if is_hi else 0.5,
+                )
+            )
+        ax.text(
+            u.centroid.x,
+            u.centroid.y,
+            f"{room.name[:6]}\n{u.area:.0f}",
+            ha="center",
+            va="center",
+            fontsize=5,
+            color="#900" if is_hi else "black",
+        )
     for rid in corridor_ids:
         if rid in region_poly:
             xs, ys = region_poly[rid].exterior.xy
@@ -217,12 +235,14 @@ def main() -> None:
             data = json.loads((cd / "input.json").read_text(encoding="utf-8"))
             shape = from_dict(ShapeInput, data["shape"])
             program = from_dict(ProgramRequest, data["program"])
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             continue
         for floor in shape.floors:
             try:
                 _, rpoly_b, _, carved_b, _ = run_floor(shape, program, floor, do_split=False)
-                _, rpoly_s, growth_s, carved_s, info = run_floor(shape, program, floor, do_split=True)
+                _, rpoly_s, growth_s, carved_s, info = run_floor(
+                    shape, program, floor, do_split=True
+                )
             except Exception as e:  # noqa: BLE001
                 rows.append((cd.name, floor.level, f"PIPE-FAIL {type(e).__name__}"))
                 continue
@@ -232,20 +252,30 @@ def main() -> None:
             okB = access_ok(carved_s, rpoly_s, info["idxB"])
             disc = carved_s.diagnostics.get("disconnected_rooms", ())
             empt = carved_s.diagnostics.get("emptied_rooms", ())
-            # 면적: split 전후 방 총합 (region 재그룹이라 보존 기대)
-            area_b = sum(r.area_m2 for r in carved_b.rooms)
-            area_s = sum(r.area_m2 for r in carved_s.rooms)
-            flag = "OK" if (okA and okB and info["connA"] and info["connB"]
-                            and info["idxB"] not in empt and info["idxA"] not in disc
-                            and info["idxB"] not in disc) else "FAIL"
+            flag = (
+                "OK"
+                if (
+                    okA
+                    and okB
+                    and info["connA"]
+                    and info["connB"]
+                    and info["idxB"] not in empt
+                    and info["idxA"] not in disc
+                    and info["idxB"] not in disc
+                )
+                else "FAIL"
+            )
             hub = carved_s.fixture.hub_room_index
             n_pub = sum(1 for r in carved_s.rooms if r.role == "public")
-            rows.append((
-                cd.name, floor.level,
-                f"{flag} hub={hub} pub={n_pub} split={info['room'][:5]}({info['role'][:3]}) "
-                f"A={info['areaA']:.0f}/{okA} B={info['areaB']:.0f}/{okB} "
-                f"conn={info['connA']}/{info['connB']} disc={list(disc)} empt={list(empt)}"
-            ))
+            rows.append(
+                (
+                    cd.name,
+                    floor.level,
+                    f"{flag} hub={hub} pub={n_pub} split={info['room'][:5]}({info['role'][:3]}) "
+                    f"A={info['areaA']:.0f}/{okA} B={info['areaB']:.0f}/{okB} "
+                    f"conn={info['connA']}/{info['connB']} disc={list(disc)} empt={list(empt)}",
+                )
+            )
             renders.append((flag, cd.name, floor.level, rpoly_b, carved_b, rpoly_s, carved_s, info))
 
     # 콘솔
@@ -263,8 +293,14 @@ def main() -> None:
             corr_b = list(cb.base_corridor_region_ids) + list(cb.shortcut_corridor_region_ids)
             corr_s = list(cs.base_corridor_region_ids) + list(cs.shortcut_corridor_region_ids)
             _draw(axes[i][0], rpb, cb.rooms, corr_b, f"{name} L{lv} BEFORE")
-            _draw(axes[i][1], rps, cs.rooms, corr_s,
-                  f"[{flag}] AFTER split {info['room'][:5]} A/B(red)", hi=(info["idxA"], info["idxB"]))
+            _draw(
+                axes[i][1],
+                rps,
+                cs.rooms,
+                corr_s,
+                f"[{flag}] AFTER split {info['room'][:5]} A/B(red)",
+                hi=(info["idxA"], info["idxB"]),
+            )
         fig.suptitle("PoC split-before-corridor — split pieces red; grey=corridor", fontsize=11)
         fig.tight_layout()
         out = OUT / "poc_split.png"

@@ -122,6 +122,7 @@ def label_floor(
     *,
     level: int,
     anchors: Iterable[VerticalAnchor] = (),
+    entry: Polygon | None = None,
 ) -> LabeledFloorLayout:
     """Assemble one floor's `LabeledFloorLayout` — grown rooms + fixed vc rooms.
 
@@ -162,5 +163,19 @@ def label_floor(
         )
         rooms.append(room)
     rooms.extend(vc_rooms(specs, anchors))
+    # 현관(건물 출입구) 재삽입 (run.py entry_floor) — growth 에서 뺀 외주 region 을 고정
+    # 방으로. 격자 정렬 폴리곤이라 인접 방과 겹침 없이 타일링(vc_rooms 와 동일 패턴);
+    # access 는 run.py 가 corridor target 으로 보장. role=public(현관=공용 진입 공간).
+    if entry is not None:
+        rooms.append(
+            LabeledRoom(
+                id=f"entry_L{level}",
+                polygon=entry,
+                role="public",
+                usage="foyer",
+                area_m2=entry.area,
+                anchor_id=None,
+            )
+        )
     corridor_polygons = polygonize_corridors(corridored.corridor_region_ids, region_poly)
     return LabeledFloorLayout(level=level, rooms=rooms, corridor_polygons=corridor_polygons)

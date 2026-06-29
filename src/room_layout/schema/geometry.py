@@ -203,6 +203,10 @@ class ShapeInput:
     name: str
     floors: list[FloorShape]
     vertical_anchors: list[VerticalAnchor] = field(default_factory=list)
+    # 현관(건물 출입구) 예약 층 — regionize 후 외벽 region 하나를 growth 에서 빼
+    # 고정 방으로 재삽입(+corridor target 으로 access 보장). None = 예약 안 함.
+    # 계단(subtract-first, 물리·수직)과 달리 현관은 단층 방이라 region-예약이 맞음.
+    entry_floor: int | None = None
 
     def __post_init__(self) -> None:
         if not self.name.strip():

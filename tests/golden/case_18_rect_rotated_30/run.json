@@ -16,7 +16,7 @@
         {
           "id": "space_2",
           "role": "private",
-          "usage": "bedroom",
+          "usage": "private",
           "area_m2": 17.324998,
           "anchor_id": null
         },
@@ -31,14 +31,14 @@
           "id": "space_4",
           "role": "wet",
           "usage": "wet",
-          "area_m2": 14.25,
+          "area_m2": 11.55,
           "anchor_id": null
         },
         {
           "id": "space_4__s4",
           "role": "private",
-          "usage": "private",
-          "area_m2": 14.625,
+          "usage": "bedroom",
+          "area_m2": 17.325,
           "anchor_id": null
         }
       ],

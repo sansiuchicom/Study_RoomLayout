@@ -52,19 +52,19 @@
           "id": "space_5",
           "role": "private",
           "usage": "bedroom",
-          "area_m2": 11.5075,
+          "area_m2": 12.6625,
           "anchor_id": null
         },
         {
           "id": "space_5__s5",
           "role": "private",
           "usage": "private",
-          "area_m2": 7.455,
+          "area_m2": 8.085,
           "anchor_id": null
         }
       ],
       "n_corridor_polygons": 3,
-      "corridor_area_m2": 24.2875
+      "corridor_area_m2": 22.5025
     }
   ]
 }

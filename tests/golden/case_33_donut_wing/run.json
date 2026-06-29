@@ -22,9 +22,9 @@
         },
         {
           "id": "space_3",
-          "role": "wet",
-          "usage": "wet",
-          "area_m2": 3.525,
+          "role": "private",
+          "usage": "private",
+          "area_m2": 9.4,
           "anchor_id": null
         },
         {
@@ -43,14 +43,14 @@
         },
         {
           "id": "space_4",
-          "role": "private",
-          "usage": "private",
+          "role": "wet",
+          "usage": "wet",
           "area_m2": 6.0,
           "anchor_id": null
         }
       ],
       "n_corridor_polygons": 2,
-      "corridor_area_m2": 34.625
+      "corridor_area_m2": 28.75
     }
   ]
 }

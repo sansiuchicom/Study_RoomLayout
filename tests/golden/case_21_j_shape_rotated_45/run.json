@@ -15,35 +15,35 @@
         },
         {
           "id": "space_2",
-          "role": "private",
-          "usage": "private",
-          "area_m2": 14.059999,
+          "role": "wet",
+          "usage": "wet",
+          "area_m2": 9.527502,
           "anchor_id": null
         },
         {
           "id": "space_2__s4",
-          "role": "wet",
-          "usage": "wet",
-          "area_m2": 11.0725,
+          "role": "private",
+          "usage": "private",
+          "area_m2": 11.269998,
           "anchor_id": null
         },
         {
           "id": "space_3",
           "role": "private",
           "usage": "bedroom",
-          "area_m2": 18.334998,
+          "area_m2": 24.979998,
           "anchor_id": null
         },
         {
           "id": "space_3__s3",
           "role": "private",
           "usage": "bedroom",
-          "area_m2": 21.664998,
+          "area_m2": 12.662498,
           "anchor_id": null
         }
       ],
-      "n_corridor_polygons": 1,
-      "corridor_area_m2": 2.867501
+      "n_corridor_polygons": 2,
+      "corridor_area_m2": 9.56
     }
   ]
 }

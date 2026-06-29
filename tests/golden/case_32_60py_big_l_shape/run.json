@@ -17,14 +17,14 @@
           "id": "space_2",
           "role": "wet",
           "usage": "wet",
-          "area_m2": 11.5225,
+          "area_m2": 8.3425,
           "anchor_id": null
         },
         {
           "id": "space_2__s8",
-          "role": "service",
-          "usage": "service",
-          "area_m2": 15.07,
+          "role": "private",
+          "usage": "private",
+          "area_m2": 18.25,
           "anchor_id": null
         },
         {
@@ -43,8 +43,8 @@
         },
         {
           "id": "space_5",
-          "role": "private",
-          "usage": "private",
+          "role": "service",
+          "usage": "service",
           "area_m2": 15.5675,
           "anchor_id": null
         },

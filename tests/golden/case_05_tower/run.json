@@ -17,35 +17,35 @@
           "id": "space_2",
           "role": "private",
           "usage": "private",
-          "area_m2": 15.405,
+          "area_m2": 15.0,
           "anchor_id": null
         },
         {
           "id": "space_2__s6",
           "role": "private",
-          "usage": "private",
-          "area_m2": 11.62,
+          "usage": "bedroom",
+          "area_m2": 16.8825,
           "anchor_id": null
         },
         {
           "id": "space_3",
-          "role": "private",
-          "usage": "private",
+          "role": "wet",
+          "usage": "wet",
           "area_m2": 8.0,
           "anchor_id": null
         },
         {
           "id": "space_4",
           "role": "private",
-          "usage": "bedroom",
-          "area_m2": 17.58,
+          "usage": "private",
+          "area_m2": 15.0,
           "anchor_id": null
         },
         {
           "id": "space_4__s5",
-          "role": "wet",
-          "usage": "wet",
-          "area_m2": 2.4725,
+          "role": "private",
+          "usage": "private",
+          "area_m2": 14.2,
           "anchor_id": null
         },
         {
@@ -57,7 +57,7 @@
         }
       ],
       "n_corridor_polygons": 2,
-      "corridor_area_m2": 29.3725
+      "corridor_area_m2": 15.3675
     }
   ]
 }

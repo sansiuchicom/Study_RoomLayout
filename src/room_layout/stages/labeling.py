@@ -38,6 +38,7 @@ from shapely.geometry import Polygon
 
 from room_layout.schema import LabeledFloorLayout, LabeledRoom, SpaceUnitSpec, VerticalAnchor
 from room_layout.stages.corridor import CorridoredLayout
+from room_layout.stages.fit_assign import fit_assign
 from room_layout.stages.polygonize import (
     build_region_polygons,
     polygonize_corridors,
@@ -45,6 +46,20 @@ from room_layout.stages.polygonize import (
 )
 from room_layout.stages.regionize import Region
 from room_layout.stages.room_growth import GrownRoom
+
+# fit_assign usage → 출력 7-class role (usage 가 곧 role 인 role-only 프로그램도 커버).
+_USAGE_TO_ROLE: dict[str, str] = {
+    "living": "public",
+    "family_room": "public",
+    "public": "public",
+    "bedroom": "private",
+    "private": "private",
+    "storage": "private",
+    "bathroom": "wet",
+    "wet": "wet",
+    "kitchen": "service",
+    "service": "service",
+}
 
 
 def label_room(grown: GrownRoom, spec: SpaceUnitSpec, polygon: Polygon) -> LabeledRoom:
@@ -118,16 +133,30 @@ def label_floor(
     ``program_adapter`` / validator invariants — should never happen).
     """
     specs = list(specs)
-    specs_by_id = {s.id: s for s in specs}
     region_poly = build_region_polygons(regions)
+    # grow-then-label (§11): usage 를 geometry 로 배정 (spec-id 복원 대체) — split 조각도 커버.
+    usages = fit_assign(
+        corridored.rooms,
+        region_poly,
+        corridored.corridor_region_ids,
+        specs,
+        hub_idx=corridored.fixture.hub_room_index,
+    )
     rooms = []
-    for gr in corridored.rooms:
-        room = label_room(
-            gr,
-            specs_by_id[gr.name],
-            polygonize_room(gr.region_ids, region_poly, room_name=gr.name),
+    for i, gr in enumerate(corridored.rooms):
+        if not gr.region_ids:
+            continue
+        poly = polygonize_room(gr.region_ids, region_poly, room_name=gr.name)
+        usage = usages.get(i, gr.role)
+        room = LabeledRoom(
+            id=gr.name,
+            polygon=poly,
+            role=_USAGE_TO_ROLE.get(usage, gr.role),
+            usage=usage,
+            area_m2=poly.area,
+            anchor_id=None,
         )
-        # 구성 region 폴리곤 부착(§8 region-aligned 후처리 입력) — 직렬화 무영향(init=False).
+        # 구성 region 폴리곤 부착 (synbim region-aligned 입력) — 직렬화 무영향(init=False).
         room.region_polygons = tuple(
             region_poly[rid] for rid in gr.region_ids if rid in region_poly
         )

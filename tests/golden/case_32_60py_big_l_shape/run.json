@@ -4,60 +4,74 @@
   "floors": [
     {
       "level": 1,
-      "n_rooms": 7,
+      "n_rooms": 9,
       "rooms": [
         {
           "id": "space_1",
           "role": "public",
-          "usage": null,
+          "usage": "living",
           "area_m2": 95.7,
           "anchor_id": null
         },
         {
           "id": "space_2",
-          "role": "private",
-          "usage": null,
-          "area_m2": 30.0,
+          "role": "wet",
+          "usage": "wet",
+          "area_m2": 11.5225,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2__s8",
+          "role": "service",
+          "usage": "service",
+          "area_m2": 15.07,
           "anchor_id": null
         },
         {
           "id": "space_3",
           "role": "private",
-          "usage": null,
+          "usage": "private",
           "area_m2": 20.0,
           "anchor_id": null
         },
         {
           "id": "space_4",
           "role": "private",
-          "usage": null,
+          "usage": "private",
           "area_m2": 19.75,
           "anchor_id": null
         },
         {
           "id": "space_5",
-          "role": "wet",
-          "usage": null,
+          "role": "private",
+          "usage": "private",
           "area_m2": 15.5675,
           "anchor_id": null
         },
         {
           "id": "space_6",
           "role": "wet",
-          "usage": null,
+          "usage": "wet",
           "area_m2": 12.1,
           "anchor_id": null
         },
         {
           "id": "space_7",
-          "role": "service",
-          "usage": null,
-          "area_m2": 42.0,
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 21.0,
+          "anchor_id": null
+        },
+        {
+          "id": "space_7__s7",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 21.0,
           "anchor_id": null
         }
       ],
       "n_corridor_polygons": 2,
-      "corridor_area_m2": 6.8825
+      "corridor_area_m2": 10.29
     }
   ]
 }

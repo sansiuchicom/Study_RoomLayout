@@ -96,7 +96,9 @@ def test_label_floor_over_33_cases(case):
     for gr in cl.rooms:
         room = by_id[gr.name]
         assert room.role in SEVEN_ROLES
-        assert room.usage == f"u_{gr.name}"
+        # §11 grow-then-label: usage 는 spec-id 복원이 아니라 geometry(fit_assign) 배정.
+        # 모든 방이 라벨됨을 검증 (특정 usage 매칭은 더 이상 계약 아님).
+        assert room.usage is not None
         assert room.polygon.geom_type == "Polygon" and room.polygon.is_valid
         assert room.area_m2 == room.polygon.area  # S07-D6 source
         assert room.area_m2 > 0

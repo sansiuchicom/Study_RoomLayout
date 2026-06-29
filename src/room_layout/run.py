@@ -67,6 +67,7 @@ from room_layout.stages.labeling import label_floor, vc_rooms
 from room_layout.stages.program_adapter import _EXCLUDED_INPUT_ROLES, program_to_fixture
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
+from room_layout.stages.room_split import split_oversized
 from room_layout.stages.stage01_program import run as _cardinality_gate
 from room_layout.stages.stage02_gate import run as _area_dim_gate
 from room_layout.target.adapter import (
@@ -155,6 +156,8 @@ def _run_floor(
         _emit(on_stage, 3, "region_graph", rg, floor.level)
         fixture = program_to_fixture(holed, program)
         growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
+        # §11 pre-corridor split: 큰 방을 role 상한 밑으로 → corridor 가 새 방 access 처리.
+        growth = split_oversized(growth, regions)
         _emit(on_stage, 4, "growth", growth, floor.level)
         carved = carve_corridors(
             holed,

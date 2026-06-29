@@ -4,19 +4,26 @@
   "floors": [
     {
       "level": 1,
-      "n_rooms": 3,
+      "n_rooms": 4,
       "rooms": [
         {
           "id": "kitchen",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 15.45,
+          "anchor_id": null
+        },
+        {
+          "id": "kitchen__s2",
           "role": "wet",
-          "usage": null,
-          "area_m2": 30.0,
+          "usage": "wet",
+          "area_m2": 14.55,
           "anchor_id": null
         },
         {
           "id": "living",
           "role": "public",
-          "usage": null,
+          "usage": "living",
           "area_m2": 84.0,
           "anchor_id": null
         },
@@ -33,20 +40,41 @@
     },
     {
       "level": 2,
-      "n_rooms": 3,
+      "n_rooms": 6,
       "rooms": [
         {
           "id": "bed1",
           "role": "private",
-          "usage": null,
-          "area_m2": 72.0,
+          "usage": "bedroom",
+          "area_m2": 22.875,
+          "anchor_id": null
+        },
+        {
+          "id": "bed1__s3",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 25.48,
+          "anchor_id": null
+        },
+        {
+          "id": "bed1__s4",
+          "role": "private",
+          "usage": "private",
+          "area_m2": 19.645,
           "anchor_id": null
         },
         {
           "id": "bed2",
           "role": "private",
-          "usage": null,
-          "area_m2": 38.0,
+          "usage": "bedroom",
+          "area_m2": 24.0,
+          "anchor_id": null
+        },
+        {
+          "id": "bed2__s2",
+          "role": "private",
+          "usage": "private",
+          "area_m2": 18.0,
           "anchor_id": null
         },
         {
@@ -62,13 +90,62 @@
     },
     {
       "level": 3,
-      "n_rooms": 2,
+      "n_rooms": 9,
       "rooms": [
         {
           "id": "bed3",
           "role": "private",
-          "usage": null,
-          "area_m2": 114.0,
+          "usage": "bedroom",
+          "area_m2": 17.3825,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s1",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 14.34,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s1__s2",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 16.545,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s1__s2__s3",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 12.6175,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s1__s4",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 15.4825,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s5",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 12.2375,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s5__s6",
+          "role": "private",
+          "usage": "bedroom",
+          "area_m2": 13.56,
+          "anchor_id": null
+        },
+        {
+          "id": "bed3__s7",
+          "role": "private",
+          "usage": "private",
+          "area_m2": 11.835,
           "anchor_id": null
         },
         {

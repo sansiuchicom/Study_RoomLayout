@@ -56,6 +56,10 @@ class LabeledRoom:
     area_m2: float
     doors: list[Door] | None = None
     anchor_id: str | None = None
+    # 구성 region 폴리곤(거의 사각형 타일) — 다운스트림 region-aligned 후처리(욕실/주방
+    # 쪼개기, PlanBIM 145 §8) 가 소비. ``init=False`` 라 ``to_dict`` 직렬화/골든 무영향
+    # (S07-D6: 출력 기하는 ``polygon`` 단일 출처, region_polygons 는 보조 메타).
+    region_polygons: tuple[Polygon, ...] = field(default=(), init=False)
 
 
 @dataclass

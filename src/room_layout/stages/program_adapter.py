@@ -5,10 +5,12 @@ Plan reference: ``004_Step04_AlgorithmCore_Plan.md`` §4.14 + S04-D3.
 The thin bridge that lets the faithful Cell growth algorithm consume the new
 7-class ``ProgramRequest`` (the production input). Per S04-D3:
 
-- **Growth is target-agnostic**: ``area_target_m2`` / ``area_min_m2`` /
-  ``min_dimension_m`` are *dropped* here — they feed the Step 07 gates, not
-  growth. The fixture carries only the per-role aspect / min-area tables growth
-  actually uses (Cell defaults; a ``target_rules`` override is a Step 06 concern).
+- **Growth min/aspect via role tables**: ``area_min_m2`` / ``min_dimension_m``
+  are *dropped* here — they feed the Step 07 gates, not growth. The fixture
+  carries the per-role aspect / min-area tables growth uses (Cell defaults).
+  **``area_target_m2`` is now *preserved* into ``RoomSpec`` (Phase 4 Step 2a,
+  PlanBIM 145/146)** as the area-aware-growth input; growth stays
+  target-agnostic until Step 2b consumes it (carrying it is behaviour-neutral).
 - **Role 7→4 collapse**: ``hub`` → Cell ``public`` placed *first* so Cell's
   "first public room = hub" (``hub_room_index``) lands on it; ``corridor`` is
   never an input role; ``vertical_circulation`` is **excluded** (anchor-locked,
@@ -78,6 +80,10 @@ def program_to_fixture(
             role="public" if spec.role == "hub" else spec.role,
             seed_position=None,  # production path is auto-placement
             target_aspect_range=None,
+            # Phase 4 Step 2a (PlanBIM 145/146): 전형 크기 보존 (이전엔 drop —
+            # S04-D3 growth target-agnostic). growth 소비는 Step 2b; 현재는
+            # 운반만(동작 무변). min/aspect 게이트는 종전대로.
+            area_target_m2=spec.area_target_m2,
         )
         for spec in ordered
     )

@@ -4,34 +4,41 @@
   "floors": [
     {
       "level": 1,
-      "n_rooms": 4,
+      "n_rooms": 5,
       "rooms": [
         {
           "id": "space_1",
           "role": "public",
-          "usage": null,
+          "usage": "living",
           "area_m2": 44.0,
           "anchor_id": null
         },
         {
           "id": "space_2",
           "role": "private",
-          "usage": null,
+          "usage": "bedroom",
           "area_m2": 22.6,
           "anchor_id": null
         },
         {
           "id": "space_3",
           "role": "private",
-          "usage": null,
+          "usage": "private",
           "area_m2": 14.775,
           "anchor_id": null
         },
         {
           "id": "space_4",
+          "role": "private",
+          "usage": "private",
+          "area_m2": 11.5025,
+          "anchor_id": null
+        },
+        {
+          "id": "space_4__s4",
           "role": "wet",
-          "usage": null,
-          "area_m2": 20.7275,
+          "usage": "wet",
+          "area_m2": 9.225,
           "anchor_id": null
         }
       ],

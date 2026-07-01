@@ -9,28 +9,28 @@
         {
           "id": "space_1",
           "role": "public",
-          "usage": null,
+          "usage": "living",
           "area_m2": 51.719999,
           "anchor_id": null
         },
         {
           "id": "space_2",
           "role": "private",
-          "usage": null,
+          "usage": "private",
           "area_m2": 21.120147,
           "anchor_id": null
         },
         {
           "id": "space_3",
           "role": "private",
-          "usage": null,
+          "usage": "private",
           "area_m2": 21.120147,
           "anchor_id": null
         },
         {
           "id": "space_4",
           "role": "wet",
-          "usage": null,
+          "usage": "wet",
           "area_m2": 19.125688,
           "anchor_id": null
         }

@@ -39,6 +39,8 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+from shapely.ops import unary_union
+
 from room_layout.constraints.gates import check_multi_floor_feasibility
 from room_layout.constraints.multi_floor import check_vertical_continuity
 from room_layout.constraints.room_gate import check_grown_rooms
@@ -64,9 +66,11 @@ from room_layout.stages.corridor import carve_corridors
 from room_layout.stages.corridor_bridge import bridge_orphan_corridors
 from room_layout.stages.growth_partition import region_partition_growth
 from room_layout.stages.labeling import label_floor, vc_rooms
+from room_layout.stages.polygonize import build_region_polygons
 from room_layout.stages.program_adapter import _EXCLUDED_INPUT_ROLES, program_to_fixture
 from room_layout.stages.region_graph import build_region_graph
 from room_layout.stages.regionize import regionize
+from room_layout.stages.room_split import split_oversized
 from room_layout.stages.stage01_program import run as _cardinality_gate
 from room_layout.stages.stage02_gate import run as _area_dim_gate
 from room_layout.target.adapter import (
@@ -94,6 +98,38 @@ def _emit(
         on_stage(StageOutput(index=index, stage_id=stage_id, payload=payload, level=level))
 
 
+# 현관(건물 출입구) region 예약 — ShapeInput.entry_floor 에서만. 건물 외주(exterior)에
+# 충분히 닿는 ~현관 크기 region 하나를 seed 로 골라 growth 에서 제외(+corridor target).
+# 계단(subtract-first, 물리·수직)과 달리 현관은 단층 방이라 *이미 만든 region* 을 빼는
+# 게 맞음 — 격자 정렬이라 인접 방 notch 0 (PlanBIM 145 §13 Option 1).
+_ENTRY_WALL_MIN = 1.2  # 외주 공유 최소 길이(m) — 외부문 자리
+_ENTRY_AREA = (2.0, 5.0)  # 현관 region 면적 범위(㎡)
+
+
+def _pick_entry_region(regions: tuple, seed: int):
+    """외주(건물 외벽)에 닿는 ~현관 크기 region 1개 (seed 변이). 없으면 None.
+
+    floor 의 외주 = region 폴리곤 합집합의 exterior(계단 hole 은 interior 라 제외됨).
+    가장 긴 변 편향 없음(유효 후보 중 seed-uniform). 단층 방이라 안전 — 모양 이상해도
+    계단처럼 못 만드는 게 아님.
+    """
+    polys = build_region_polygons(regions)
+    floor_poly = unary_union(list(polys.values()))
+    if floor_poly.geom_type != "Polygon":  # 분리된 floor (드묾) → 예약 포기
+        return None
+    ext = floor_poly.exterior
+    lo, hi = _ENTRY_AREA
+    cands = [
+        r
+        for r in regions
+        if lo <= polys[r.region_id].area <= hi
+        and polys[r.region_id].boundary.intersection(ext).length >= _ENTRY_WALL_MIN
+    ]
+    if not cands:
+        return None
+    return cands[seed % len(cands)]
+
+
 def _run_floor(
     floor: FloorShape,
     *,
@@ -101,6 +137,7 @@ def _run_floor(
     program: ProgramRequest,
     rules: TargetRules,
     building_cardinality: bool,
+    seed: int,
     on_stage: Callable[[StageOutput], None] | None,
     extra_corridor_targets: tuple = (),
 ) -> tuple[LabeledFloorLayout, list[FailureRecord]]:
@@ -151,10 +188,22 @@ def _run_floor(
         _emit(on_stage, 1, "atomize", atoms, floor.level)
         regions = regionize(holed, atoms=atoms)
         _emit(on_stage, 2, "regionize", regions, floor.level)
+        # 현관 예약 (entry_floor) — 외주 region 1개를 growth 에서 빼고 corridor target
+        # 으로 access 보장(landing 과 동일 메커니즘). label_floor 가 고정 방으로 재삽입.
+        # build_region_graph 는 빠진 region 의 atom→None 으로 우아하게 제외 (S03 graph).
+        entry_poly = None
+        if floor.level == shape.entry_floor:
+            er = _pick_entry_region(regions, seed)
+            if er is not None:
+                entry_poly = build_region_polygons([er])[er.region_id]
+                regions = tuple(r for r in regions if r.region_id != er.region_id)
+                extra_corridor_targets = (*extra_corridor_targets, entry_poly)
         rg = build_region_graph(holed, atoms=atoms, regions=regions)
         _emit(on_stage, 3, "region_graph", rg, floor.level)
         fixture = program_to_fixture(holed, program)
         growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
+        # §11 pre-corridor split: 큰 방을 role 상한 밑으로 → corridor 가 새 방 access 처리.
+        growth = split_oversized(growth, regions)
         _emit(on_stage, 4, "growth", growth, floor.level)
         carved = carve_corridors(
             holed,
@@ -166,7 +215,9 @@ def _run_floor(
         # repo post-step (§4.11): bridge any orphan corridor into the hub network.
         carved = bridge_orphan_corridors(carved, regions, rg)
         _emit(on_stage, 5, "corridor", carved, floor.level)
-        fl = label_floor(carved, regions, specs, level=floor.level, anchors=applicable)
+        fl = label_floor(
+            carved, regions, specs, level=floor.level, anchors=applicable, entry=entry_poly
+        )
         _emit(on_stage, 6, "labeling", fl, floor.level)
     except (DomainGateFailure, GeometryFailure) as e:
         return LabeledFloorLayout(level=floor.level), [e.record]
@@ -276,6 +327,7 @@ def run(
             program=program,
             rules=rules,
             building_cardinality=building_cardinality,
+            seed=seed,
             on_stage=on_stage,
             extra_corridor_targets=tuple(targets_by_level.get(floor.level, ())),
         )

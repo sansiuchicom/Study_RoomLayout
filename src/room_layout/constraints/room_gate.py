@@ -66,7 +66,9 @@ def check_grown_rooms(
     for room in rooms:
         if room.role == "vertical_circulation":
             continue
-        spec = specs_by_id[room.id]
+        spec = specs_by_id.get(room.id)
+        if spec is None:
+            continue  # §11 split 조각 (program spec 없음) — admission 검사 대상 아님
         if room.area_m2 < spec.area_min_m2:
             failures.append(
                 FailureRecord(

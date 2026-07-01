@@ -24,15 +24,15 @@
         },
         {
           "id": "bed2",
-          "role": "private",
-          "usage": "bedroom",
+          "role": "service",
+          "usage": "kitchen",
           "area_m2": 14.265,
           "anchor_id": null
         },
         {
           "id": "kitchen",
-          "role": "service",
-          "usage": "kitchen",
+          "role": "private",
+          "usage": "bedroom",
           "area_m2": 15.075,
           "anchor_id": null
         },

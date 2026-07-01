@@ -4,39 +4,53 @@
   "floors": [
     {
       "level": 1,
-      "n_rooms": 4,
+      "n_rooms": 6,
       "rooms": [
         {
           "id": "space_1",
           "role": "public",
-          "usage": null,
+          "usage": "living",
           "area_m2": 20.0,
           "anchor_id": null
         },
         {
           "id": "space_2",
           "role": "private",
-          "usage": null,
-          "area_m2": 28.0,
+          "usage": "bedroom",
+          "area_m2": 14.6,
+          "anchor_id": null
+        },
+        {
+          "id": "space_2__s5",
+          "role": "wet",
+          "usage": "wet",
+          "area_m2": 7.2025,
           "anchor_id": null
         },
         {
           "id": "space_3",
           "role": "private",
-          "usage": null,
-          "area_m2": 25.75,
+          "usage": "private",
+          "area_m2": 12.25,
+          "anchor_id": null
+        },
+        {
+          "id": "space_3__s4",
+          "role": "private",
+          "usage": "private",
+          "area_m2": 10.395,
           "anchor_id": null
         },
         {
           "id": "space_4",
-          "role": "wet",
-          "usage": null,
+          "role": "private",
+          "usage": "bedroom",
           "area_m2": 18.6725,
           "anchor_id": null
         }
       ],
-      "n_corridor_polygons": 1,
-      "corridor_area_m2": 5.5775
+      "n_corridor_polygons": 2,
+      "corridor_area_m2": 14.88
     }
   ]
 }

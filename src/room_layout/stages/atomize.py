@@ -269,10 +269,17 @@ def _atomize_with_shared_grid(
                     global_poly = sa.rotate(sub, degrees(theta), origin=(0, 0))
                 else:
                     global_poly = sub
+                # 퇴화 셀 스킵: 좌표 snap(6자리) 후 collinear/zero-area 가 되는 미세
+                # 조각은 원자 기여 0 인데 ShapePart 검증이 거부 → 조용히 건너뜀 (겹친
+                # 다-방향 part 격자 교차에서 발생; 정상 셀은 무영향, golden-safe).
+                try:
+                    shape = from_shapely(global_poly)
+                except ValueError:
+                    continue
                 atoms.append(
                     Atom(
                         atom_id=next_id[0],
-                        shape=from_shapely(global_poly),
+                        shape=shape,
                         part_id=part_id,
                         piece_id=piece_idx,
                         theta=theta,

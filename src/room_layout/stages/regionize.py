@@ -162,6 +162,30 @@ def _collect_structural_coords(
     }
 
 
+def _connected_atom_components(atoms):
+    """원자 리스트를 **공간 연결 성분**으로 분리 (연결이면 그대로 1개, 배정실패 시 미분리).
+
+    union 이 MultiPolygon(hole 로 끊김)이면 각 조각으로 원자를 가른다. 180 §14.24.
+    """
+    if len(atoms) < 2:
+        return [atoms]
+    polys = [to_shapely(a.shape) for a in atoms]
+    merged = unary_union(polys)
+    if merged.geom_type != "MultiPolygon":
+        return [atoms]
+    parts = list(merged.geoms)
+    groups: list[list] = [[] for _ in parts]
+    for a, p in zip(atoms, polys):
+        rp = p.representative_point()
+        for i, part in enumerate(parts):
+            if part.covers(rp):
+                groups[i].append(a)
+                break
+    if sum(len(g) for g in groups) != len(atoms):
+        return [atoms]
+    return [g for g in groups if g]
+
+
 def _structural_partition(
     atoms_with_local,
     interior_xs: tuple[float, ...],
@@ -398,21 +422,26 @@ def regionize(
                 actual_atoms = [aw[0] for aw in atom_list]
                 if not actual_atoms:
                     continue
-                shape_part = _union_atoms_to_shape_part(actual_atoms)
-                if shape_part is None:
-                    continue
-                regions.append(
-                    Region(
-                        region_id=next_id,
-                        shape=shape_part,
-                        atom_ids=tuple(a.atom_id for a in actual_atoms),
-                        part_id=part_id,
-                        piece_id=piece_idx,
-                        theta=eff_theta,
-                        cut_history=tuple(cell_history) + tuple(sub_history),
+                # 연결성 강제: 원자 집합이 hole(계단/중정)로 끊겼으면 각 연결 성분을
+                # **별도 region** 으로. 안 그러면 disconnected region → union 이 큰 조각만
+                # 취하고 나머지 유실 → region_graph 유령 인접(끊긴 조각이 옆 방과 접) +
+                # 미배정 gap(유실 조각). 004 §4.9 / PlanBIM 180 §14.24.
+                for comp_atoms in _connected_atom_components(actual_atoms):
+                    shape_part = _union_atoms_to_shape_part(comp_atoms)
+                    if shape_part is None:
+                        continue
+                    regions.append(
+                        Region(
+                            region_id=next_id,
+                            shape=shape_part,
+                            atom_ids=tuple(a.atom_id for a in comp_atoms),
+                            part_id=part_id,
+                            piece_id=piece_idx,
+                            theta=eff_theta,
+                            cut_history=tuple(cell_history) + tuple(sub_history),
+                        )
                     )
-                )
-                next_id += 1
+                    next_id += 1
 
     return tuple(regions)
 

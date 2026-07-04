@@ -352,6 +352,7 @@ def regionize(
     policy: DimensionPolicy | None = None,
     *,
     target_area: float = 3.0,
+    enforce_connectivity: bool = True,
 ) -> tuple[Region, ...]:
     if atoms is None:
         atoms = atomize(floor, policy)
@@ -426,7 +427,14 @@ def regionize(
                 # **별도 region** 으로. 안 그러면 disconnected region → union 이 큰 조각만
                 # 취하고 나머지 유실 → region_graph 유령 인접(끊긴 조각이 옆 방과 접) +
                 # 미배정 gap(유실 조각). 004 §4.9 / PlanBIM 180 §14.24.
-                for comp_atoms in _connected_atom_components(actual_atoms):
+                # ``enforce_connectivity=False`` reverts to that buggy behavior
+                # (single region per group) — a research ablation switch only.
+                components = (
+                    _connected_atom_components(actual_atoms)
+                    if enforce_connectivity
+                    else [actual_atoms]
+                )
+                for comp_atoms in components:
                     shape_part = _union_atoms_to_shape_part(comp_atoms)
                     if shape_part is None:
                         continue

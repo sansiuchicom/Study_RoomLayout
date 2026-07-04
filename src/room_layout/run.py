@@ -140,6 +140,8 @@ def _run_floor(
     seed: int,
     on_stage: Callable[[StageOutput], None] | None,
     extra_corridor_targets: tuple = (),
+    enforce_connectivity: bool = True,
+    carve: bool = True,
 ) -> tuple[LabeledFloorLayout, list[FailureRecord]]:
     """Lay out one floor — the per-floor body of ``run()`` (S10-D2 extraction).
 
@@ -186,13 +188,16 @@ def _run_floor(
         holed = subtract_anchors(floor, shape.vertical_anchors)
         atoms = atomize(holed)
         _emit(on_stage, 1, "atomize", atoms, floor.level)
-        regions = regionize(holed, atoms=atoms)
+        regions = regionize(holed, atoms=atoms, enforce_connectivity=enforce_connectivity)
         _emit(on_stage, 2, "regionize", regions, floor.level)
         # 현관 예약 (entry_floor) — 외주 region 1개를 growth 에서 빼고 corridor target
         # 으로 access 보장(landing 과 동일 메커니즘). label_floor 가 고정 방으로 재삽입.
         # build_region_graph 는 빠진 region 의 atom→None 으로 우아하게 제외 (S03 graph).
         entry_poly = None
-        if floor.level == shape.entry_floor:
+        # Entry reservation is part of the circulation subsystem — gated with
+        # ``carve`` so the no-carve ablation grows a plain tiling (no reserved
+        # entry region, no corridors).
+        if carve and floor.level == shape.entry_floor:
             er = _pick_entry_region(regions, seed)
             if er is not None:
                 entry_poly = build_region_polygons([er])[er.region_id]
@@ -211,6 +216,7 @@ def _run_floor(
             regions=regions,
             region_graph=rg,
             extra_targets=extra_corridor_targets,
+            carve=carve,
         )
         # repo post-step (§4.11): bridge any orphan corridor into the hub network.
         carved = bridge_orphan_corridors(carved, regions, rg)
@@ -233,6 +239,8 @@ def run(
     seed: int,
     on_stage: Callable[[StageOutput], None] | None = None,
     corridor_targets: Sequence[CorridorTarget] | None = None,
+    enforce_connectivity: bool = True,
+    carve: bool = True,
 ) -> LabeledRoomLayout:
     """Lay out ``program`` on ``shape`` and return a ``LabeledRoomLayout`` (D001).
 
@@ -330,6 +338,8 @@ def run(
             seed=seed,
             on_stage=on_stage,
             extra_corridor_targets=tuple(targets_by_level.get(floor.level, ())),
+            enforce_connectivity=enforce_connectivity,
+            carve=carve,
         )
         floors.append(fl)
         failures.extend(floor_failures)

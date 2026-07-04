@@ -298,6 +298,7 @@ def carve_corridors(
     regions: tuple[Region, ...],
     region_graph: RegionGraph,
     extra_targets: tuple = (),
+    carve: bool = True,
 ) -> CorridoredLayout:
     """Phase 8 entry — see ``PHASE8_Corridor.md``. Consumes Step 03 outputs
     (``regions`` + ``region_graph``) as the carve substrate (S04-D8).
@@ -305,7 +306,20 @@ def carve_corridors(
     ``extra_targets``: shapely Polygons the circulation must additionally
     reach (CorridorTarget.polygon, already filtered to this floor) — routed
     after the room targets, before Stage 2 / cleanup.
+
+    ``carve=False`` is a research ablation switch: skip circulation carving and
+    return the grown rooms with no corridors (rooms tile the floor, connected by
+    adjacency only). Do not use in production.
     """
+    if not carve:
+        return CorridoredLayout(
+            fixture=growth_result.fixture,
+            rooms=growth_result.rooms,
+            base_corridor_region_ids=(),
+            shortcut_corridor_region_ids=(),
+            leftover_region_ids=(),
+            diagnostics={"ablated": "no_carve"},
+        )
     (
         _regions,
         region_poly,

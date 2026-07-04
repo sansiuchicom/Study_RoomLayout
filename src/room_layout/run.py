@@ -142,6 +142,7 @@ def _run_floor(
     extra_corridor_targets: tuple = (),
     enforce_connectivity: bool = True,
     carve: bool = True,
+    split_correction: bool = True,
 ) -> tuple[LabeledFloorLayout, list[FailureRecord]]:
     """Lay out one floor — the per-floor body of ``run()`` (S10-D2 extraction).
 
@@ -208,7 +209,10 @@ def _run_floor(
         fixture = program_to_fixture(holed, program)
         growth = region_partition_growth(holed, fixture, regions=regions, region_graph=rg)
         # §11 pre-corridor split: 큰 방을 role 상한 밑으로 → corridor 가 새 방 access 처리.
-        growth = split_oversized(growth, regions)
+        # ``split_correction=False`` is a research ablation switch: skip the room-size
+        # correction so oversized rooms (esp. wet/service) are left uncorrected.
+        if split_correction:
+            growth = split_oversized(growth, regions)
         _emit(on_stage, 4, "growth", growth, floor.level)
         carved = carve_corridors(
             holed,
@@ -241,6 +245,7 @@ def run(
     corridor_targets: Sequence[CorridorTarget] | None = None,
     enforce_connectivity: bool = True,
     carve: bool = True,
+    split_correction: bool = True,
 ) -> LabeledRoomLayout:
     """Lay out ``program`` on ``shape`` and return a ``LabeledRoomLayout`` (D001).
 
@@ -340,6 +345,7 @@ def run(
             extra_corridor_targets=tuple(targets_by_level.get(floor.level, ())),
             enforce_connectivity=enforce_connectivity,
             carve=carve,
+            split_correction=split_correction,
         )
         floors.append(fl)
         failures.extend(floor_failures)
